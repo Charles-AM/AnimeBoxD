@@ -35,6 +35,18 @@ body {
   margin: 0;
   min-width: 320px;
   background: var(--bg-glow);
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
 }
 
 button,
@@ -144,4 +156,15 @@ select {
 
 .dark .button-glow {
   box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2), 0 12px 26px rgba(45, 212, 191, 0.25);
+}
+
+@media (max-width: 640px) {
+  .font-display {
+    letter-spacing: 0;
+  }
+
+  .glass-card {
+    border-radius: 1rem;
+    padding: 1rem;
+  }
 }

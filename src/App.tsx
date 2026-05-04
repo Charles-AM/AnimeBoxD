@@ -182,15 +182,15 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
 
   return (
     <div className="page-shell min-h-screen">
-      <div className="mx-auto grid min-h-screen max-w-4xl items-center px-4 py-12">
+      <div className="mx-auto grid min-h-screen max-w-4xl items-center px-3 py-6 sm:px-4 sm:py-12">
         <Card className="grid gap-6">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
               <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Animeboxd</p>
-              <h1 className="font-display text-4xl">Welcome back</h1>
+              <h1 className="font-display text-4xl leading-tight sm:text-5xl">Welcome back</h1>
               <p className="text-sm text-slate-500">Sign up or sign in to your personal diary.</p>
             </div>
-            <Film className="h-10 w-10 text-teal-500" />
+            <Film className="h-10 w-10 shrink-0 text-teal-500" />
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
             <button className={clsx("rounded-xl border px-3 py-2 text-sm font-semibold", mode === "signup" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300")} onClick={() => setMode("signup")}>
@@ -220,32 +220,40 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
 function Header({ user, theme, onThemeChange, onLogout, onHome, onMyStuff, onDashboard, activePage }: { user: { name: string; avatar: string }; theme: ThemeMode; onThemeChange: (value: ThemeMode) => void; onLogout: () => void; onHome: () => void; onMyStuff: () => void; onDashboard: () => void; activePage: "home" | "stuff" | "add" | "dashboard" }) {
   return (
     <header className="sticky top-0 z-20 border-b border-white/60 bg-white/70 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
-        <button className="flex items-center gap-2" onClick={onHome}>
+      <div className="mx-auto flex max-w-6xl flex-col gap-3 px-3 py-3 sm:px-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center justify-between gap-3">
+        <button className="flex min-w-0 items-center gap-2" onClick={onHome}>
           <Film className="h-7 w-7 text-teal-500" />
-          <div>
-            <p className="font-display text-2xl">Animeboxd</p>
+          <div className="min-w-0">
+            <p className="font-display text-2xl leading-none">Animeboxd</p>
             <p className="text-xs text-slate-500">Personal diary</p>
           </div>
         </button>
-        <div className="flex items-center gap-2">
-          <button className={clsx("inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition", activePage === "home" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onHome}>
+          <div className="flex shrink-0 items-center gap-2 lg:hidden">
+            <span className="rounded-full bg-white/80 px-2 py-1 text-sm font-semibold shadow-sm dark:bg-slate-900/70">{user.avatar}</span>
+            <button className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200" onClick={onLogout} aria-label="Log out">
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        <div className="flex w-full items-center gap-2 overflow-x-auto pb-1 lg:w-auto lg:overflow-visible lg:pb-0">
+          <button className={clsx("inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition", activePage === "home" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onHome}>
             Homepage
           </button>
-          <button className={clsx("inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition", activePage === "stuff" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onMyStuff}>
+          <button className={clsx("inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition", activePage === "stuff" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onMyStuff}>
             <Plus className="h-4 w-4" /> My Stuff
           </button>
-          <button className={clsx("inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition", activePage === "dashboard" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onDashboard}>
+          <button className={clsx("inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition", activePage === "dashboard" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onDashboard}>
             Dashboard
           </button>
-          <select className={inputClass()} value={theme} onChange={(event) => onThemeChange(event.target.value as ThemeMode)}>
+          <select className={clsx(inputClass(), "w-28 shrink-0")} value={theme} onChange={(event) => onThemeChange(event.target.value as ThemeMode)}>
             {["Dark", "Light", "System"].map((item) => <option key={item}>{item}</option>)}
           </select>
-          <div className="hidden items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-sm font-semibold text-slate-700 shadow-sm dark:bg-slate-900/70 dark:text-slate-200 md:flex">
+          <div className="hidden shrink-0 items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-sm font-semibold text-slate-700 shadow-sm dark:bg-slate-900/70 dark:text-slate-200 lg:flex">
             <span className="text-lg">{user.avatar}</span>
             <span>{user.name}</span>
           </div>
-          <button className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/70 bg-white/80 text-slate-700 transition hover:-translate-y-0.5 hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200" onClick={onLogout} aria-label="Log out">
+          <button className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/70 bg-white/80 text-slate-700 transition hover:-translate-y-0.5 hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200 lg:inline-flex" onClick={onLogout} aria-label="Log out">
             <LogOut className="h-4 w-4" />
           </button>
         </div>
@@ -282,10 +290,10 @@ function SearchPanel({ onSelect }: { onSelect: (anime: AnimeSummary) => void }) 
         <Search className="h-5 w-5 text-slate-400" />
         <input className={clsx(inputClass(), "w-full border-0 bg-transparent px-0 focus:border-0")} placeholder="Search anime to add" value={query} onChange={(event) => setQuery(event.target.value)} />
       </div>
-      {loading && <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-40 animate-pulse rounded-md bg-slate-100 dark:bg-slate-800" />)}</div>}
+      {loading && <div className="mt-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-40 animate-pulse rounded-md bg-slate-100 dark:bg-slate-800" />)}</div>}
       {error && <p className="mt-3 rounded-md bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950 dark:text-rose-200">{error}</p>}
       {!!results.length && (
-        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="mt-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {results.map((anime) => (
             <div key={anime.mal_id} className="rounded-xl border border-slate-200/70 bg-white/70 p-3 dark:border-slate-800 dark:bg-slate-900/70">
               <img src={anime.image_url} alt="" className="aspect-[2/3] w-full rounded-lg object-cover" />
@@ -302,7 +310,7 @@ function SearchPanel({ onSelect }: { onSelect: (anime: AnimeSummary) => void }) 
 function CuratedGrid({ items, onAdd }: { items: AnimeSummary[]; onAdd: (anime: AnimeSummary) => void }) {
   const safeItems = Array.isArray(items) ? items : [];
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 min-[520px]:grid-cols-2 xl:grid-cols-3">
       {safeItems.map((anime) => (
         <div key={anime.mal_id} className="rounded-2xl border border-slate-200/70 bg-white/80 p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/70">
           <img src={anime.image_url} alt="" className="aspect-[2/3] w-full rounded-xl object-cover" />
@@ -350,17 +358,17 @@ function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave
   const [notes, setNotes] = useState("");
 
   return (
-    <div className="mx-auto grid max-w-4xl gap-6 px-4 py-6">
+    <div className="mx-auto grid max-w-4xl gap-6 px-3 py-4 sm:px-4 sm:py-6">
       <Card className="grid gap-4">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Add to diary</p>
-            <h2 className="font-display text-3xl">{anime.title}</h2>
+            <h2 className="break-words font-display text-3xl leading-tight sm:text-4xl">{anime.title}</h2>
           </div>
-          <button className="text-sm font-semibold text-slate-500" onClick={onCancel}>Back</button>
+          <button className="self-start text-sm font-semibold text-slate-500 sm:self-auto" onClick={onCancel}>Back</button>
         </div>
-        <div className="grid gap-4 md:grid-cols-[160px_1fr]">
-          <img src={anime.image_url} alt="" className="w-full rounded-xl object-cover" />
+        <div className="grid gap-4 sm:grid-cols-[140px_1fr] md:grid-cols-[170px_1fr]">
+          <img src={anime.image_url} alt="" className="mx-auto aspect-[2/3] w-40 rounded-xl object-cover sm:w-full" />
           <div className="grid gap-3">
             <div className="grid gap-2 sm:grid-cols-2">
               <Field label="Status">
@@ -403,14 +411,14 @@ function LibraryCard({ entry, onUpdate, onRemove }: { entry: LibraryEntry; onUpd
   const progress = Math.min(100, Math.round((draft.episodes_watched / totalEpisodes) * 100));
   return (
     <div className="grid gap-3 rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/70">
-      <div className="grid grid-cols-[72px_1fr_auto] items-start gap-3">
+      <div className="grid grid-cols-[64px_minmax(0,1fr)] items-start gap-3 sm:grid-cols-[72px_minmax(0,1fr)_auto]">
         <img src={entry.image_url} alt="" className="h-24 w-16 rounded-lg object-cover" />
         <div className="grid gap-1">
           <p className="font-semibold text-slate-900 dark:text-white">{entry.title}</p>
           <p className="text-xs text-slate-500">{statusLabels[draft.status]} • {draft.rating || "-"}/10</p>
           <p className="text-xs text-slate-500">{draft.episodes_watched}/{totalEpisodes} episodes</p>
         </div>
-        <button className="inline-flex items-center gap-1 text-xs font-semibold text-teal-600" onClick={() => setExpanded((prev) => !prev)}>
+        <button className="col-span-2 inline-flex items-center gap-1 text-xs font-semibold text-teal-600 sm:col-span-1" onClick={() => setExpanded((prev) => !prev)}>
           {expanded ? "Collapse" : "Edit"}
           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </button>
@@ -442,11 +450,11 @@ function LibraryCard({ entry, onUpdate, onRemove }: { entry: LibraryEntry; onUpd
           <Field label="Notes">
             <textarea className={clsx(inputClass(), "min-h-20")} value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} />
           </Field>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
               <span>Added {new Date(entry.added_at).toLocaleDateString()}</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button className="bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => { onUpdate({ ...draft }); setExpanded(false); }}>Save</Button>
               <button className="inline-flex items-center gap-2 text-xs font-semibold text-rose-600" onClick={onRemove}><Trash2 className="h-4 w-4" /> Remove</button>
             </div>
@@ -474,10 +482,10 @@ function HomePage({ addAnime }: { addAnime: (anime: AnimeSummary) => void }) {
   const reshuffle = () => setRandomAnime(shuffleItems(fixedAnime).slice(0, 12));
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6">
+    <div className="mx-auto grid max-w-6xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
       <Card className="grid gap-2">
         <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Animeboxd</p>
-        <h1 className="font-display text-4xl">Keep your anime life in one cozy place.</h1>
+        <h1 className="font-display text-4xl leading-tight sm:text-5xl">Keep your anime life in one cozy place.</h1>
         <p className="max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
           Find something new to watch, save it to your diary, rate what you finish, and keep the little notes you will want to remember later.
         </p>
@@ -513,7 +521,7 @@ function DiscoveryPanel({ onAdd }: { onAdd: (anime: AnimeSummary) => void }) {
   return (
     <Section title="Search and Discovery" icon={<Search className="h-5 w-5" />}>
       <Card className="grid gap-4">
-        <div className="grid gap-3 md:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Search">
             <input className={inputClass()} placeholder="Title or mood" value={query} onChange={(event) => setQuery(event.target.value)} />
           </Field>
@@ -561,15 +569,15 @@ function MyStuffPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
     .slice(0, 4);
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6">
-      <div className="flex items-center justify-between">
-        <h2 className="font-display text-2xl">My Stuff</h2>
+    <div className="mx-auto grid max-w-6xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="font-display text-3xl leading-tight">My Stuff</h2>
         <button className="text-sm font-semibold text-teal-600" onClick={onBack}>Back to home</button>
       </div>
-      <Card className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
+      <Card className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="grid gap-2">
           <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Diary shelf</p>
-          <h3 className="font-display text-3xl">{data.settings.username}'s logbook</h3>
+          <h3 className="break-words font-display text-3xl leading-tight sm:text-4xl">{data.settings.username}'s logbook</h3>
           <p className="text-sm text-slate-500">A living record of what you watch, what you finish, and what you plan to watch next.</p>
           <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
             <span className="rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-900">Total {counts.total}</span>
@@ -592,7 +600,7 @@ function MyStuffPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
         </div>
       </Card>
       <ProfileHighlights data={data} updateData={updateData} />
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-5">
         <Card className="text-sm"><p className="text-slate-500">Total</p><p className="text-2xl font-black">{counts.total}</p></Card>
         <Card className="text-sm"><p className="text-slate-500">Watching</p><p className="text-2xl font-black">{counts.watching}</p></Card>
         <Card className="text-sm"><p className="text-slate-500">Completed</p><p className="text-2xl font-black">{counts.completed}</p></Card>
@@ -606,7 +614,7 @@ function MyStuffPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
             {section.entries.length === 0 ? (
               <Card className="text-sm text-slate-500">No anime here yet.</Card>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 lg:grid-cols-2">
                 {section.entries.map((entry) => (
                   <LibraryCard key={entry.mal_id} entry={entry} onUpdate={updateEntry} onRemove={() => removeEntry(entry.mal_id)} />
                 ))}
@@ -669,9 +677,9 @@ function ProfileHighlights({ data, updateData }: { data: AppData; updateData: (p
         <p className="text-sm text-slate-500">Pick favorites from the anime catalog or anything you have added yourself.</p>
       </div>
       {selected.length > 0 ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 min-[520px]:grid-cols-2 lg:grid-cols-4">
           {selected.map((anime) => (
-            <div key={anime.mal_id} className="grid grid-cols-[56px_1fr] gap-3 rounded-xl border border-teal-200 bg-teal-50/70 p-2 dark:border-teal-900 dark:bg-teal-950/30">
+            <div key={anime.mal_id} className="grid grid-cols-[56px_minmax(0,1fr)] gap-3 rounded-xl border border-teal-200 bg-teal-50/70 p-2 dark:border-teal-900 dark:bg-teal-950/30">
               <img src={anime.image_url} alt="" className="h-20 w-14 rounded-lg object-cover" />
               <div>
                 <p className="line-clamp-2 text-sm font-semibold text-slate-900 dark:text-white">{anime.title}</p>
@@ -692,9 +700,9 @@ function ProfileHighlights({ data, updateData }: { data: AppData; updateData: (p
           <input className={inputClass()} placeholder="Search favorites by title or genre" value={query} onChange={(event) => setQuery(event.target.value)} />
           {searchLoading && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">Searching anime...</p>}
           {searchError && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{searchError}</p>}
-          <div className="grid max-h-96 gap-2 overflow-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid max-h-[70vh] gap-2 overflow-auto pr-1 md:max-h-96 md:grid-cols-2 xl:grid-cols-3">
             {visibleCatalog.map((anime) => (
-              <label key={anime.mal_id} className="grid grid-cols-[18px_44px_1fr] items-center gap-2 rounded-xl border border-slate-200/70 bg-white/70 p-2 text-sm font-semibold dark:border-slate-800 dark:bg-slate-950/70">
+              <label key={anime.mal_id} className="grid grid-cols-[18px_44px_minmax(0,1fr)] items-center gap-2 rounded-xl border border-slate-200/70 bg-white/70 p-2 text-sm font-semibold dark:border-slate-800 dark:bg-slate-950/70">
                 <input type="checkbox" checked={validSelectedIds.includes(anime.mal_id)} onChange={() => toggleFavorite(anime)} />
                 <img src={anime.image_url} alt="" className="h-14 w-10 rounded-md object-cover" />
                 <span>
@@ -745,15 +753,15 @@ function DashboardPage({ data, onClearHistory }: { data: AppData; onClearHistory
   const favoriteAnime = allKnownAnime(data.library, data.settings.favoriteAnimeCatalog || []).filter((anime) => favoriteIds.has(anime.mal_id));
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6">
-      <div className="flex items-center justify-between">
-        <h2 className="font-display text-2xl">Dashboard</h2>
+    <div className="mx-auto grid max-w-6xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="font-display text-3xl leading-tight">Dashboard</h2>
         <Button className="bg-rose-600 hover:bg-rose-700" onClick={onClearHistory}>Clear history</Button>
       </div>
-      <Card className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
+      <Card className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="grid gap-2">
           <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Diary pulse</p>
-          <h3 className="font-display text-3xl">Your archive at a glance</h3>
+          <h3 className="font-display text-3xl leading-tight sm:text-4xl">Your archive at a glance</h3>
           <p className="text-sm text-slate-500">Track progress, completion, and the genres shaping your season.</p>
           <p className="text-sm text-slate-600">{summaryText}</p>
           <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
@@ -792,9 +800,9 @@ function DashboardPage({ data, onClearHistory }: { data: AppData; onClearHistory
         {favoriteAnime.length === 0 ? (
           <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No favorites selected yet. Choose them in My Stuff.</p>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 min-[520px]:grid-cols-2 lg:grid-cols-4">
             {favoriteAnime.map((anime) => (
-              <div key={anime.mal_id} className="grid grid-cols-[64px_1fr] gap-3 rounded-xl border border-slate-200/70 bg-white/70 p-3 dark:border-slate-800 dark:bg-slate-950/70">
+              <div key={anime.mal_id} className="grid grid-cols-[64px_minmax(0,1fr)] gap-3 rounded-xl border border-slate-200/70 bg-white/70 p-3 dark:border-slate-800 dark:bg-slate-950/70">
                 <img src={anime.image_url} alt="" className="h-24 w-16 rounded-lg object-cover" />
                 <div>
                   <p className="line-clamp-2 text-sm font-semibold text-slate-900 dark:text-white">{anime.title}</p>
@@ -806,10 +814,10 @@ function DashboardPage({ data, onClearHistory }: { data: AppData; onClearHistory
           </div>
         )}
       </Card>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 xl:grid-cols-2">
         <Card>
           <h3 className="mb-3 font-semibold">Status breakdown</h3>
-          <div className="h-64">
+          <div className="h-72 min-w-0 overflow-hidden sm:h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie data={statusData} dataKey="value" nameKey="name" outerRadius={90}>
@@ -836,7 +844,7 @@ function DashboardPage({ data, onClearHistory }: { data: AppData; onClearHistory
           </div>
         </Card>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-3">
         <Card className="text-sm"><p className="text-slate-500">Total entries</p><p className="text-3xl font-black">{counts.total}</p></Card>
         <Card className="text-sm"><p className="text-slate-500">Watching</p><p className="text-3xl font-black">{counts.watching}</p></Card>
         <Card className="text-sm"><p className="text-slate-500">Completed</p><p className="text-3xl font-black">{counts.completed}</p></Card>

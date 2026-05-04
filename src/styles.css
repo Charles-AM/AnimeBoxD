@@ -1,0 +1,147 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  font-family: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f7f4ff;
+  --ink-950: #0b0d1a;
+  --ink-900: #15182a;
+  --ink-800: #1d2138;
+  --petal: #ff94d8;
+  --aqua: #76f8ff;
+  --sun: #ffd66b;
+  --violet: #8a7bff;
+  --bg-glow: radial-gradient(circle at 15% 15%, rgba(255, 148, 216, 0.28), transparent 45%),
+    radial-gradient(circle at 85% 10%, rgba(118, 248, 255, 0.28), transparent 40%),
+    radial-gradient(circle at 50% 90%, rgba(138, 123, 255, 0.25), transparent 55%),
+    linear-gradient(180deg, #f7f4ff 0%, #f3f6ff 60%, #eef2ff 100%);
+}
+
+.dark {
+  color-scheme: dark;
+  background: #06070f;
+  --ink-950: #f8fafc;
+  --ink-900: #e2e8f0;
+  --ink-800: #cbd5f5;
+  --bg-glow: radial-gradient(circle at 15% 15%, rgba(138, 123, 255, 0.26), transparent 45%),
+    radial-gradient(circle at 85% 10%, rgba(118, 248, 255, 0.2), transparent 40%),
+    radial-gradient(circle at 50% 90%, rgba(255, 148, 216, 0.18), transparent 55%),
+    linear-gradient(180deg, #06070f 0%, #0b0f1c 60%, #0b1120 100%);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--bg-glow);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.heatmap .color-empty {
+  fill: #e2e8f0;
+}
+
+.dark .heatmap .color-empty {
+  fill: #1e293b;
+}
+
+.heatmap .color-scale-1 {
+  fill: #99f6e4;
+}
+
+.heatmap .color-scale-2 {
+  fill: #5eead4;
+}
+
+.heatmap .color-scale-3 {
+  fill: #2dd4bf;
+}
+
+.heatmap .color-scale-4 {
+  fill: #0f766e;
+}
+
+.react-calendar-heatmap text {
+  fill: #64748b;
+  font-size: 8px;
+}
+
+.dark .react-calendar-heatmap text {
+  fill: #94a3b8;
+}
+
+.font-display {
+  font-family: "Bebas Neue", "Space Grotesk", sans-serif;
+  letter-spacing: 0.02em;
+}
+
+.page-shell {
+  background: var(--bg-glow);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+}
+
+.dark .glass-card {
+  background: rgba(10, 14, 28, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.45);
+}
+
+.anime-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.anime-hero::before,
+.anime-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto;
+  border-radius: 999px;
+  opacity: 0.8;
+  filter: blur(0px);
+  pointer-events: none;
+}
+
+.anime-hero::before {
+  top: -120px;
+  right: -120px;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(255, 148, 216, 0.8) 0%, rgba(255, 148, 216, 0) 70%);
+}
+
+.anime-hero::after {
+  bottom: -140px;
+  left: -120px;
+  width: 360px;
+  height: 360px;
+  background: radial-gradient(circle, rgba(118, 248, 255, 0.85) 0%, rgba(118, 248, 255, 0) 70%);
+}
+
+.text-gradient {
+  background: linear-gradient(110deg, #ff6ac2, #7af4ff 45%, #ffd66b 85%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.button-glow {
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08), 0 12px 24px rgba(124, 58, 237, 0.25);
+}
+
+.dark .button-glow {
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2), 0 12px 26px rgba(45, 212, 191, 0.25);
+}

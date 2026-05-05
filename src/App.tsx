@@ -288,7 +288,7 @@ function Header({ user, theme, onThemeChange, onLogout, onHome, onMyStuff, onMyM
           >
             <Mail className="h-4 w-4" /> Report issue
           </button>
-          <select className={clsx(inputClass(), "w-28 shrink-0")} value={theme} onChange={(event) => onThemeChange(event.target.value as ThemeMode)}>
+          <select className={clsx(inputClass(), "!w-28 shrink-0")} value={theme} onChange={(event) => onThemeChange(event.target.value as ThemeMode)}>
             {["Dark", "Light", "System"].map((item) => <option key={item}>{item}</option>)}
           </select>
           <div className="hidden shrink-0 items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-sm font-semibold text-slate-700 shadow-sm dark:bg-slate-900/70 dark:text-slate-200 lg:flex">

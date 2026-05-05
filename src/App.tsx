@@ -965,6 +965,25 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
   const safeResults = results.filter((item): item is AnimeSummary | MangaSummary => Boolean(item && typeof item.mal_id === "number"));
   const detail = mode === "anime" ? animeDetail : mangaDetail;
 
+  const clearExploreInput = () => {
+    setQuery("");
+    setResults([]);
+    setError("");
+    setLoading(false);
+  };
+
+  const clearExploreAll = () => {
+    clearExploreInput();
+    setSelectedId(null);
+    setAnimeDetail(null);
+    setMangaDetail(null);
+    setStaff([]);
+    setCast([]);
+    setThemes({ openings: [], endings: [] });
+    setDetailError("");
+    setDetailLoading(false);
+  };
+
   return (
     <div className="mx-auto grid max-w-5xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
       <Card className="grid gap-4">
@@ -987,9 +1006,13 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
       </Card>
       <div className="grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
         <Card className={clsx("grid gap-3", selectedId ? "hidden lg:grid" : "grid")}>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Search className="h-5 w-5 text-slate-400" />
             <input className={clsx(inputClass(), "w-full border-0 bg-transparent px-0 focus:border-0")} placeholder={`Search ${mode} by title`} value={query} onChange={(event) => setQuery(event.target.value)} />
+            <div className="flex flex-wrap gap-2">
+              <button className="button-ghost" type="button" onClick={clearExploreInput}>Clear text</button>
+              <button className="button-ghost" type="button" onClick={clearExploreAll}>Clear</button>
+            </div>
           </div>
           {loading && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">Searching...</p>}
           {error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{error}</p>}

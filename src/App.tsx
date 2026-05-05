@@ -352,8 +352,8 @@ function isLibraryEntry(anime: AnimeSummary): anime is LibraryEntry {
 
 function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave: (entry: LibraryEntry) => void; onCancel: () => void }) {
   const [status, setStatus] = useState<LibraryStatus>("Plan to Watch");
-  const [rating, setRating] = useState(0);
-  const [episodesWatched, setEpisodesWatched] = useState(0);
+  const [ratingInput, setRatingInput] = useState("");
+  const [episodesWatchedInput, setEpisodesWatchedInput] = useState("");
   const [review, setReview] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -377,10 +377,25 @@ function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave
                 </select>
               </Field>
               <Field label="Rating">
-                <input className={inputClass()} type="number" min={0} max={10} value={rating} onChange={(event) => setRating(Number(event.target.value))} />
+                <input
+                  className={inputClass()}
+                  type="number"
+                  min={0}
+                  max={10}
+                  placeholder="0-10"
+                  value={ratingInput}
+                  onChange={(event) => setRatingInput(event.target.value)}
+                />
               </Field>
               <Field label="Episodes watched">
-                <input className={inputClass()} type="number" min={0} value={episodesWatched} onChange={(event) => setEpisodesWatched(Number(event.target.value))} />
+                <input
+                  className={inputClass()}
+                  type="number"
+                  min={0}
+                  placeholder="0"
+                  value={episodesWatchedInput}
+                  onChange={(event) => setEpisodesWatchedInput(event.target.value)}
+                />
               </Field>
             </div>
             <Field label="Review">
@@ -392,6 +407,8 @@ function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave
             <div className="flex items-center gap-2">
               <Button className="bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => {
                 const entry = mergeAnimeToEntry(anime);
+                const rating = ratingInput.trim() ? Number(ratingInput) : 0;
+                const episodesWatched = episodesWatchedInput.trim() ? Number(episodesWatchedInput) : 0;
                 onSave({ ...entry, status, rating, episodes_watched: episodesWatched, review, notes });
               }}>Save</Button>
               <button className="text-sm font-semibold text-slate-500" onClick={onCancel}>Cancel</button>
@@ -492,7 +509,7 @@ function HomePage({ addAnime }: { addAnime: (anime: AnimeSummary) => void }) {
       </Card>
       <Section title="Random Picks" icon={<Film className="h-5 w-5" />}>
         <div className="flex justify-end">
-          <Button className="bg-white text-slate-900 hover:bg-slate-100 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800" onClick={reshuffle}>
+          <Button className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800" onClick={reshuffle}>
             <RefreshCcw className="h-4 w-4" /> Shuffle
           </Button>
         </div>

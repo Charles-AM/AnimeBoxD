@@ -9,7 +9,6 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          charts: ["recharts", "react-calendar-heatmap"],
           icons: ["lucide-react"]
         }
       }

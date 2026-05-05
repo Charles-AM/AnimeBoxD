@@ -17,11 +17,14 @@ export const defaultSettings: Settings = {
   bio: "Building a better anime memory palace.",
   avatar: "✨",
   favoriteAnimeIds: [],
-  favoriteAnimeCatalog: []
+  favoriteAnimeCatalog: [],
+  favoriteMangaIds: [],
+  favoriteMangaCatalog: []
 };
 
 export const defaultData: AppData = {
   library: [],
+  mangaLibrary: [],
   reviews: [],
   lists: defaultLists,
   diary: [],

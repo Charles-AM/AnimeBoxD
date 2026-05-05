@@ -1,4 +1,5 @@
 export type LibraryStatus = "Watching" | "Completed" | "Plan to Watch" | "On Hold" | "Dropped";
+export type MangaStatus = "Reading" | "Completed" | "Plan to Read" | "On Hold" | "Dropped";
 export type ThemeMode = "Dark" | "Light" | "System";
 
 export interface AnimeSummary {
@@ -17,6 +18,47 @@ export interface AnimeSummary {
   url?: string;
 }
 
+export interface AnimeDetail extends AnimeSummary {
+  producers?: string[];
+  licensors?: string[];
+  themes?: string[];
+  demographics?: string[];
+  source?: string;
+  rating?: string;
+  duration?: string;
+  broadcast?: string;
+  season?: string;
+  title_english?: string;
+  title_japanese?: string;
+  popularity?: number;
+  favorites?: number;
+}
+
+export interface MangaSummary {
+  mal_id: number;
+  title: string;
+  image_url: string;
+  total_chapters: number;
+  total_volumes: number;
+  genres: string[];
+  authors: string[];
+  synopsis?: string;
+  score?: number;
+  rank?: number;
+  year?: number;
+  url?: string;
+  status?: string;
+  serialization?: string[];
+  themes?: string[];
+  demographics?: string[];
+}
+
+export interface MangaDetail extends MangaSummary {
+  title_english?: string;
+  title_japanese?: string;
+  favorites?: number;
+}
+
 export interface LibraryEntry extends AnimeSummary {
   status: LibraryStatus;
   rating: number;
@@ -26,6 +68,21 @@ export interface LibraryEntry extends AnimeSummary {
   end_date: string;
   notes: string;
   review: string;
+  drop_reason: string;
+  tags: string[];
+  added_at: string;
+}
+
+export interface MangaEntry extends MangaSummary {
+  status: MangaStatus;
+  rating: number;
+  chapters_read: number;
+  volumes_read: number;
+  start_date: string;
+  end_date: string;
+  notes: string;
+  review: string;
+  drop_reason: string;
   tags: string[];
   added_at: string;
 }
@@ -75,10 +132,13 @@ export interface Settings {
   avatar: string;
   favoriteAnimeIds: number[];
   favoriteAnimeCatalog: AnimeSummary[];
+  favoriteMangaIds: number[];
+  favoriteMangaCatalog: MangaSummary[];
 }
 
 export interface AppData {
   library: LibraryEntry[];
+  mangaLibrary: MangaEntry[];
   reviews: Review[];
   lists: CustomList[];
   diary: DiaryEntry[];

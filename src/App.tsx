@@ -8,11 +8,14 @@ import {
   CheckCircle2,
   Film,
   LogOut,
+  Mail,
   PlayCircle,
   Plus,
   RefreshCcw,
   Search,
-  Trash2
+  Send,
+  Trash2,
+  X
 } from "lucide-react";
 import { fixedAnime } from "./lib/fixedAnime";
 import { getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, searchAnime, searchManga } from "./lib/jikan";
@@ -48,14 +51,16 @@ const sections: Section[] = [
   { key: "Watching", title: "Watching now", icon: <PlayCircle className="h-5 w-5" /> },
   { key: "Plan to Watch", title: "Plan to watch", icon: <BookMarked className="h-5 w-5" /> },
   { key: "Completed", title: "Completed", icon: <CheckCircle2 className="h-5 w-5" /> },
-  { key: "On Hold", title: "On hold", icon: <Film className="h-5 w-5" /> }
+  { key: "On Hold", title: "On hold", icon: <Film className="h-5 w-5" /> },
+  { key: "Dropped", title: "Dropped", icon: <Trash2 className="h-5 w-5" /> }
 ];
 
 const mangaSections: { key: MangaStatus; title: string; icon: React.ReactElement }[] = [
   { key: "Reading", title: "Reading now", icon: <BookOpen className="h-5 w-5" /> },
   { key: "Plan to Read", title: "Plan to read", icon: <BookMarked className="h-5 w-5" /> },
   { key: "Completed", title: "Completed", icon: <CheckCircle2 className="h-5 w-5" /> },
-  { key: "On Hold", title: "On hold", icon: <Film className="h-5 w-5" /> }
+  { key: "On Hold", title: "On hold", icon: <Film className="h-5 w-5" /> },
+  { key: "Dropped", title: "Dropped", icon: <Trash2 className="h-5 w-5" /> }
 ];
 
 
@@ -93,7 +98,7 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
 
 function Button({ children, className, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button className={clsx("button-glow inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold leading-none text-white transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300", className)} {...props}>
+    <button className={clsx("button-glow inline-flex min-h-10 min-w-0 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold leading-none text-white transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300", className)} {...props}>
       {children}
     </button>
   );
@@ -109,7 +114,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function inputClass() {
-  return "rounded-xl border border-slate-200/70 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-teal-500 dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-100";
+  return "w-full min-w-0 rounded-xl border border-slate-200/70 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-teal-500 dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-100";
 }
 
 function mergeAnimeToEntry(anime: AnimeSummary, existing?: LibraryEntry): LibraryEntry {
@@ -123,6 +128,7 @@ function mergeAnimeToEntry(anime: AnimeSummary, existing?: LibraryEntry): Librar
     end_date: existing?.end_date || "",
     notes: existing?.notes || "",
     review: existing?.review || "",
+    drop_reason: existing?.drop_reason || "",
     tags: existing?.tags || [],
     added_at: existing?.added_at || new Date().toISOString()
   };
@@ -139,6 +145,7 @@ function mergeMangaToEntry(manga: MangaSummary, existing?: MangaEntry): MangaEnt
     end_date: existing?.end_date || "",
     notes: existing?.notes || "",
     review: existing?.review || "",
+    drop_reason: existing?.drop_reason || "",
     tags: existing?.tags || [],
     added_at: existing?.added_at || new Date().toISOString()
   };
@@ -239,18 +246,18 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
   );
 }
 
-function Header({ user, theme, onThemeChange, onLogout, onHome, onMyStuff, onMyManga, onDashboard, onExplore, activePage }: { user: { name: string; avatar: string }; theme: ThemeMode; onThemeChange: (value: ThemeMode) => void; onLogout: () => void; onHome: () => void; onMyStuff: () => void; onMyManga: () => void; onDashboard: () => void; onExplore: () => void; activePage: "home" | "stuff" | "manga" | "add" | "add-manga" | "dashboard" | "explore" }) {
+function Header({ user, theme, onThemeChange, onLogout, onHome, onMyStuff, onMyManga, onDashboard, onExplore, onReportIssue, activePage }: { user: { name: string; avatar: string }; theme: ThemeMode; onThemeChange: (value: ThemeMode) => void; onLogout: () => void; onHome: () => void; onMyStuff: () => void; onMyManga: () => void; onDashboard: () => void; onExplore: () => void; onReportIssue: () => void; activePage: "home" | "stuff" | "manga" | "add" | "add-manga" | "dashboard" | "explore" }) {
   return (
-    <header className="sticky top-0 z-20 border-b border-white/60 bg-white/70 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
+    <header className="sticky top-0 z-20 border-b border-white/60 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
       <div className="mx-auto flex max-w-6xl flex-col gap-3 px-3 py-3 sm:px-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center justify-between gap-3">
-        <button className="flex min-w-0 items-center gap-2" onClick={onHome}>
-          <Film className="h-7 w-7 text-teal-500" />
-          <div className="min-w-0">
-            <p className="font-display text-2xl leading-none">Animeboxd</p>
-            <p className="text-xs text-slate-500">Personal diary</p>
-          </div>
-        </button>
+          <button className="flex min-w-0 items-center gap-2" onClick={onHome}>
+            <Film className="h-7 w-7 text-teal-500" />
+            <div className="min-w-0">
+              <p className="truncate font-display text-2xl leading-none">Animeboxd</p>
+              <p className="text-xs text-slate-500">Personal diary</p>
+            </div>
+          </button>
           <div className="flex shrink-0 items-center gap-2 lg:hidden">
             <span className="rounded-full bg-white/80 px-2 py-1 text-sm font-semibold shadow-sm dark:bg-slate-900/70">{user.avatar}</span>
             <button className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200" onClick={onLogout} aria-label="Log out">
@@ -258,7 +265,7 @@ function Header({ user, theme, onThemeChange, onLogout, onHome, onMyStuff, onMyM
             </button>
           </div>
         </div>
-        <div className="flex w-full items-center gap-2 overflow-x-auto pb-1 lg:w-auto lg:overflow-visible lg:pb-0">
+        <div className="scrollbar-soft -mx-1 flex w-[calc(100%+0.5rem)] items-center gap-2 overflow-x-auto px-1 pb-1 lg:mx-0 lg:w-auto lg:overflow-visible lg:px-0 lg:pb-0">
           <button className={clsx("inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition", activePage === "home" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onHome}>
             Homepage
           </button>
@@ -274,6 +281,13 @@ function Header({ user, theme, onThemeChange, onLogout, onHome, onMyStuff, onMyM
           <button className={clsx("inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition", activePage === "dashboard" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onDashboard}>
             Dashboard
           </button>
+          <button
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-slate-200/70 bg-white/80 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200"
+            onClick={onReportIssue}
+            type="button"
+          >
+            <Mail className="h-4 w-4" /> Report issue
+          </button>
           <select className={clsx(inputClass(), "w-28 shrink-0")} value={theme} onChange={(event) => onThemeChange(event.target.value as ThemeMode)}>
             {["Dark", "Light", "System"].map((item) => <option key={item}>{item}</option>)}
           </select>
@@ -287,6 +301,96 @@ function Header({ user, theme, onThemeChange, onLogout, onHome, onMyStuff, onMyM
         </div>
       </div>
     </header>
+  );
+}
+
+function ReportIssueModal({ onClose }: { onClose: () => void }) {
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [error, setError] = useState("");
+
+  const submitReport = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    if (String(formData.get("website") || "").trim()) return;
+    setStatus("sending");
+    setError("");
+
+    try {
+      const response = await fetch("https://formsubmit.co/ajax/vmb4manager@gmail.com", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          _subject: "AnimeBoxD issue or suggestion",
+          name: formData.get("name"),
+          email: formData.get("email"),
+          category: formData.get("category"),
+          message: formData.get("message")
+        })
+      });
+
+      if (!response.ok) throw new Error("The report could not be sent right now.");
+      setStatus("sent");
+      form.reset();
+    } catch (err) {
+      setStatus("error");
+      setError(err instanceof Error ? err.message : "The report could not be sent right now.");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-950/60 px-3 py-4 backdrop-blur-sm sm:px-4">
+      <div className="scrollbar-soft max-h-[92dvh] w-full max-w-xl overflow-y-auto rounded-2xl border border-white/60 bg-white p-4 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Report</p>
+            <h2 className="font-display text-2xl leading-tight sm:text-3xl">Send feedback</h2>
+            <p className="mt-1 text-sm text-slate-500">Share an issue, concern, or suggestion and it will go to the AnimeBoxD inbox.</p>
+          </div>
+          <button className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/70 text-slate-600 transition hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:text-slate-300" onClick={onClose} type="button" aria-label="Close report form">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {status === "sent" ? (
+          <div className="mt-5 rounded-2xl bg-teal-50 p-4 text-sm text-teal-800 dark:bg-teal-950/40 dark:text-teal-100">
+            Thanks. Your message has been sent.
+          </div>
+        ) : (
+          <form className="mt-5 grid gap-3" onSubmit={submitReport}>
+            <input className="hidden" name="website" tabIndex={-1} autoComplete="off" />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Name">
+                <input className={inputClass()} name="name" placeholder="Your name" />
+              </Field>
+              <Field label="Email">
+                <input className={inputClass()} name="email" type="email" placeholder="you@example.com" />
+              </Field>
+            </div>
+            <Field label="Type">
+              <select className={inputClass()} name="category" defaultValue="Suggestion">
+                <option>Issue</option>
+                <option>Concern</option>
+                <option>Suggestion</option>
+              </select>
+            </Field>
+            <Field label="Message">
+              <textarea className={clsx(inputClass(), "min-h-32 resize-y")} name="message" minLength={10} required placeholder="Tell us what happened or what you would like to see..." />
+            </Field>
+            {status === "error" && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-100">{error}</p>}
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <button className="text-sm font-semibold text-slate-500" onClick={onClose} type="button">Cancel</button>
+              <Button className="bg-teal-400 text-slate-950 hover:bg-teal-300" disabled={status === "sending"} type="submit">
+                <Send className="h-4 w-4" /> {status === "sending" ? "Sending..." : "Send report"}
+              </Button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -323,7 +427,7 @@ function SearchPanel({ onSelect }: { onSelect: (anime: AnimeSummary) => void }) 
       {!!results.length && (
         <div className="mt-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {results.map((anime) => (
-            <div key={anime.mal_id} className="rounded-xl border border-slate-200/70 bg-white/70 p-3 dark:border-slate-800 dark:bg-slate-900/70">
+            <div key={anime.mal_id} className="touch-card rounded-xl border border-slate-200/70 bg-white/70 p-3 dark:border-slate-800 dark:bg-slate-900/70">
               <img src={anime.image_url} alt="" className="aspect-[2/3] w-full rounded-lg object-cover" />
               <p className="mt-2 line-clamp-2 text-sm font-semibold text-slate-900 dark:text-white">{anime.title}</p>
               <Button className="mt-3 w-full bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => onSelect(anime)}><Plus className="h-4 w-4" /> Add to diary</Button>
@@ -368,7 +472,7 @@ function SearchMangaPanel({ onSelect }: { onSelect: (manga: MangaSummary) => voi
       {!!results.length && (
         <div className="mt-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {results.map((manga) => (
-            <div key={manga.mal_id} className="rounded-xl border border-slate-200/70 bg-white/70 p-3 dark:border-slate-800 dark:bg-slate-900/70">
+            <div key={manga.mal_id} className="touch-card rounded-xl border border-slate-200/70 bg-white/70 p-3 dark:border-slate-800 dark:bg-slate-900/70">
               <img src={manga.image_url} alt="" className="aspect-[2/3] w-full rounded-lg object-cover" />
               <p className="mt-2 line-clamp-2 text-sm font-semibold text-slate-900 dark:text-white">{manga.title}</p>
               <Button className="mt-3 w-full bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => onSelect(manga)}><Plus className="h-4 w-4" /> Add to manga</Button>
@@ -385,7 +489,7 @@ function CuratedGrid({ items, onAdd }: { items: AnimeSummary[]; onAdd: (anime: A
   return (
     <div className="grid grid-cols-1 gap-4 min-[520px]:grid-cols-2 xl:grid-cols-3">
       {safeItems.map((anime) => (
-        <div key={anime.mal_id} className="rounded-2xl border border-slate-200/70 bg-white/80 p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/70">
+        <div key={anime.mal_id} className="touch-card rounded-2xl border border-slate-200/70 bg-white/80 p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/70">
           <img src={anime.image_url} alt="" className="aspect-[2/3] w-full rounded-xl object-cover" />
           <p className="mt-2 line-clamp-2 text-sm font-semibold text-slate-900 dark:text-white">{anime.title}</p>
           <p className="mt-1 text-xs text-slate-500">{anime.year || "Unknown"} • {anime.genres.slice(0, 2).join(", ")}</p>
@@ -434,12 +538,38 @@ function isMangaEntry(manga: MangaSummary): manga is MangaEntry {
   return "status" in manga && "rating" in manga && "chapters_read" in manga;
 }
 
+function applyAnimeStatus(entry: LibraryEntry, status: LibraryStatus): LibraryEntry {
+  if (status === "Completed" && entry.total_episodes > 0) {
+    return { ...entry, status, episodes_watched: entry.total_episodes };
+  }
+  return { ...entry, status };
+}
+
+function applyMangaStatus(entry: MangaEntry, status: MangaStatus): MangaEntry {
+  if (status === "Completed") {
+    return {
+      ...entry,
+      status,
+      chapters_read: entry.total_chapters > 0 ? entry.total_chapters : entry.chapters_read,
+      volumes_read: entry.total_volumes > 0 ? entry.total_volumes : entry.volumes_read
+    };
+  }
+  return { ...entry, status };
+}
+
 function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave: (entry: LibraryEntry) => void; onCancel: () => void }) {
   const [status, setStatus] = useState<LibraryStatus>("Plan to Watch");
   const [ratingInput, setRatingInput] = useState("");
   const [episodesWatchedInput, setEpisodesWatchedInput] = useState("");
   const [review, setReview] = useState("");
   const [notes, setNotes] = useState("");
+  const [dropReason, setDropReason] = useState("");
+  const changeStatus = (nextStatus: LibraryStatus) => {
+    setStatus(nextStatus);
+    if (nextStatus === "Completed" && anime.total_episodes > 0) {
+      setEpisodesWatchedInput(String(anime.total_episodes));
+    }
+  };
 
   return (
     <div className="mx-auto grid max-w-4xl gap-6 px-3 py-4 sm:px-4 sm:py-6">
@@ -456,7 +586,7 @@ function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave
           <div className="grid gap-3">
             <div className="grid gap-2 sm:grid-cols-2">
               <Field label="Status">
-                <select className={inputClass()} value={status} onChange={(event) => setStatus(event.target.value as LibraryStatus)}>
+                <select className={inputClass()} value={status} onChange={(event) => changeStatus(event.target.value as LibraryStatus)}>
                   {statuses.map((item) => <option key={item} value={item}>{statusLabels[item]}</option>)}
                 </select>
               </Field>
@@ -488,12 +618,17 @@ function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave
             <Field label="Notes">
               <textarea className={clsx(inputClass(), "min-h-20")} value={notes} onChange={(event) => setNotes(event.target.value)} />
             </Field>
+            {status === "Dropped" && (
+              <Field label="Why did you drop it?">
+                <textarea className={clsx(inputClass(), "min-h-20")} placeholder="Too slow, not my style, bad pacing..." value={dropReason} onChange={(event) => setDropReason(event.target.value)} />
+              </Field>
+            )}
             <div className="flex items-center gap-2">
               <Button className="bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => {
                 const entry = mergeAnimeToEntry(anime);
                 const rating = ratingInput.trim() ? Number(ratingInput) : 0;
-                const episodesWatched = episodesWatchedInput.trim() ? Number(episodesWatchedInput) : 0;
-                onSave({ ...entry, status, rating, episodes_watched: episodesWatched, review, notes });
+                const episodesWatched = status === "Completed" && anime.total_episodes > 0 ? anime.total_episodes : episodesWatchedInput.trim() ? Number(episodesWatchedInput) : 0;
+                onSave(applyAnimeStatus({ ...entry, status, rating, episodes_watched: episodesWatched, review, notes, drop_reason: dropReason }, status));
               }}>Save</Button>
               <button className="text-sm font-semibold text-slate-500" onClick={onCancel}>Cancel</button>
             </div>
@@ -507,10 +642,10 @@ function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave
 function AddMangaPage({ manga, onSave, onCancel }: { manga: MangaSummary; onSave: (entry: MangaEntry) => void; onCancel: () => void }) {
   const [status, setStatus] = useState<MangaStatus>("Plan to Read");
   const [ratingInput, setRatingInput] = useState("");
-  const [chaptersReadInput, setChaptersReadInput] = useState("");
-  const [volumesReadInput, setVolumesReadInput] = useState("");
   const [review, setReview] = useState("");
   const [notes, setNotes] = useState("");
+  const [dropReason, setDropReason] = useState("");
+  const changeStatus = (nextStatus: MangaStatus) => setStatus(nextStatus);
 
   return (
     <div className="mx-auto grid max-w-4xl gap-6 px-3 py-4 sm:px-4 sm:py-6">
@@ -527,7 +662,7 @@ function AddMangaPage({ manga, onSave, onCancel }: { manga: MangaSummary; onSave
           <div className="grid gap-3">
             <div className="grid gap-2 sm:grid-cols-2">
               <Field label="Status">
-                <select className={inputClass()} value={status} onChange={(event) => setStatus(event.target.value as MangaStatus)}>
+                <select className={inputClass()} value={status} onChange={(event) => changeStatus(event.target.value as MangaStatus)}>
                   {mangaStatuses.map((item) => <option key={item} value={item}>{mangaStatusLabels[item]}</option>)}
                 </select>
               </Field>
@@ -542,26 +677,6 @@ function AddMangaPage({ manga, onSave, onCancel }: { manga: MangaSummary; onSave
                   onChange={(event) => setRatingInput(event.target.value)}
                 />
               </Field>
-              <Field label="Chapters read">
-                <input
-                  className={inputClass()}
-                  type="number"
-                  min={0}
-                  placeholder="0"
-                  value={chaptersReadInput}
-                  onChange={(event) => setChaptersReadInput(event.target.value)}
-                />
-              </Field>
-              <Field label="Volumes read">
-                <input
-                  className={inputClass()}
-                  type="number"
-                  min={0}
-                  placeholder="0"
-                  value={volumesReadInput}
-                  onChange={(event) => setVolumesReadInput(event.target.value)}
-                />
-              </Field>
             </div>
             <Field label="Review">
               <textarea className={clsx(inputClass(), "min-h-24")} value={review} onChange={(event) => setReview(event.target.value)} />
@@ -569,13 +684,16 @@ function AddMangaPage({ manga, onSave, onCancel }: { manga: MangaSummary; onSave
             <Field label="Notes">
               <textarea className={clsx(inputClass(), "min-h-20")} value={notes} onChange={(event) => setNotes(event.target.value)} />
             </Field>
+            {status === "Dropped" && (
+              <Field label="Why did you drop it?">
+                <textarea className={clsx(inputClass(), "min-h-20")} placeholder="Lost interest, pacing, story direction..." value={dropReason} onChange={(event) => setDropReason(event.target.value)} />
+              </Field>
+            )}
             <div className="flex items-center gap-2">
               <Button className="bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => {
                 const entry = mergeMangaToEntry(manga);
                 const rating = ratingInput.trim() ? Number(ratingInput) : 0;
-                const chaptersRead = chaptersReadInput.trim() ? Number(chaptersReadInput) : 0;
-                const volumesRead = volumesReadInput.trim() ? Number(volumesReadInput) : 0;
-                onSave({ ...entry, status, rating, chapters_read: chaptersRead, volumes_read: volumesRead, review, notes });
+                onSave(applyMangaStatus({ ...entry, status, rating, review, notes, drop_reason: dropReason }, status));
               }}>Save</Button>
               <button className="text-sm font-semibold text-slate-500" onClick={onCancel}>Cancel</button>
             </div>
@@ -593,7 +711,7 @@ function LibraryCard({ entry, onUpdate, onRemove }: { entry: LibraryEntry; onUpd
   const totalEpisodes = draft.total_episodes || Math.max(draft.episodes_watched, 1);
   const progress = Math.min(100, Math.round((draft.episodes_watched / totalEpisodes) * 100));
   return (
-    <div className="grid gap-3 rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/70">
+    <div className="touch-card grid gap-3 rounded-2xl border border-slate-200/70 bg-white/80 p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/70 sm:p-4">
       <div className="grid grid-cols-[64px_minmax(0,1fr)] items-start gap-3 sm:grid-cols-[72px_minmax(0,1fr)_auto]">
         <img src={entry.image_url} alt="" className="h-24 w-16 rounded-lg object-cover" />
         <div className="grid gap-1">
@@ -612,11 +730,14 @@ function LibraryCard({ entry, onUpdate, onRemove }: { entry: LibraryEntry; onUpd
           <div className="h-2 rounded-full bg-teal-500" style={{ width: `${progress}%` }} />
         </div>
       </div>
+      {draft.status === "Dropped" && draft.drop_reason && (
+        <p className="rounded-xl bg-rose-50 p-2 text-xs text-rose-700 dark:bg-rose-950/30 dark:text-rose-200">Dropped: {draft.drop_reason}</p>
+      )}
       {expanded && (
         <>
           <div className="grid gap-2 sm:grid-cols-3">
             <Field label="Status">
-              <select className={inputClass()} value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value as LibraryStatus })}>
+              <select className={inputClass()} value={draft.status} onChange={(event) => setDraft(applyAnimeStatus(draft, event.target.value as LibraryStatus))}>
                 {statuses.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}
               </select>
             </Field>
@@ -633,12 +754,17 @@ function LibraryCard({ entry, onUpdate, onRemove }: { entry: LibraryEntry; onUpd
           <Field label="Notes">
             <textarea className={clsx(inputClass(), "min-h-20")} value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} />
           </Field>
+          {draft.status === "Dropped" && (
+            <Field label="Why did you drop it?">
+              <textarea className={clsx(inputClass(), "min-h-20")} value={draft.drop_reason || ""} onChange={(event) => setDraft({ ...draft, drop_reason: event.target.value })} />
+            </Field>
+          )}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
               <span>Added {new Date(entry.added_at).toLocaleDateString()}</span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button className="bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => { onUpdate({ ...draft }); setExpanded(false); }}>Save</Button>
+              <Button className="bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => { onUpdate(applyAnimeStatus({ ...draft }, draft.status)); setExpanded(false); }}>Save</Button>
               <button className="inline-flex items-center gap-2 text-xs font-semibold text-rose-600" onClick={onRemove}><Trash2 className="h-4 w-4" /> Remove</button>
             </div>
           </div>
@@ -652,42 +778,31 @@ function MangaCard({ entry, onUpdate, onRemove }: { entry: MangaEntry; onUpdate:
   const [draft, setDraft] = useState(entry);
   useEffect(() => setDraft({ ...entry, review: entry.review || "" }), [entry]);
   const [expanded, setExpanded] = useState(false);
-  const totalChapters = draft.total_chapters || Math.max(draft.chapters_read, 1);
-  const progress = Math.min(100, Math.round((draft.chapters_read / totalChapters) * 100));
 
   return (
-    <div className="grid gap-3 rounded-2xl border border-teal-200/70 bg-white/80 p-4 shadow-sm dark:border-teal-900/50 dark:bg-slate-950/70">
+    <div className="touch-card grid gap-3 rounded-2xl border border-teal-200/70 bg-white/80 p-3 shadow-sm dark:border-teal-900/50 dark:bg-slate-950/70 sm:p-4">
       <div className="grid grid-cols-[64px_minmax(0,1fr)] items-start gap-3 sm:grid-cols-[72px_minmax(0,1fr)_auto]">
         <img src={entry.image_url} alt="" className="h-24 w-16 rounded-lg object-cover" />
         <div className="grid gap-1">
           <p className="font-semibold text-slate-900 dark:text-white">{entry.title}</p>
           <p className="text-xs text-slate-500">{mangaStatusLabels[draft.status]} • {draft.rating || "-"}/10</p>
-          <p className="text-xs text-slate-500">{draft.chapters_read}/{totalChapters} chapters</p>
+          <p className="line-clamp-1 text-xs text-slate-500">{draft.genres.slice(0, 3).join(", ") || "Manga entry"}</p>
         </div>
         <button className="col-span-2 inline-flex items-center gap-1 text-xs font-semibold text-teal-600 sm:col-span-1" onClick={() => setExpanded((prev) => !prev)}>
           {expanded ? "Collapse" : "Edit"}
           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </button>
       </div>
-      <div>
-        <div className="mb-1 flex justify-between text-xs text-slate-500"><span>Progress</span><span>{progress}%</span></div>
-        <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800">
-          <div className="h-2 rounded-full bg-teal-400" style={{ width: `${progress}%` }} />
-        </div>
-      </div>
+      {draft.status === "Dropped" && draft.drop_reason && (
+        <p className="rounded-xl bg-rose-50 p-2 text-xs text-rose-700 dark:bg-rose-950/30 dark:text-rose-200">Dropped: {draft.drop_reason}</p>
+      )}
       {expanded && (
         <>
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-2">
             <Field label="Status">
-              <select className={inputClass()} value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value as MangaStatus })}>
+              <select className={inputClass()} value={draft.status} onChange={(event) => setDraft(applyMangaStatus(draft, event.target.value as MangaStatus))}>
                 {mangaStatuses.map((status) => <option key={status} value={status}>{mangaStatusLabels[status]}</option>)}
               </select>
-            </Field>
-            <Field label="Chapters read">
-              <input className={inputClass()} type="number" min={0} max={draft.total_chapters || undefined} value={draft.chapters_read} onChange={(event) => setDraft({ ...draft, chapters_read: Number(event.target.value) })} />
-            </Field>
-            <Field label="Volumes read">
-              <input className={inputClass()} type="number" min={0} max={draft.total_volumes || undefined} value={draft.volumes_read} onChange={(event) => setDraft({ ...draft, volumes_read: Number(event.target.value) })} />
             </Field>
             <Field label="Rating">
               <input className={inputClass()} type="number" min={0} max={10} value={draft.rating} onChange={(event) => setDraft({ ...draft, rating: Number(event.target.value) })} />
@@ -699,12 +814,17 @@ function MangaCard({ entry, onUpdate, onRemove }: { entry: MangaEntry; onUpdate:
           <Field label="Notes">
             <textarea className={clsx(inputClass(), "min-h-20")} value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} />
           </Field>
+          {draft.status === "Dropped" && (
+            <Field label="Why did you drop it?">
+              <textarea className={clsx(inputClass(), "min-h-20")} value={draft.drop_reason || ""} onChange={(event) => setDraft({ ...draft, drop_reason: event.target.value })} />
+            </Field>
+          )}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
               <span>Added {new Date(entry.added_at).toLocaleDateString()}</span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button className="bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => { onUpdate({ ...draft }); setExpanded(false); }}>Save</Button>
+              <Button className="bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => { onUpdate(applyMangaStatus({ ...draft }, draft.status)); setExpanded(false); }}>Save</Button>
               <button className="inline-flex items-center gap-2 text-xs font-semibold text-rose-600" onClick={onRemove}><Trash2 className="h-4 w-4" /> Remove</button>
             </div>
           </div>
@@ -1378,21 +1498,24 @@ function DashboardPage({ data, onClearHistory }: { data: AppData; onClearHistory
 
   const rated = data.library.filter((entry) => entry.rating > 0);
   const averageRating = rated.length ? (rated.reduce((sum, entry) => sum + entry.rating, 0) / rated.length).toFixed(1) : "-";
-  const completionRate = counts.total ? Math.round((counts.completed / counts.total) * 100) : 0;
   const mangaRated = data.mangaLibrary.filter((entry) => entry.rating > 0);
   const mangaAverage = mangaRated.length ? (mangaRated.reduce((sum, entry) => sum + entry.rating, 0) / mangaRated.length).toFixed(1) : "-";
-  const mangaCompletionRate = mangaCounts.total ? Math.round((mangaCounts.completed / mangaCounts.total) * 100) : 0;
   const totalEntries = counts.total + mangaCounts.total;
   const totalCompleted = counts.completed + mangaCounts.completed;
   const totalInProgress = counts.watching + mangaCounts.reading;
   const overallCompletion = totalEntries ? Math.round((totalCompleted / totalEntries) * 100) : 0;
-  const animeProgressWidth = counts.total ? Math.round((counts.completed / counts.total) * 100) : 0;
-  const mangaProgressWidth = mangaCounts.total ? Math.round((mangaCounts.completed / mangaCounts.total) * 100) : 0;
+  const watchedEpisodes = data.library.reduce((sum, entry) => sum + Math.max(0, entry.episodes_watched || 0), 0);
+  const totalKnownEpisodes = data.library.reduce((sum, entry) => sum + Math.max(0, entry.total_episodes || 0), 0);
+  const watchedKnownEpisodes = data.library.reduce((sum, entry) => entry.total_episodes > 0 ? sum + Math.min(Math.max(0, entry.episodes_watched || 0), entry.total_episodes) : sum, 0);
+  const animeProgressWidth = totalKnownEpisodes ? Math.round((watchedKnownEpisodes / totalKnownEpisodes) * 100) : 0;
+  const mangaCompletionWidth = mangaCounts.total ? Math.round((mangaCounts.completed / mangaCounts.total) * 100) : 0;
+  const animeProgressLabel = totalKnownEpisodes ? `${watchedKnownEpisodes}/${totalKnownEpisodes} known episodes` : `${watchedEpisodes} episodes logged`;
+  const mangaCompletionLabel = mangaCounts.total ? `${mangaCounts.completed}/${mangaCounts.total} completed` : "No manga saved yet";
   const averageAcrossLibraries = [...rated.map((entry) => entry.rating), ...mangaRated.map((entry) => entry.rating)];
   const combinedAverage = averageAcrossLibraries.length ? (averageAcrossLibraries.reduce((sum, rating) => sum + rating, 0) / averageAcrossLibraries.length).toFixed(1) : "-";
   const recentHistory = [
     ...data.library.map((entry) => ({ kind: "Anime" as const, title: entry.title, image: entry.image_url, status: statusLabels[entry.status], detail: `${entry.episodes_watched}/${entry.total_episodes || "?"} eps`, rating: entry.rating, date: entry.added_at })),
-    ...data.mangaLibrary.map((entry) => ({ kind: "Manga" as const, title: entry.title, image: entry.image_url, status: mangaStatusLabels[entry.status], detail: `${entry.chapters_read}/${entry.total_chapters || "?"} ch`, rating: entry.rating, date: entry.added_at }))
+    ...data.mangaLibrary.map((entry) => ({ kind: "Manga" as const, title: entry.title, image: entry.image_url, status: mangaStatusLabels[entry.status], detail: entry.genres.slice(0, 2).join(", ") || "Manga", rating: entry.rating, date: entry.added_at }))
   ]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 8);
@@ -1420,22 +1543,22 @@ function DashboardPage({ data, onClearHistory }: { data: AppData; onClearHistory
         <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-2xl border border-teal-200/70 bg-teal-50/60 p-4 dark:border-teal-900/60 dark:bg-teal-950/20">
             <p className="text-sm font-semibold text-slate-500">Total saved</p>
-            <p className="mt-1 text-4xl font-black">{totalEntries}</p>
+            <p className="mt-1 text-3xl font-black sm:text-4xl">{totalEntries}</p>
             <p className="text-xs text-slate-500">{counts.total} anime • {mangaCounts.total} manga</p>
           </div>
           <div className="rounded-2xl border border-teal-200/70 bg-white/70 p-4 dark:border-teal-900/50 dark:bg-slate-950/70">
             <p className="text-sm font-semibold text-slate-500">Completed</p>
-            <p className="mt-1 text-4xl font-black">{totalCompleted}</p>
+            <p className="mt-1 text-3xl font-black sm:text-4xl">{totalCompleted}</p>
             <p className="text-xs text-slate-500">{overallCompletion}% of your library</p>
           </div>
           <div className="rounded-2xl border border-teal-200/70 bg-white/70 p-4 dark:border-teal-900/50 dark:bg-slate-950/70">
             <p className="text-sm font-semibold text-slate-500">In progress</p>
-            <p className="mt-1 text-4xl font-black">{totalInProgress}</p>
+            <p className="mt-1 text-3xl font-black sm:text-4xl">{totalInProgress}</p>
             <p className="text-xs text-slate-500">{counts.watching} watching • {mangaCounts.reading} reading</p>
           </div>
           <div className="rounded-2xl border border-teal-200/70 bg-white/70 p-4 dark:border-teal-900/50 dark:bg-slate-950/70">
             <p className="text-sm font-semibold text-slate-500">Average rating</p>
-            <p className="mt-1 text-4xl font-black">{combinedAverage}</p>
+            <p className="mt-1 text-3xl font-black sm:text-4xl">{combinedAverage}</p>
             <p className="text-xs text-slate-500">Anime {averageRating} • Manga {mangaAverage}</p>
           </div>
         </div>
@@ -1447,12 +1570,11 @@ function DashboardPage({ data, onClearHistory }: { data: AppData; onClearHistory
               <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Anime</p>
               <h3 className="font-display text-3xl">Watch history</h3>
             </div>
-            <p className="text-3xl font-black">{counts.total}</p>
           </div>
           <div>
             <div className="mb-1 flex justify-between text-xs font-semibold text-slate-500">
-              <span>Completed</span>
-              <span>{completionRate}%</span>
+              <span>Episodes watched</span>
+              <span>{animeProgressLabel}</span>
             </div>
             <div className="h-3 rounded-full bg-slate-100 dark:bg-slate-800">
               <div className="h-3 rounded-full bg-teal-500" style={{ width: `${animeProgressWidth}%` }} />
@@ -1471,15 +1593,14 @@ function DashboardPage({ data, onClearHistory }: { data: AppData; onClearHistory
               <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Manga</p>
               <h3 className="font-display text-3xl">Reading history</h3>
             </div>
-            <p className="text-3xl font-black">{mangaCounts.total}</p>
           </div>
           <div>
             <div className="mb-1 flex justify-between text-xs font-semibold text-slate-500">
-              <span>Completed</span>
-              <span>{mangaCompletionRate}%</span>
+              <span>Completed manga</span>
+              <span>{mangaCompletionLabel}</span>
             </div>
             <div className="h-3 rounded-full bg-slate-100 dark:bg-slate-800">
-              <div className="h-3 rounded-full bg-teal-500" style={{ width: `${mangaProgressWidth}%` }} />
+              <div className="h-3 rounded-full bg-teal-500" style={{ width: `${mangaCompletionWidth}%` }} />
             </div>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center text-xs font-semibold text-slate-600 dark:text-slate-300">
@@ -1543,6 +1664,7 @@ function App() {
   const [page, setPage] = useState<"home" | "stuff" | "manga" | "add" | "add-manga" | "dashboard" | "explore">("home");
   const [selectedAnime, setSelectedAnime] = useState<AnimeSummary | null>(null);
   const [selectedManga, setSelectedManga] = useState<MangaSummary | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
   useTheme(data.settings);
 
   useEffect(() => {
@@ -1644,8 +1766,10 @@ function App() {
         onMyManga={() => setPage("manga")}
         onDashboard={() => setPage("dashboard")}
         onExplore={() => setPage("explore")}
+        onReportIssue={() => setReportOpen(true)}
         activePage={page}
       />
+      {reportOpen && <ReportIssueModal onClose={() => setReportOpen(false)} />}
       {page === "home" && <HomePage addAnime={startAddFlow} />}
       {page === "explore" && <ExplorePage onAddAnime={startAddFlow} onAddManga={startAddMangaFlow} />}
       {page === "stuff" && <MyStuffPage data={data} onSelect={startAddFlow} updateEntry={updateEntry} removeEntry={removeEntry} updateData={updateData} onBack={() => setPage("home")} />}

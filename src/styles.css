@@ -49,11 +49,41 @@ canvas {
   max-width: 100%;
 }
 
+img {
+  height: auto;
+}
+
 button,
 input,
 textarea,
 select {
   font: inherit;
+}
+
+input,
+textarea,
+select {
+  min-width: 0;
+}
+
+.scrollbar-soft {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(20, 184, 166, 0.55) transparent;
+}
+
+.scrollbar-soft::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.scrollbar-soft::-webkit-scrollbar-thumb {
+  background: rgba(20, 184, 166, 0.55);
+  border-radius: 999px;
+}
+
+.touch-card {
+  min-width: 0;
+  overflow: hidden;
 }
 
 .heatmap .color-empty {
@@ -166,5 +196,19 @@ select {
   .glass-card {
     border-radius: 1rem;
     padding: 1rem;
+  }
+
+  .button-glow {
+    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08), 0 8px 18px rgba(124, 58, 237, 0.18);
+  }
+}
+
+@media (max-width: 420px) {
+  .glass-card {
+    padding: 0.875rem;
+  }
+
+  .page-shell {
+    font-size: 15px;
   }
 }

@@ -238,7 +238,7 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
             </Field>
             {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{error}</p>}
             <Button onClick={submit}>{mode === "signup" ? "Create diary" : "Enter diary"}</Button>
-            <button className="text-sm font-semibold text-teal-600" onClick={loginDemo}>Use demo user</button>
+            <button className="button-ghost" onClick={loginDemo}>Use demo user</button>
           </div>
         </Card>
       </div>
@@ -382,7 +382,7 @@ function ReportIssueModal({ onClose }: { onClose: () => void }) {
             </Field>
             {status === "error" && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-100">{error}</p>}
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <button className="text-sm font-semibold text-slate-500" onClick={onClose} type="button">Cancel</button>
+              <button className="button-ghost" onClick={onClose} type="button">Cancel</button>
               <Button className="bg-teal-400 text-slate-950 hover:bg-teal-300" disabled={status === "sending"} type="submit">
                 <Send className="h-4 w-4" /> {status === "sending" ? "Sending..." : "Send report"}
               </Button>
@@ -579,7 +579,7 @@ function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave
             <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Add to diary</p>
             <h2 className="break-words font-display text-3xl leading-tight sm:text-4xl">{anime.title}</h2>
           </div>
-          <button className="self-start text-sm font-semibold text-slate-500 sm:self-auto" onClick={onCancel}>Back</button>
+          <button className="button-ghost self-start sm:self-auto" onClick={onCancel}>Back</button>
         </div>
         <div className="grid gap-4 sm:grid-cols-[140px_1fr] md:grid-cols-[170px_1fr]">
           <img src={anime.image_url} alt="" className="mx-auto aspect-[2/3] w-40 rounded-xl object-cover sm:w-full" />
@@ -630,7 +630,7 @@ function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave
                 const episodesWatched = status === "Completed" && anime.total_episodes > 0 ? anime.total_episodes : episodesWatchedInput.trim() ? Number(episodesWatchedInput) : 0;
                 onSave(applyAnimeStatus({ ...entry, status, rating, episodes_watched: episodesWatched, review, notes, drop_reason: dropReason }, status));
               }}>Save</Button>
-              <button className="text-sm font-semibold text-slate-500" onClick={onCancel}>Cancel</button>
+              <button className="button-ghost" onClick={onCancel}>Cancel</button>
             </div>
           </div>
         </div>
@@ -655,7 +655,7 @@ function AddMangaPage({ manga, onSave, onCancel }: { manga: MangaSummary; onSave
             <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Add to manga shelf</p>
             <h2 className="break-words font-display text-3xl leading-tight sm:text-4xl">{manga.title}</h2>
           </div>
-          <button className="self-start text-sm font-semibold text-slate-500 sm:self-auto" onClick={onCancel}>Back</button>
+          <button className="button-ghost self-start sm:self-auto" onClick={onCancel}>Back</button>
         </div>
         <div className="grid gap-4 sm:grid-cols-[140px_1fr] md:grid-cols-[170px_1fr]">
           <img src={manga.image_url} alt="" className="mx-auto aspect-[2/3] w-40 rounded-xl object-cover sm:w-full" />
@@ -695,7 +695,7 @@ function AddMangaPage({ manga, onSave, onCancel }: { manga: MangaSummary; onSave
                 const rating = ratingInput.trim() ? Number(ratingInput) : 0;
                 onSave(applyMangaStatus({ ...entry, status, rating, review, notes, drop_reason: dropReason }, status));
               }}>Save</Button>
-              <button className="text-sm font-semibold text-slate-500" onClick={onCancel}>Cancel</button>
+              <button className="button-ghost" onClick={onCancel}>Cancel</button>
             </div>
           </div>
         </div>
@@ -852,12 +852,15 @@ function HomePage({ addAnime }: { addAnime: (anime: AnimeSummary) => void }) {
 
   return (
     <div className="mx-auto grid max-w-5xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
-      <Card className="grid gap-2">
-        <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Animeboxd</p>
-        <h1 className="font-display text-4xl leading-tight sm:text-5xl">Keep your anime life in one cozy place.</h1>
-        <p className="max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-          Find something new to watch, save it to your diary, rate what you finish, and keep the little notes you will want to remember later.
-        </p>
+      <Card className="hero-banner grid min-h-[140px] content-start justify-items-end gap-1 pt-4 text-right text-white sm:min-h-[190px] sm:pt-6">
+        <img className="hero-media" src="/homepageheader.jpg" alt="Animeboxd hero collage" />
+        <h1 className="hero-title font-display text-5xl leading-none sm:text-6xl">Animeboxd</h1>
+        <div className="hero-tagline max-w-md text-base italic text-white/90 sm:text-lg">
+          <ul className="m-0 list-none space-y-2 p-0 text-right">
+            <li>🍥 anime</li>
+            <li>🍥 manga</li>
+          </ul>
+        </div>
       </Card>
       <Section title="Random Picks" icon={<Film className="h-5 w-5" />}>
         <div className="flex justify-end">
@@ -875,7 +878,7 @@ type ExploreMode = "anime" | "manga";
 type AnimeStaff = { person: { name: string }; positions: string[] };
 type AnimeCharacter = { character: { name: string }; role: string; voice_actors?: { person: { name: string }; language: string }[] };
 
-function ExplorePage({ onAddAnime, onAddManga }: { onAddAnime: (anime: AnimeSummary) => void; onAddManga: (manga: MangaSummary) => void }) {
+function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: AnimeSummary) => void; onAddManga: (manga: MangaSummary) => void; onBack: () => void }) {
   const [mode, setMode] = useState<ExploreMode>("anime");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<(AnimeSummary | MangaSummary)[]>([]);
@@ -965,10 +968,13 @@ function ExplorePage({ onAddAnime, onAddManga }: { onAddAnime: (anime: AnimeSumm
   return (
     <div className="mx-auto grid max-w-5xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
       <Card className="grid gap-4">
-        <div className="grid gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="grid gap-2">
           <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Explore</p>
           <h2 className="font-display text-3xl leading-tight sm:text-4xl">Deep dive into anime and manga.</h2>
           <p className="text-sm text-slate-500">Search titles and open a full production dossier with cast, staff, and music details.</p>
+          </div>
+          <Button className="bg-rose-600 hover:bg-rose-700" onClick={onBack}>Back to home</Button>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button className={clsx("rounded-xl border px-3 py-2 text-sm font-semibold", mode === "anime" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300")} onClick={() => setMode("anime")}>
@@ -1011,7 +1017,7 @@ function ExplorePage({ onAddAnime, onAddManga }: { onAddAnime: (anime: AnimeSumm
         </Card>
         <Card className={clsx("grid gap-4 lg:max-h-[72vh] lg:overflow-auto", selectedId ? "grid" : "hidden lg:grid")}>
           {selectedId && (
-            <button className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200/70 bg-white/80 px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-200" onClick={() => setSelectedId(null)}>
+            <button className="button-ghost" onClick={() => setSelectedId(null)}>
               Back to results
             </button>
           )}
@@ -1138,7 +1144,7 @@ function ExplorePage({ onAddAnime, onAddManga }: { onAddAnime: (anime: AnimeSumm
   );
 }
 
-function MyStuffPage({ data, onSelect, updateEntry, removeEntry, updateData, onBack }: { data: AppData; onSelect: (anime: AnimeSummary) => void; updateEntry: (entry: LibraryEntry) => void; removeEntry: (id: number) => void; updateData: (patch: Partial<AppData>) => void; onBack: () => void }) {
+function MyStuffPage({ data, onSelect, updateEntry, removeEntry, updateData, onBack, onClearHistory }: { data: AppData; onSelect: (anime: AnimeSummary) => void; updateEntry: (entry: LibraryEntry) => void; removeEntry: (id: number) => void; updateData: (patch: Partial<AppData>) => void; onBack: () => void; onClearHistory: () => void }) {
   const grouped = useMemo(() => {
     return sections.map((section) => ({
       ...section,
@@ -1162,7 +1168,10 @@ function MyStuffPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
     <div className="mx-auto grid max-w-6xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-display text-3xl leading-tight">My Anime</h2>
-        <button className="text-sm font-semibold text-teal-600" onClick={onBack}>Back to home</button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button className="bg-rose-600 hover:bg-rose-700" onClick={onClearHistory}>Clear history</Button>
+          <Button className="bg-rose-600 hover:bg-rose-700" onClick={onBack}>Back to home</Button>
+        </div>
       </div>
       <Card className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="grid gap-2">
@@ -1217,7 +1226,7 @@ function MyStuffPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
   );
 }
 
-function MyMangaPage({ data, onSelect, updateEntry, removeEntry, updateData, onBack }: { data: AppData; onSelect: (manga: MangaSummary) => void; updateEntry: (entry: MangaEntry) => void; removeEntry: (id: number) => void; updateData: (patch: Partial<AppData>) => void; onBack: () => void }) {
+function MyMangaPage({ data, onSelect, updateEntry, removeEntry, updateData, onBack, onClearHistory }: { data: AppData; onSelect: (manga: MangaSummary) => void; updateEntry: (entry: MangaEntry) => void; removeEntry: (id: number) => void; updateData: (patch: Partial<AppData>) => void; onBack: () => void; onClearHistory: () => void }) {
   const grouped = useMemo(() => {
     return mangaSections.map((section) => ({
       ...section,
@@ -1241,7 +1250,10 @@ function MyMangaPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
     <div className="mx-auto grid max-w-6xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-display text-3xl leading-tight">My Manga</h2>
-        <button className="text-sm font-semibold text-teal-600" onClick={onBack}>Back to home</button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button className="bg-rose-600 hover:bg-rose-700" onClick={onClearHistory}>Clear history</Button>
+          <Button className="bg-rose-600 hover:bg-rose-700" onClick={onBack}>Back to home</Button>
+        </div>
       </div>
       <Card className="grid gap-4 border border-teal-200/70 bg-teal-50/40 dark:border-teal-900/60 dark:bg-slate-950/70 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="grid gap-2">
@@ -1478,7 +1490,7 @@ function MangaHighlights({ data, updateData }: { data: AppData; updateData: (pat
   );
 }
 
-function DashboardPage({ data, onClearHistory }: { data: AppData; onClearHistory: () => void }) {
+function DashboardPage({ data, onClearHistory, onBack }: { data: AppData; onClearHistory: () => void; onBack: () => void }) {
   const counts = {
     total: data.library.length,
     watching: data.library.filter((entry) => entry.status === "Watching").length,
@@ -1532,7 +1544,10 @@ function DashboardPage({ data, onClearHistory }: { data: AppData; onClearHistory
     <div className="mx-auto grid max-w-6xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-display text-3xl leading-tight">Dashboard</h2>
-        <Button className="bg-rose-600 hover:bg-rose-700" onClick={onClearHistory}>Clear history</Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button className="bg-rose-600 hover:bg-rose-700" onClick={onClearHistory}>Clear history</Button>
+          <Button className="bg-rose-600 hover:bg-rose-700" onClick={onBack}>Back to home</Button>
+        </div>
       </div>
       <Card className="grid gap-4">
         <div>
@@ -1752,6 +1767,16 @@ function App() {
     setData((prev) => ({ ...prev, library: [], mangaLibrary: [] }));
   };
 
+  const clearAnimeHistory = () => {
+    if (!confirm("Clear all anime history for this account?")) return;
+    setData((prev) => ({ ...prev, library: [] }));
+  };
+
+  const clearMangaHistory = () => {
+    if (!confirm("Clear all manga history for this account?")) return;
+    setData((prev) => ({ ...prev, mangaLibrary: [] }));
+  };
+
   if (!userId) return <AuthPage onLogin={handleLogin} />;
 
   return (
@@ -1771,10 +1796,10 @@ function App() {
       />
       {reportOpen && <ReportIssueModal onClose={() => setReportOpen(false)} />}
       {page === "home" && <HomePage addAnime={startAddFlow} />}
-      {page === "explore" && <ExplorePage onAddAnime={startAddFlow} onAddManga={startAddMangaFlow} />}
-      {page === "stuff" && <MyStuffPage data={data} onSelect={startAddFlow} updateEntry={updateEntry} removeEntry={removeEntry} updateData={updateData} onBack={() => setPage("home")} />}
-      {page === "manga" && <MyMangaPage data={data} onSelect={startAddMangaFlow} updateEntry={updateMangaEntry} removeEntry={removeMangaEntry} updateData={updateData} onBack={() => setPage("home")} />}
-      {page === "dashboard" && <DashboardPage data={data} onClearHistory={clearHistory} />}
+      {page === "explore" && <ExplorePage onAddAnime={startAddFlow} onAddManga={startAddMangaFlow} onBack={() => setPage("home")} />}
+      {page === "stuff" && <MyStuffPage data={data} onSelect={startAddFlow} updateEntry={updateEntry} removeEntry={removeEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={clearAnimeHistory} />}
+      {page === "manga" && <MyMangaPage data={data} onSelect={startAddMangaFlow} updateEntry={updateMangaEntry} removeEntry={removeMangaEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={clearMangaHistory} />}
+      {page === "dashboard" && <DashboardPage data={data} onClearHistory={clearHistory} onBack={() => setPage("home")} />}
       {page === "add" && selectedAnime && (
         <AddEntryPage
           anime={selectedAnime}

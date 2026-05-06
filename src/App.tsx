@@ -544,7 +544,6 @@ function SiteFooter() {
   return (
     <footer className="mx-auto grid max-w-6xl gap-3 px-3 pb-8 pt-4 text-sm text-slate-500 sm:px-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <p>AnimeBoxD is an independent anime and manga diary.</p>
         <div className="flex flex-wrap items-center gap-3">
           <ShareSiteButton />
           <nav className="flex flex-wrap gap-3">

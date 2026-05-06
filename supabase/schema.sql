@@ -8,7 +8,7 @@ create table if not exists public.profiles (
   username text not null default 'Anime fan',
   avatar text not null default '✨',
   bio text not null default '',
-  is_public boolean not null default true,
+  is_public boolean not null default false,
   is_admin boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -46,10 +46,14 @@ alter table public.user_app_data enable row level security;
 alter table public.user_reports enable row level security;
 alter table public.anime_home_cache enable row level security;
 
+alter table public.profiles
+alter column is_public set default false;
+
 drop policy if exists "Profiles are viewable by owner or public" on public.profiles;
-create policy "Profiles are viewable by owner or public"
+drop policy if exists "Users read their own profile" on public.profiles;
+create policy "Users read their own profile"
 on public.profiles for select
-using (is_public = true or auth.uid() = id);
+using (auth.uid() = id);
 
 drop policy if exists "Users update their own profile" on public.profiles;
 create policy "Users update their own profile"

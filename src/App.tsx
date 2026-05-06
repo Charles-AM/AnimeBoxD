@@ -370,9 +370,6 @@ function Header({ user, theme, onThemeChange, onLogout, onHome, onMyStuff, onMyM
           <button className={clsx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-2.5 py-2 text-sm font-semibold transition sm:gap-2 sm:px-3", activePage === "dashboard" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onDashboard}>
             Dashboard
           </button>
-          <button className={clsx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-2.5 py-2 text-sm font-semibold transition sm:gap-2 sm:px-3", activePage === "profile" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onProfile}>
-            {user.avatar} <span className="max-w-24 truncate sm:max-w-32">{user.name}</span>
-          </button>
           <button
             className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200/70 bg-white/80 px-2.5 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200 sm:gap-2 sm:px-3"
             onClick={onReportIssue}
@@ -383,6 +380,13 @@ function Header({ user, theme, onThemeChange, onLogout, onHome, onMyStuff, onMyM
           <select className={clsx(inputClass(), "!w-28 shrink-0")} value={theme} onChange={(event) => onThemeChange(event.target.value as ThemeMode)}>
             {["Dark", "Light", "System"].map((item) => <option key={item}>{item}</option>)}
           </select>
+          <button className={clsx("inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-sm font-semibold shadow-sm transition hover:-translate-y-0.5 sm:px-3", activePage === "profile" ? "border-teal-400 bg-teal-50 text-teal-900 dark:bg-teal-400 dark:text-slate-950" : "border-slate-200/70 bg-white/90 text-slate-700 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-200")} onClick={onProfile} type="button">
+            <span className="grid h-7 w-7 place-items-center rounded-full bg-teal-100 text-base dark:bg-slate-950/60">{user.avatar}</span>
+            <span className="grid min-w-0 text-left leading-tight">
+              <span className="max-w-24 truncate text-xs font-black sm:max-w-32">{user.name}</span>
+              <span className="hidden text-[10px] font-semibold text-slate-500 dark:text-slate-400 sm:block">Profile</span>
+            </span>
+          </button>
           <button className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/70 bg-white/80 text-slate-700 transition hover:-translate-y-0.5 hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200 lg:inline-flex" onClick={onLogout} aria-label="Log out">
             <LogOut className="h-4 w-4" />
           </button>
@@ -1958,10 +1962,10 @@ function ProfilePage({ data, memberSince, onBack, onSaveProfile, onDeleteAccount
             </Field>
             <label className="flex items-center justify-between gap-3 rounded-xl bg-slate-100 p-3 text-sm font-semibold text-slate-700 dark:bg-slate-950/70 dark:text-slate-200">
               <span>
-                Public profile
-                <span className="block text-xs font-normal text-slate-500">Mock visibility for now, ready for public profiles later.</span>
+                Keep profile private
+                <span className="block text-xs font-normal text-slate-500">Profiles are private while AnimeBoxD has no social user connections.</span>
               </span>
-              <input className="h-5 w-5 accent-teal-500" type="checkbox" checked={isPublic} onChange={(event) => setIsPublic(event.target.checked)} />
+              <input className="h-5 w-5 accent-teal-500" type="checkbox" checked={!isPublic} onChange={(event) => setIsPublic(!event.target.checked)} />
             </label>
             {status === "error" && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-100">{error}</p>}
             {status === "saved" && <p className="rounded-xl bg-teal-50 p-3 text-sm font-semibold text-teal-800 dark:bg-teal-950/40 dark:text-teal-100">Profile saved.</p>}

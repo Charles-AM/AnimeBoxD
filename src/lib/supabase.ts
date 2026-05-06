@@ -57,7 +57,7 @@ export function userToProfileFallback(user: User): CloudProfile {
     username: (user.user_metadata?.username as string) || user.email?.split("@")[0] || "Anime fan",
     avatar: (user.user_metadata?.avatar as string) || "✨",
     bio: "",
-    is_public: true,
+    is_public: false,
     created_at: user.created_at
   };
 }
@@ -89,7 +89,7 @@ export async function signUpWithEmail(email: string, password: string, username:
       username,
       avatar: "✨",
       bio: "",
-      is_public: true,
+      is_public: false,
       created_at: data.user.created_at
     });
     await ensureCloudData(data.user.id, username);
@@ -110,7 +110,7 @@ export async function signInWithEmail(email: string, password: string) {
         username,
         avatar: (data.user.user_metadata?.avatar as string) || "✨",
         bio: "",
-        is_public: true,
+        is_public: false,
         created_at: data.user.created_at
       });
     }

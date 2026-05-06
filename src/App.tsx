@@ -220,7 +220,7 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
             <div className="min-w-0">
               <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Animeboxd</p>
               <h1 className="font-display text-4xl leading-tight sm:text-5xl">Welcome back</h1>
-              <p className="text-sm text-slate-500">Sign up or sign in to your personal diary.</p>
+              <p className="text-sm text-slate-500">Pick up where you left off.</p>
             </div>
             <Film className="h-10 w-10 shrink-0 text-teal-500" />
           </div>
@@ -351,7 +351,7 @@ function ReportIssueModal({ onClose }: { onClose: () => void }) {
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Report</p>
             <h2 className="font-display text-2xl leading-tight sm:text-3xl">Send feedback</h2>
-            <p className="mt-1 text-sm text-slate-500">Share an issue, concern, or suggestion and it will go to the AnimeBoxD inbox.</p>
+            <p className="mt-1 text-sm text-slate-500">Tell me what broke, felt off, or could be better.</p>
           </div>
           <button className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/70 text-slate-600 transition hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:text-slate-300" onClick={onClose} type="button" aria-label="Close report form">
             <X className="h-5 w-5" />
@@ -381,7 +381,7 @@ function ReportIssueModal({ onClose }: { onClose: () => void }) {
               </select>
             </Field>
             <Field label="Message">
-              <textarea className={clsx(inputClass(), "min-h-32 resize-y")} name="message" minLength={10} required placeholder="Tell us what happened or what you would like to see..." />
+              <textarea className={clsx(inputClass(), "min-h-32 resize-y")} name="message" minLength={10} required placeholder="What should I know?" />
             </Field>
             {status === "error" && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-100">{error}</p>}
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -421,9 +421,9 @@ function SearchPanel({ onSelect }: { onSelect: (anime: AnimeSummary) => void }) 
 
   return (
     <Card>
-      <div className="flex items-center gap-2">
+      <div className="grid grid-cols-[20px_minmax(0,1fr)] items-center gap-2">
         <Search className="h-5 w-5 text-slate-400" />
-        <input className={clsx(inputClass(), "w-full border-0 bg-transparent px-0 focus:border-0")} placeholder="Search anime to add" value={query} onChange={(event) => setQuery(event.target.value)} />
+        <input className={clsx(inputClass(), "border-0 bg-transparent px-0 focus:border-0")} placeholder="Search anime" value={query} onChange={(event) => setQuery(event.target.value)} />
       </div>
       {loading && <div className="mt-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-40 animate-pulse rounded-md bg-slate-100 dark:bg-slate-800" />)}</div>}
       {error && <p className="mt-3 rounded-md bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950 dark:text-rose-200">{error}</p>}
@@ -466,9 +466,9 @@ function SearchMangaPanel({ onSelect }: { onSelect: (manga: MangaSummary) => voi
 
   return (
     <Card>
-      <div className="flex items-center gap-2">
+      <div className="grid grid-cols-[20px_minmax(0,1fr)] items-center gap-2">
         <Search className="h-5 w-5 text-slate-400" />
-        <input className={clsx(inputClass(), "w-full border-0 bg-transparent px-0 focus:border-0")} placeholder="Search manga to add" value={query} onChange={(event) => setQuery(event.target.value)} />
+        <input className={clsx(inputClass(), "border-0 bg-transparent px-0 focus:border-0")} placeholder="Search manga" value={query} onChange={(event) => setQuery(event.target.value)} />
       </div>
       {loading && <div className="mt-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-40 animate-pulse rounded-md bg-slate-100 dark:bg-slate-800" />)}</div>}
       {error && <p className="mt-3 rounded-md bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950 dark:text-rose-200">{error}</p>}
@@ -867,7 +867,7 @@ function AnimeRail({ title, kicker, items, onAdd }: { title: string; kicker: str
         </div>
       ) : (
         <Card className="py-4">
-          <p className="text-sm text-slate-500">No updates loaded yet.</p>
+          <p className="text-sm text-slate-500">Updates are still loading.</p>
         </Card>
       )}
     </section>
@@ -901,7 +901,7 @@ function SeasonTracker({ trending, seasonal, upcoming, airingToday, updatedAt, l
         <div className="max-w-2xl">
           <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Live Season Tracker</p>
           <h2 className="font-display text-3xl leading-tight sm:text-4xl">A compact pulse check for the season.</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-500">Real Jikan data, sorted into quick signals: score, favorites, today's schedule, and upcoming anime.</p>
+          <p className="mt-2 text-sm leading-6 text-slate-500">A quick look at what is scoring well, airing today, and coming soon.</p>
         </div>
         <Button className="self-start bg-slate-900 text-white hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300 sm:self-auto" onClick={onRefresh} disabled={loading}>
           <RefreshCcw className="h-4 w-4" /> {loading ? "Updating" : "Refresh"}
@@ -959,7 +959,7 @@ function HomePage({ addAnime }: { addAnime: (anime: AnimeSummary) => void }) {
       setAiringToday(todayAnime);
       setUpdatedAt(new Date().toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Anime updates are taking a little longer than usual.");
+      setError(err instanceof Error ? err.message : "Updates are slow right now. Try again in a bit.");
       setTrending(fixedAnime.slice(0, 6));
     } finally {
       setLoading(false);
@@ -1117,9 +1117,9 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
       <Card className="grid gap-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="grid gap-2">
-          <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Explore</p>
-          <h2 className="font-display text-3xl leading-tight sm:text-4xl">Deep dive into anime and manga.</h2>
-          <p className="text-sm text-slate-500">Search titles and open a full production dossier with cast, staff, and music details.</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Explore</p>
+            <h2 className="font-display text-3xl leading-tight sm:text-4xl">Find your next watch.</h2>
+            <p className="text-sm text-slate-500">Search anime or manga, then save what catches your eye.</p>
           </div>
           <Button className="bg-rose-600 hover:bg-rose-700" onClick={onBack}>Back to home</Button>
         </div>
@@ -1134,18 +1134,20 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
       </Card>
       <div className="grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
         <Card className={clsx("grid gap-3", selectedId ? "hidden lg:grid" : "grid")}>
-          <div className="flex flex-wrap items-center gap-2">
-            <Search className="h-5 w-5 text-slate-400" />
-            <input className={clsx(inputClass(), "w-full border-0 bg-transparent px-0 focus:border-0")} placeholder={`Search ${mode} by title`} value={query} onChange={(event) => setQuery(event.target.value)} />
+          <div className="grid gap-2">
+            <div className="grid grid-cols-[20px_minmax(0,1fr)] items-center gap-2">
+              <Search className="h-5 w-5 text-slate-400" />
+              <input className={clsx(inputClass(), "border-0 bg-transparent px-0 focus:border-0")} placeholder={`Search ${mode} by title`} value={query} onChange={(event) => setQuery(event.target.value)} />
+            </div>
             <div className="flex flex-wrap gap-2">
-              <button className="button-ghost" type="button" onClick={clearExploreInput}>Clear text</button>
+              <button className="button-ghost" type="button" onClick={clearExploreInput}>Clear search</button>
               <button className="button-ghost" type="button" onClick={clearExploreAll}>Clear</button>
             </div>
           </div>
           {loading && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">Searching...</p>}
           {error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{error}</p>}
           {!loading && !results.length && query.trim().length < 2 && (
-            <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">Type at least 2 characters to begin.</p>
+            <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">Type a title to start.</p>
           )}
           <div className="grid max-h-[70vh] gap-2 overflow-auto pr-1 md:max-h-[520px]">
             {safeResults.map((item) => {
@@ -1172,7 +1174,7 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
               Back to results
             </button>
           )}
-          {!selectedId && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">Select a title to see the full dossier.</p>}
+          {!selectedId && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">Choose a title to see more.</p>}
           {detailLoading && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">Loading details...</p>}
           {detailError && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{detailError}</p>}
           {detail && (
@@ -1308,7 +1310,8 @@ function MyStuffPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
     watching: data.library.filter((entry) => entry.status === "Watching").length,
     completed: data.library.filter((entry) => entry.status === "Completed").length,
     plan: data.library.filter((entry) => entry.status === "Plan to Watch").length,
-    onHold: data.library.filter((entry) => entry.status === "On Hold").length
+    onHold: data.library.filter((entry) => entry.status === "On Hold").length,
+    dropped: data.library.filter((entry) => entry.status === "Dropped").length
   };
 
   const recent = [...data.library]
@@ -1328,7 +1331,7 @@ function MyStuffPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
         <div className="grid gap-2">
           <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Diary shelf</p>
           <h3 className="break-words font-display text-3xl leading-tight sm:text-4xl">{data.settings.username}'s logbook</h3>
-          <p className="text-sm text-slate-500">A living record of what you watch, what you finish, and what you plan to watch next.</p>
+          <p className="text-sm text-slate-500">What you are watching, finished, and saving for later.</p>
           <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
             <span className="rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-900">Total {counts.total}</span>
             <span className="rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-900">Watching {counts.watching}</span>
@@ -1337,7 +1340,7 @@ function MyStuffPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
         </div>
         <div className="grid gap-2">
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Recent entries</p>
-          {recent.length === 0 && <p className="text-sm text-slate-500">No entries yet. Add your first anime.</p>}
+          {recent.length === 0 && <p className="text-sm text-slate-500">Nothing here yet. Add an anime when you are ready.</p>}
           {recent.map((entry) => (
             <div key={entry.mal_id} className="flex items-center gap-3">
               <img src={entry.image_url} alt="" className="h-12 w-9 rounded-md object-cover" />
@@ -1350,19 +1353,20 @@ function MyStuffPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
         </div>
       </Card>
       <ProfileHighlights data={data} updateData={updateData} />
-      <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-6">
         <Card className="text-sm"><p className="text-slate-500">Total</p><p className="text-2xl font-black">{counts.total}</p></Card>
         <Card className="text-sm"><p className="text-slate-500">Watching</p><p className="text-2xl font-black">{counts.watching}</p></Card>
         <Card className="text-sm"><p className="text-slate-500">Completed</p><p className="text-2xl font-black">{counts.completed}</p></Card>
-        <Card className="text-sm"><p className="text-slate-500">Plan</p><p className="text-2xl font-black">{counts.plan}</p></Card>
+        <Card className="text-sm"><p className="text-slate-500">Planned</p><p className="text-2xl font-black">{counts.plan}</p></Card>
         <Card className="text-sm"><p className="text-slate-500">On hold</p><p className="text-2xl font-black">{counts.onHold}</p></Card>
+        <Card className="text-sm"><p className="text-slate-500">Dropped</p><p className="text-2xl font-black">{counts.dropped}</p></Card>
       </div>
       <SearchPanel onSelect={onSelect} />
       <div className="grid gap-6">
         {grouped.map((section) => (
           <Section key={section.key} title={section.title} icon={section.icon}>
             {section.entries.length === 0 ? (
-              <Card className="text-sm text-slate-500">No anime here yet.</Card>
+              <Card className="text-sm text-slate-500">This shelf is empty for now.</Card>
             ) : (
               <div className="grid gap-4 lg:grid-cols-2">
                 {section.entries.map((entry) => (
@@ -1390,7 +1394,8 @@ function MyMangaPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
     reading: data.mangaLibrary.filter((entry) => entry.status === "Reading").length,
     completed: data.mangaLibrary.filter((entry) => entry.status === "Completed").length,
     plan: data.mangaLibrary.filter((entry) => entry.status === "Plan to Read").length,
-    onHold: data.mangaLibrary.filter((entry) => entry.status === "On Hold").length
+    onHold: data.mangaLibrary.filter((entry) => entry.status === "On Hold").length,
+    dropped: data.mangaLibrary.filter((entry) => entry.status === "Dropped").length
   };
 
   const recent = [...data.mangaLibrary]
@@ -1410,7 +1415,7 @@ function MyMangaPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
         <div className="grid gap-2">
           <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Manga shelf</p>
           <h3 className="break-words font-display text-3xl leading-tight sm:text-4xl">{data.settings.username}'s bookshelf</h3>
-          <p className="text-sm text-slate-600 dark:text-slate-300">Track the volumes, chapters, and stories you are collecting.</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">Keep your manga list close and easy to update.</p>
           <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-700">
             <span className="rounded-xl bg-white/70 px-3 py-1 dark:bg-slate-900">Total {counts.total}</span>
             <span className="rounded-xl bg-white/70 px-3 py-1 dark:bg-slate-900">Reading {counts.reading}</span>
@@ -1419,7 +1424,7 @@ function MyMangaPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
         </div>
         <div className="grid gap-2">
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Recent entries</p>
-          {recent.length === 0 && <p className="text-sm text-slate-500">No manga entries yet. Add your first series.</p>}
+          {recent.length === 0 && <p className="text-sm text-slate-500">No manga yet. Add a series when one sticks.</p>}
           {recent.map((entry) => (
             <div key={entry.mal_id} className="flex items-center gap-3">
               <img src={entry.image_url} alt="" className="h-12 w-9 rounded-md object-cover" />
@@ -1432,19 +1437,20 @@ function MyMangaPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
         </div>
       </Card>
       <MangaHighlights data={data} updateData={updateData} />
-      <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-6">
         <Card className="text-sm"><p className="text-slate-500">Total</p><p className="text-2xl font-black">{counts.total}</p></Card>
         <Card className="text-sm"><p className="text-slate-500">Reading</p><p className="text-2xl font-black">{counts.reading}</p></Card>
         <Card className="text-sm"><p className="text-slate-500">Completed</p><p className="text-2xl font-black">{counts.completed}</p></Card>
-        <Card className="text-sm"><p className="text-slate-500">Plan</p><p className="text-2xl font-black">{counts.plan}</p></Card>
+        <Card className="text-sm"><p className="text-slate-500">Planned</p><p className="text-2xl font-black">{counts.plan}</p></Card>
         <Card className="text-sm"><p className="text-slate-500">On hold</p><p className="text-2xl font-black">{counts.onHold}</p></Card>
+        <Card className="text-sm"><p className="text-slate-500">Dropped</p><p className="text-2xl font-black">{counts.dropped}</p></Card>
       </div>
       <SearchMangaPanel onSelect={onSelect} />
       <div className="grid gap-6">
         {grouped.map((section) => (
           <Section key={section.key} title={section.title} icon={section.icon}>
             {section.entries.length === 0 ? (
-              <Card className="text-sm text-slate-500">No manga here yet.</Card>
+              <Card className="text-sm text-slate-500">This shelf is empty for now.</Card>
             ) : (
               <div className="grid gap-4 lg:grid-cols-2">
                 {section.entries.map((entry) => (
@@ -1506,7 +1512,7 @@ function ProfileHighlights({ data, updateData }: { data: AppData; updateData: (p
       <div>
         <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Profile highlights</p>
         <h3 className="font-display text-3xl">Favorite anime shelf</h3>
-        <p className="text-sm text-slate-500">Pick favorites from the anime catalog or anything you have added yourself.</p>
+        <p className="text-sm text-slate-500">Pin the anime you want people to notice first.</p>
       </div>
       {selected.length > 0 ? (
         <div className="grid gap-3 min-[520px]:grid-cols-2 lg:grid-cols-4">
@@ -1521,7 +1527,7 @@ function ProfileHighlights({ data, updateData }: { data: AppData; updateData: (p
           ))}
         </div>
       ) : (
-        <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No favorites highlighted yet.</p>
+        <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No highlights yet.</p>
       )}
       <button className="inline-flex items-center justify-between rounded-xl border border-slate-200/70 bg-white/70 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-200" onClick={() => setOpen((prev) => !prev)}>
         <span>{open ? "Hide favorite picker" : "Choose favorite anime"}</span>
@@ -1529,7 +1535,7 @@ function ProfileHighlights({ data, updateData }: { data: AppData; updateData: (p
       </button>
       {open && (
         <div className="grid gap-3">
-          <input className={inputClass()} placeholder="Search favorites by title or genre" value={query} onChange={(event) => setQuery(event.target.value)} />
+          <input className={inputClass()} placeholder="Search anime favorites" value={query} onChange={(event) => setQuery(event.target.value)} />
           {searchLoading && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">Searching anime...</p>}
           {searchError && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{searchError}</p>}
           <div className="grid max-h-[70vh] gap-2 overflow-auto pr-1 md:max-h-96 md:grid-cols-2 xl:grid-cols-3">
@@ -1597,7 +1603,7 @@ function MangaHighlights({ data, updateData }: { data: AppData; updateData: (pat
       <div>
         <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Manga highlights</p>
         <h3 className="font-display text-3xl">Favorite manga shelf</h3>
-        <p className="text-sm text-slate-500">Pin the series you always want within reach.</p>
+        <p className="text-sm text-slate-500">Pin the manga you keep coming back to.</p>
       </div>
       {selected.length > 0 ? (
         <div className="grid gap-3 min-[520px]:grid-cols-2 lg:grid-cols-4">
@@ -1612,7 +1618,7 @@ function MangaHighlights({ data, updateData }: { data: AppData; updateData: (pat
           ))}
         </div>
       ) : (
-        <p className="rounded-xl bg-teal-50 p-3 text-sm text-slate-500 dark:bg-teal-950/30">No manga favorites yet.</p>
+        <p className="rounded-xl bg-teal-50 p-3 text-sm text-slate-500 dark:bg-teal-950/30">No manga highlights yet.</p>
       )}
       <button className="inline-flex items-center justify-between rounded-xl border border-teal-200/70 bg-white/70 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-teal-900/50 dark:bg-slate-950/70 dark:text-slate-200" onClick={() => setOpen((prev) => !prev)}>
         <span>{open ? "Hide manga picker" : "Choose favorite manga"}</span>
@@ -1620,7 +1626,7 @@ function MangaHighlights({ data, updateData }: { data: AppData; updateData: (pat
       </button>
       {open && (
         <div className="grid gap-3">
-          <input className={inputClass()} placeholder="Search manga by title or genre" value={query} onChange={(event) => setQuery(event.target.value)} />
+          <input className={inputClass()} placeholder="Search manga favorites" value={query} onChange={(event) => setQuery(event.target.value)} />
           {searchLoading && <p className="rounded-xl bg-teal-50 p-3 text-sm text-slate-500 dark:bg-teal-950/30">Searching manga...</p>}
           {searchError && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{searchError}</p>}
           <div className="grid max-h-[70vh] gap-2 overflow-auto pr-1 md:max-h-96 md:grid-cols-2 xl:grid-cols-3">
@@ -1703,8 +1709,8 @@ function DashboardPage({ data, onClearHistory, onBack }: { data: AppData; onClea
       <Card className="grid gap-4">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-teal-500">History summary</p>
-          <h3 className="font-display text-3xl leading-tight sm:text-4xl">Your anime and manga at a glance</h3>
-          <p className="max-w-2xl text-sm text-slate-500">A simple read on what you have saved, finished, and returned to lately.</p>
+          <h3 className="font-display text-3xl leading-tight sm:text-4xl">Your watch life, simplified.</h3>
+          <p className="max-w-2xl text-sm text-slate-500">A clean snapshot of what you have saved and finished.</p>
         </div>
         <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-2xl border border-teal-200/70 bg-teal-50/60 p-4 dark:border-teal-900/60 dark:bg-teal-950/20">
@@ -1781,7 +1787,7 @@ function DashboardPage({ data, onClearHistory, onBack }: { data: AppData; onClea
         <Card>
           <h3 className="mb-3 font-display text-2xl">Recent history</h3>
           <div className="grid gap-3">
-            {recentHistory.length === 0 && <p className="text-sm text-slate-500">No history yet. Add anime or manga to see your timeline.</p>}
+            {recentHistory.length === 0 && <p className="text-sm text-slate-500">Your timeline is empty for now.</p>}
             {recentHistory.map((entry) => (
               <div key={`${entry.kind}-${entry.title}-${entry.date}`} className="grid grid-cols-[48px_minmax(0,1fr)] gap-3 rounded-xl border border-slate-200/70 bg-white/70 p-3 text-sm dark:border-slate-800 dark:bg-slate-900/70">
                 <img src={entry.image} alt="" className="h-16 w-12 rounded-lg object-cover" />
@@ -1801,7 +1807,7 @@ function DashboardPage({ data, onClearHistory, onBack }: { data: AppData; onClea
         <Card>
           <h3 className="mb-3 font-display text-2xl">Favorites</h3>
           {favoriteHighlights.length === 0 ? (
-            <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No favorites selected yet. Choose favorites in My Anime or My Manga.</p>
+            <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No favorites pinned yet.</p>
           ) : (
             <div className="grid gap-3">
               {favoriteHighlights.map((item) => (

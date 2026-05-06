@@ -18,7 +18,7 @@ import {
   X
 } from "lucide-react";
 import { fixedAnime } from "./lib/fixedAnime";
-import { getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, searchAnime, searchManga } from "./lib/jikan";
+import { getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, getSeasonal, getTopAiring, getUpcomingAnime, searchAnime, searchManga } from "./lib/jikan";
 import { loadData, saveData, setActiveUser } from "./lib/storage";
 import type { AnimeDetail, AnimeSummary, AppData, LibraryEntry, LibraryStatus, MangaDetail, MangaEntry, MangaStatus, MangaSummary, Settings, ThemeMode } from "./types/anime";
 
@@ -506,15 +506,6 @@ function CuratedGrid({ items, onAdd }: { items: AnimeSummary[]; onAdd: (anime: A
   );
 }
 
-function shuffleItems<T>(items: T[]) {
-  const copy = [...items];
-  for (let i = copy.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
-}
-
 function allKnownAnime(library: LibraryEntry[], extra: AnimeSummary[] = []) {
   const byId = new Map<number, AnimeSummary>();
   fixedAnime.forEach((anime) => byId.set(anime.mal_id, anime));
@@ -846,30 +837,105 @@ function Section({ title, icon, children }: { title: string; icon: React.ReactEl
   );
 }
 
+function HomeFeedSection({ title, subtitle, items, onAdd }: { title: string; subtitle: string; items: AnimeSummary[]; onAdd: (anime: AnimeSummary) => void }) {
+  return (
+    <Section title={title} icon={<Film className="h-5 w-5" />}>
+      <p className="text-sm text-slate-500">{subtitle}</p>
+      {items.length ? (
+        <CuratedGrid items={items.slice(0, 6)} onAdd={onAdd} />
+      ) : (
+        <Card>
+          <p className="text-sm text-slate-500">No updates loaded yet.</p>
+        </Card>
+      )}
+    </Section>
+  );
+}
+
 function HomePage({ addAnime }: { addAnime: (anime: AnimeSummary) => void }) {
-  const [randomAnime, setRandomAnime] = useState<AnimeSummary[]>(() => shuffleItems(fixedAnime).slice(0, 12));
-  const reshuffle = () => setRandomAnime(shuffleItems(fixedAnime).slice(0, 12));
+  const [trending, setTrending] = useState<AnimeSummary[]>([]);
+  const [seasonal, setSeasonal] = useState<AnimeSummary[]>([]);
+  const [upcoming, setUpcoming] = useState<AnimeSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [updatedAt, setUpdatedAt] = useState("");
+
+  const loadHomeUpdates = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const trendingAnime = await getTopAiring();
+      const seasonalAnime = await getSeasonal();
+      const upcomingAnime = await getUpcomingAnime();
+      setTrending(trendingAnime);
+      setSeasonal(seasonalAnime);
+      setUpcoming(upcomingAnime);
+      setUpdatedAt(new Date().toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Anime updates are taking a little longer than usual.");
+      setTrending(fixedAnime.slice(0, 6));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadHomeUpdates();
+  }, []);
 
   return (
     <div className="mx-auto grid max-w-5xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
-      <Card className="hero-banner grid min-h-[140px] content-start justify-items-end gap-1 pt-4 text-right text-white sm:min-h-[190px] sm:pt-6">
+      <Card className="hero-banner grid min-h-[190px] content-start justify-items-end gap-1 pt-4 text-right text-white sm:min-h-[230px] sm:pt-6">
         <img className="hero-media" src="/homepageheader.jpg" alt="Animeboxd hero collage" />
         <h1 className="hero-title font-display text-5xl leading-none sm:text-6xl">Animeboxd</h1>
-        <div className="hero-tagline max-w-md text-base italic text-white/90 sm:text-lg">
-          <ul className="m-0 list-none space-y-2 p-0 text-right">
-            <li>🍥 anime</li>
-            <li>🍥 manga</li>
-          </ul>
+        <div className="hero-tagline max-w-lg text-base text-white/90 sm:text-lg">
+          <p className="font-semibold">Your front page for what is airing, trending, and coming next.</p>
+          <p className="mt-2 text-sm text-white/80 sm:text-base">Check the pulse of anime today, then save anything you want to watch.</p>
         </div>
       </Card>
-      <Section title="Random Picks" icon={<Film className="h-5 w-5" />}>
-        <div className="flex justify-end">
-          <Button className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800" onClick={reshuffle}>
-            <RefreshCcw className="h-4 w-4" /> Shuffle
+
+      <Card className="grid gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Live Updates</p>
+            <h2 className="font-display text-3xl leading-tight sm:text-4xl">Anime happening now</h2>
+            <p className="max-w-2xl text-sm text-slate-500">A quick board for currently airing shows, seasonal highlights, and upcoming releases.</p>
+          </div>
+          <Button className="self-start bg-slate-900 text-white hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300 sm:self-auto" onClick={loadHomeUpdates} disabled={loading}>
+            <RefreshCcw className="h-4 w-4" /> {loading ? "Updating" : "Refresh"}
           </Button>
         </div>
-        <CuratedGrid items={randomAnime} onAdd={addAnime} />
-      </Section>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-teal-200/70 bg-teal-50/60 p-4 dark:border-teal-900/60 dark:bg-teal-950/20">
+            <p className="text-sm font-semibold text-slate-500">Trending airing</p>
+            <p className="mt-1 text-3xl font-black">{trending.length || "-"}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200/70 bg-white/70 p-4 dark:border-slate-800 dark:bg-slate-950/70">
+            <p className="text-sm font-semibold text-slate-500">This season</p>
+            <p className="mt-1 text-3xl font-black">{seasonal.length || "-"}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200/70 bg-white/70 p-4 dark:border-slate-800 dark:bg-slate-950/70">
+            <p className="text-sm font-semibold text-slate-500">Coming soon</p>
+            <p className="mt-1 text-3xl font-black">{upcoming.length || "-"}</p>
+          </div>
+        </div>
+        {updatedAt && <p className="text-xs font-semibold text-slate-500">Last refreshed at {updatedAt}</p>}
+        {error && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-100">{error}</p>}
+      </Card>
+
+      {loading && !trending.length ? (
+        <div className="grid grid-cols-1 gap-4 min-[520px]:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="h-80 animate-pulse rounded-2xl bg-white/70 dark:bg-slate-900/70" />
+          ))}
+        </div>
+      ) : (
+        <>
+          <HomeFeedSection title="Trending Airing" subtitle="Popular shows currently airing." items={trending} onAdd={addAnime} />
+          <HomeFeedSection title="This Season" subtitle="Fresh seasonal anime people are checking out now." items={seasonal} onAdd={addAnime} />
+          <HomeFeedSection title="Coming Soon" subtitle="Upcoming titles to keep on your radar." items={upcoming} onAdd={addAnime} />
+        </>
+      )}
     </div>
   );
 }

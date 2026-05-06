@@ -170,6 +170,22 @@ function sanitizeItems<T extends { mal_id?: number; title?: string }>(items: T[]
   return items.filter((item) => item && typeof item.mal_id === "number" && Boolean(item.title));
 }
 
+function readCache<T>(key: string): T | null {
+  const cached = localStorage.getItem(key);
+  if (!cached) return null;
+  try {
+    const parsed = JSON.parse(cached) as { at: number; data: T };
+    if (Date.now() - parsed.at < hour) return parsed.data;
+  } catch {
+    localStorage.removeItem(key);
+  }
+  return null;
+}
+
+function writeCache<T>(key: string, data: T) {
+  localStorage.setItem(key, JSON.stringify({ at: Date.now(), data }));
+}
+
 export async function searchAnime(query: string): Promise<AnimeSummary[]> {
   const normalizedQuery = normalizeQuery(query);
   const key = `search_cache_v2_${normalizedQuery}`;
@@ -257,8 +273,13 @@ export async function getAnimeThemes(id: number) {
 }
 
 export async function getTopAiring() {
+  const key = "top_airing_cache_v2";
+  const cached = readCache<AnimeSummary[]>(key);
+  if (cached) return cached;
   const payload = await requestJson<{ data?: JikanAnime[] }>("/top/anime?filter=airing&limit=10");
-  return Array.isArray(payload.data) ? payload.data.map(normalizeAnime) : [];
+  const data = Array.isArray(payload.data) ? payload.data.map(normalizeAnime) : [];
+  writeCache(key, data);
+  return data;
 }
 
 export async function getTopAnime(limit = 12) {
@@ -280,8 +301,23 @@ export async function getRandomAnimeList(limit = 8) {
 }
 
 export async function getSeasonal() {
+  const key = "seasonal_anime_cache_v2";
+  const cached = readCache<AnimeSummary[]>(key);
+  if (cached) return cached;
   const payload = await requestJson<{ data?: JikanAnime[] }>("/seasons/now?limit=10");
-  return Array.isArray(payload.data) ? payload.data.map(normalizeAnime) : [];
+  const data = Array.isArray(payload.data) ? payload.data.map(normalizeAnime) : [];
+  writeCache(key, data);
+  return data;
+}
+
+export async function getUpcomingAnime() {
+  const key = "upcoming_anime_cache_v2";
+  const cached = readCache<AnimeSummary[]>(key);
+  if (cached) return cached;
+  const payload = await requestJson<{ data?: JikanAnime[] }>("/seasons/upcoming?limit=10");
+  const data = Array.isArray(payload.data) ? payload.data.map(normalizeAnime) : [];
+  writeCache(key, data);
+  return data;
 }
 
 export async function getRandomAnime() {

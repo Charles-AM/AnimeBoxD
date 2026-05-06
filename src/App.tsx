@@ -16,6 +16,7 @@ import {
   Search,
   Send,
   Share2,
+  Sparkles,
   Star,
   Trash2,
   Trophy,
@@ -71,6 +72,7 @@ const mangaSections: { key: MangaStatus; title: string; icon: React.ReactElement
 
 const SITE_URL = "https://animeboxd.app/";
 const CREDIT_TEXT = "AnimeBoxD is an independent fan project. Anime and manga titles, artwork, synopses, trademarks, studios, publishers, streaming names, and source metadata belong to their respective owners. Discovery data is provided through Jikan and MyAnimeList references; AnimeBoxD does not claim ownership of third-party content.";
+const avatarOptions = ["✨", "🎴", "🍥", "🌀", "🌙", "🔥", "⚔️", "🛡️", "🧡", "💫", "🌸", "🐉", "👑", "🎧", "📚", "🦊", "👾", "⭐"];
 
 function normalizeUserId(value: string) {
   const trimmed = value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
@@ -1948,7 +1950,32 @@ function ProfilePage({ data, memberSince, onBack, onSaveProfile, onDeleteAccount
             </div>
           </div>
           <div className="grid gap-3 rounded-2xl border border-slate-200/70 bg-white/70 p-4 dark:border-slate-800 dark:bg-slate-900/70">
-            <h3 className="font-display text-2xl">Edit profile</h3>
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="font-display text-2xl">Edit profile</h3>
+              <Sparkles className="h-5 w-5 text-teal-500" />
+            </div>
+            <div className="grid gap-3 rounded-2xl bg-slate-100/80 p-3 dark:bg-slate-950/60">
+              <div className="flex items-center gap-3">
+                <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-white text-3xl shadow-sm dark:bg-slate-900">{avatar || "✨"}</div>
+                <div className="min-w-0">
+                  <p className="text-sm font-black text-slate-900 dark:text-white">Choose a profile icon</p>
+                  <p className="text-xs text-slate-500">Pick one below or type your own emoji.</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-6 gap-2 sm:grid-cols-9">
+                {avatarOptions.map((item) => (
+                  <button
+                    key={item}
+                    className={clsx("grid h-10 place-items-center rounded-xl border text-xl transition hover:-translate-y-0.5", avatar === item ? "border-teal-400 bg-teal-50 shadow-sm dark:bg-teal-400/20" : "border-slate-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/80")}
+                    onClick={() => setAvatar(item)}
+                    type="button"
+                    aria-label={`Use ${item} as avatar`}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_96px]">
               <Field label="Username">
                 <input className={inputClass()} maxLength={40} value={username} onChange={(event) => setUsername(event.target.value)} />

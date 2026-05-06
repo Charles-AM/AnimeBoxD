@@ -837,18 +837,83 @@ function Section({ title, icon, children }: { title: string; icon: React.ReactEl
   );
 }
 
-function HomeFeedSection({ title, subtitle, items, onAdd }: { title: string; subtitle: string; items: AnimeSummary[]; onAdd: (anime: AnimeSummary) => void }) {
+function AnimeRail({ title, kicker, items, onAdd }: { title: string; kicker: string; items: AnimeSummary[]; onAdd: (anime: AnimeSummary) => void }) {
   return (
-    <Section title={title} icon={<Film className="h-5 w-5" />}>
-      <p className="text-sm text-slate-500">{subtitle}</p>
+    <section className="grid gap-3">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.25em] text-teal-500">{kicker}</p>
+          <h2 className="font-display text-2xl leading-tight sm:text-3xl">{title}</h2>
+        </div>
+      </div>
       {items.length ? (
-        <CuratedGrid items={items.slice(0, 6)} onAdd={onAdd} />
+        <div className="scrollbar-soft -mx-3 flex gap-3 overflow-x-auto px-3 pb-2 sm:mx-0 sm:px-0">
+          {items.slice(0, 10).map((anime) => (
+            <article key={anime.mal_id} className="touch-card grid w-[230px] shrink-0 grid-cols-[72px_minmax(0,1fr)] gap-3 rounded-2xl border border-slate-200/70 bg-white/75 p-2.5 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300 dark:border-slate-800 dark:bg-slate-950/70">
+              <img src={anime.image_url} alt="" className="h-28 w-[72px] rounded-xl object-cover" />
+              <div className="min-w-0">
+                <p className="line-clamp-2 text-sm font-bold text-slate-900 dark:text-white">{anime.title}</p>
+                <p className="mt-1 text-xs text-slate-500">{anime.year || "TBA"} • {anime.score ? `${anime.score}/10` : "No score"}</p>
+                <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{anime.genres.slice(0, 2).join(", ") || "Anime"}</p>
+                <button className="mt-2 inline-flex items-center gap-1 rounded-full bg-teal-400 px-2.5 py-1 text-[11px] font-black text-slate-950 transition hover:bg-teal-300" onClick={() => onAdd(anime)}>
+                  <Plus className="h-3 w-3" /> Save
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
       ) : (
-        <Card>
+        <Card className="py-4">
           <p className="text-sm text-slate-500">No updates loaded yet.</p>
         </Card>
       )}
-    </Section>
+    </section>
+  );
+}
+
+function AnimeDispatch({ trending, seasonal, upcoming, updatedAt, loading, error, onRefresh, onAdd }: { trending: AnimeSummary[]; seasonal: AnimeSummary[]; upcoming: AnimeSummary[]; updatedAt: string; loading: boolean; error: string; onRefresh: () => void; onAdd: (anime: AnimeSummary) => void }) {
+  const dispatchItems = [
+    seasonal[0] && { label: "Currently airing", anime: seasonal[0], note: `${seasonal[0].genres.slice(0, 2).join(", ") || "New season"} • ${seasonal[0].total_episodes || "?"} eps` },
+    trending[0] && { label: "Popular airing", anime: trending[0], note: `${trending[0].score ? `${trending[0].score}/10` : "Audience favorite"} • rank ${trending[0].rank || "rising"}` },
+    upcoming[0] && { label: "Coming next", anime: upcoming[0], note: `${upcoming[0].year || "Soon"} • ${upcoming[0].genres.slice(0, 2).join(", ") || "Upcoming"}` }
+  ].filter(Boolean) as { label: string; anime: AnimeSummary; note: string }[];
+
+  return (
+    <Card className="grid gap-4 overflow-hidden border border-teal-200/60 bg-white/80 dark:border-teal-900/50 dark:bg-slate-950/70 lg:grid-cols-[0.9fr_1.1fr]">
+      <div className="grid content-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Anime Dispatch</p>
+          <h2 className="font-display text-3xl leading-tight sm:text-4xl">A quick read before you pick a show.</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-500">Live-style updates from current Jikan listings: what is airing, what is popular, and what is about to land.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300" onClick={onRefresh} disabled={loading}>
+            <RefreshCcw className="h-4 w-4" /> {loading ? "Updating" : "Refresh"}
+          </Button>
+          {updatedAt && <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-500 dark:bg-slate-900">Updated {updatedAt}</span>}
+        </div>
+        {error && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-100">{error}</p>}
+      </div>
+
+      <div className="grid gap-2">
+        {dispatchItems.map(({ label, anime, note }) => (
+          <button key={`${label}-${anime.mal_id}`} className="group grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-slate-200/70 bg-white/70 p-2 text-left transition hover:border-teal-300 hover:bg-teal-50/60 dark:border-slate-800 dark:bg-slate-900/70 dark:hover:bg-teal-950/30" onClick={() => onAdd(anime)}>
+            <img src={anime.image_url} alt="" className="h-20 w-14 rounded-xl object-cover" />
+            <div className="min-w-0">
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-teal-600 dark:text-teal-300">{label}</p>
+              <p className="line-clamp-1 text-sm font-bold text-slate-900 dark:text-white">{anime.title}</p>
+              <p className="line-clamp-1 text-xs text-slate-500">{note}</p>
+            </div>
+            <Plus className="h-4 w-4 text-slate-400 transition group-hover:text-teal-500" />
+          </button>
+        ))}
+        {!dispatchItems.length && (
+          <div className="rounded-2xl border border-slate-200/70 bg-white/70 p-4 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900/70">
+            Updates are loading.
+          </div>
+        )}
+      </div>
+    </Card>
   );
 }
 
@@ -885,43 +950,18 @@ function HomePage({ addAnime }: { addAnime: (anime: AnimeSummary) => void }) {
 
   return (
     <div className="mx-auto grid max-w-5xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
-      <Card className="hero-banner grid min-h-[190px] content-start justify-items-end gap-1 pt-4 text-right text-white sm:min-h-[230px] sm:pt-6">
+      <Card className="hero-banner grid min-h-[140px] content-start justify-items-end gap-1 pt-4 text-right text-white sm:min-h-[190px] sm:pt-6">
         <img className="hero-media" src="/homepageheader.jpg" alt="Animeboxd hero collage" />
         <h1 className="hero-title font-display text-5xl leading-none sm:text-6xl">Animeboxd</h1>
-        <div className="hero-tagline max-w-lg text-base text-white/90 sm:text-lg">
-          <p className="font-semibold">Your front page for what is airing, trending, and coming next.</p>
-          <p className="mt-2 text-sm text-white/80 sm:text-base">Check the pulse of anime today, then save anything you want to watch.</p>
+        <div className="hero-tagline max-w-md text-base italic text-white/90 sm:text-lg">
+          <ul className="m-0 list-none space-y-2 p-0 text-right">
+            <li>🍥 anime</li>
+            <li>🍥 manga</li>
+          </ul>
         </div>
       </Card>
 
-      <Card className="grid gap-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Live Updates</p>
-            <h2 className="font-display text-3xl leading-tight sm:text-4xl">Anime happening now</h2>
-            <p className="max-w-2xl text-sm text-slate-500">A quick board for currently airing shows, seasonal highlights, and upcoming releases.</p>
-          </div>
-          <Button className="self-start bg-slate-900 text-white hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300 sm:self-auto" onClick={loadHomeUpdates} disabled={loading}>
-            <RefreshCcw className="h-4 w-4" /> {loading ? "Updating" : "Refresh"}
-          </Button>
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-teal-200/70 bg-teal-50/60 p-4 dark:border-teal-900/60 dark:bg-teal-950/20">
-            <p className="text-sm font-semibold text-slate-500">Trending airing</p>
-            <p className="mt-1 text-3xl font-black">{trending.length || "-"}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200/70 bg-white/70 p-4 dark:border-slate-800 dark:bg-slate-950/70">
-            <p className="text-sm font-semibold text-slate-500">This season</p>
-            <p className="mt-1 text-3xl font-black">{seasonal.length || "-"}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200/70 bg-white/70 p-4 dark:border-slate-800 dark:bg-slate-950/70">
-            <p className="text-sm font-semibold text-slate-500">Coming soon</p>
-            <p className="mt-1 text-3xl font-black">{upcoming.length || "-"}</p>
-          </div>
-        </div>
-        {updatedAt && <p className="text-xs font-semibold text-slate-500">Last refreshed at {updatedAt}</p>}
-        {error && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-100">{error}</p>}
-      </Card>
+      <AnimeDispatch trending={trending} seasonal={seasonal} upcoming={upcoming} updatedAt={updatedAt} loading={loading} error={error} onRefresh={loadHomeUpdates} onAdd={addAnime} />
 
       {loading && !trending.length ? (
         <div className="grid grid-cols-1 gap-4 min-[520px]:grid-cols-2 xl:grid-cols-3">
@@ -931,9 +971,9 @@ function HomePage({ addAnime }: { addAnime: (anime: AnimeSummary) => void }) {
         </div>
       ) : (
         <>
-          <HomeFeedSection title="Trending Airing" subtitle="Popular shows currently airing." items={trending} onAdd={addAnime} />
-          <HomeFeedSection title="This Season" subtitle="Fresh seasonal anime people are checking out now." items={seasonal} onAdd={addAnime} />
-          <HomeFeedSection title="Coming Soon" subtitle="Upcoming titles to keep on your radar." items={upcoming} onAdd={addAnime} />
+          <AnimeRail title="Currently Airing" kicker="Now on screen" items={seasonal} onAdd={addAnime} />
+          <AnimeRail title="Popular Airing" kicker="Audience pulse" items={trending} onAdd={addAnime} />
+          <AnimeRail title="Coming Soon" kicker="Next issue" items={upcoming} onAdd={addAnime} />
         </>
       )}
     </div>

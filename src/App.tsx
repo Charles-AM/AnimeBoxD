@@ -302,6 +302,7 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
             <Button onClick={submit} disabled={loading}>{loading ? "One moment..." : mode === "signup" ? "Create account" : "Sign in"}</Button>
             {!isSupabaseConfigured && <button className="button-ghost" onClick={loginDemo}>Use demo user</button>}
           </div>
+          <SiteFooter />
         </Card>
       </div>
     </div>
@@ -463,6 +464,27 @@ function ReportIssueModal({ onClose, userId }: { onClose: () => void; userId?: s
         )}
       </div>
     </div>
+  );
+}
+
+function SiteFooter() {
+  const links = [
+    { label: "About", href: "/about.html" },
+    { label: "Contact", href: "/contact.html" },
+    { label: "Privacy", href: "/privacy.html" },
+    { label: "Terms", href: "/terms.html" }
+  ];
+  return (
+    <footer className="mx-auto flex max-w-6xl flex-col gap-3 px-3 pb-8 pt-4 text-sm text-slate-500 sm:px-4 md:flex-row md:items-center md:justify-between">
+      <p>AnimeBoxD is an independent anime and manga diary.</p>
+      <nav className="flex flex-wrap gap-3">
+        {links.map((link) => (
+          <a key={link.href} className="font-semibold text-slate-600 transition hover:text-teal-600 dark:text-slate-300 dark:hover:text-teal-300" href={link.href}>
+            {link.label}
+          </a>
+        ))}
+      </nav>
+    </footer>
   );
 }
 
@@ -2162,6 +2184,7 @@ function App() {
           }}
         />
       )}
+      <SiteFooter />
     </div>
   );
 }

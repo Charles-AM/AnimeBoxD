@@ -181,6 +181,12 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
     saveUsers(nextUsers);
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const authError = params.get("error_description") || params.get("error");
+    if (authError) setError(authError.replace(/\+/g, " "));
+  }, []);
+
   const passwordMeetsRules = passcode.length >= 8 && /[A-Za-z]/.test(passcode) && /\d/.test(passcode);
 
   const submit = async () => {
@@ -257,13 +263,13 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
 
   return (
     <div className="page-shell min-h-screen">
-      <div className="mx-auto grid min-h-screen max-w-4xl items-center px-3 py-6 sm:px-4 sm:py-12">
-        <Card className="grid gap-6">
+      <div className="mx-auto grid min-h-screen max-w-4xl items-start px-3 py-4 sm:items-center sm:px-4 sm:py-12">
+        <Card className="grid gap-5 p-4 sm:gap-6 sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Animeboxd</p>
               <h1 className="font-display text-4xl leading-tight sm:text-5xl">Welcome back</h1>
-            <p className="text-sm text-slate-500">{isSupabaseConfigured ? "Sign in and your library follows you." : "Pick up where you left off."}</p>
+              <p className="text-sm text-slate-500">{isSupabaseConfigured ? "Sign in and your library follows you." : "Pick up where you left off."}</p>
             </div>
             <Film className="h-10 w-10 shrink-0 text-teal-500" />
           </div>
@@ -315,13 +321,13 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
 function Header({ user, theme, onThemeChange, onLogout, onHome, onMyStuff, onMyManga, onDashboard, onExplore, onReportIssue, activePage }: { user: { name: string; avatar: string }; theme: ThemeMode; onThemeChange: (value: ThemeMode) => void; onLogout: () => void; onHome: () => void; onMyStuff: () => void; onMyManga: () => void; onDashboard: () => void; onExplore: () => void; onReportIssue: () => void; activePage: "home" | "stuff" | "manga" | "add" | "add-manga" | "dashboard" | "explore" }) {
   return (
     <header className="sticky top-0 z-20 border-b border-white/60 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
-      <div className="mx-auto flex max-w-6xl flex-col gap-3 px-3 py-3 sm:px-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="mx-auto flex max-w-6xl flex-col gap-2 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center justify-between gap-3">
           <button className="flex min-w-0 items-center gap-2" onClick={onHome}>
             <Film className="h-7 w-7 text-teal-500" />
             <div className="min-w-0">
-              <p className="truncate font-display text-2xl leading-none">Animeboxd</p>
-              <p className="text-xs text-slate-500">Personal diary</p>
+              <p className="truncate font-display text-xl leading-none sm:text-2xl">Animeboxd</p>
+              <p className="text-[11px] text-slate-500 sm:text-xs">Personal diary</p>
             </div>
           </button>
           <div className="flex shrink-0 items-center gap-2 lg:hidden">
@@ -331,9 +337,9 @@ function Header({ user, theme, onThemeChange, onLogout, onHome, onMyStuff, onMyM
             </button>
           </div>
         </div>
-        <div className="scrollbar-soft -mx-1 flex w-[calc(100%+0.5rem)] items-center gap-2 overflow-x-auto px-1 pb-1 lg:mx-0 lg:w-auto lg:overflow-visible lg:px-0 lg:pb-0">
+        <div className="scrollbar-soft -mx-1 flex w-[calc(100%+0.5rem)] items-center gap-1.5 overflow-x-auto px-1 pb-1 sm:gap-2 lg:mx-0 lg:w-auto lg:overflow-visible lg:px-0 lg:pb-0">
           <button className={clsx("inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition", activePage === "home" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onHome}>
-            Homepage
+            Home
           </button>
           <button className={clsx("inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition", activePage === "explore" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onExplore}>
             <Search className="h-4 w-4" /> Explore
@@ -352,7 +358,7 @@ function Header({ user, theme, onThemeChange, onLogout, onHome, onMyStuff, onMyM
             onClick={onReportIssue}
             type="button"
           >
-            <Mail className="h-4 w-4" /> Report issue
+            <Mail className="h-4 w-4" /> <span className="hidden sm:inline">Report issue</span><span className="sm:hidden">Report</span>
           </button>
           <ShareSiteButton />
           <select className={clsx(inputClass(), "!w-28 shrink-0")} value={theme} onChange={(event) => onThemeChange(event.target.value as ThemeMode)}>
@@ -525,11 +531,11 @@ function ShareSiteButton() {
 
   return (
     <button
-      className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-teal-200/80 bg-teal-50 px-3 py-2 text-sm font-semibold text-teal-800 transition hover:-translate-y-0.5 hover:border-teal-400 dark:border-teal-900 dark:bg-teal-950/50 dark:text-teal-100"
+      className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-teal-200/80 bg-teal-50 px-2.5 py-2 text-sm font-semibold text-teal-800 transition hover:-translate-y-0.5 hover:border-teal-400 dark:border-teal-900 dark:bg-teal-950/50 dark:text-teal-100 sm:gap-2 sm:px-3"
       onClick={share}
       type="button"
     >
-      <Share2 className="h-4 w-4" /> {copied ? "Link copied" : "Share"}
+      <Share2 className="h-4 w-4" /> <span>{copied ? "Copied" : "Share"}</span>
     </button>
   );
 }
@@ -544,9 +550,9 @@ function SiteFooter() {
   return (
     <footer className="mx-auto grid max-w-6xl gap-3 px-3 pb-8 pt-4 text-sm text-slate-500 sm:px-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <ShareSiteButton />
-          <nav className="flex flex-wrap gap-3">
+          <nav className="flex flex-wrap gap-x-3 gap-y-2">
             {links.map((link) => (
               <a key={link.href} className="font-semibold text-slate-600 transition hover:text-teal-600 dark:text-slate-300 dark:hover:text-teal-300" href={link.href}>
                 {link.label}

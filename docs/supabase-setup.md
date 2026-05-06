@@ -20,11 +20,18 @@ For local development, create `.env` from `.env.example`:
 ```env
 VITE_SUPABASE_URL=https://your-project-ref.supabase.co
 VITE_SUPABASE_ANON_KEY=your-public-anon-key
+VITE_SITE_URL=https://animeboxd.app/
 ```
 
 For Netlify, add the same two values in:
 
 Site configuration > Environment variables
+
+Also add:
+
+```env
+VITE_SITE_URL=https://animeboxd.app/
+```
 
 Then redeploy the site.
 
@@ -35,6 +42,15 @@ In Supabase:
 Authentication > URL Configuration
 
 Set the Site URL to your Netlify URL. Add the same URL to Redirect URLs.
+
+For production, use:
+
+- `https://animeboxd.app`
+- `https://animeboxd.app/`
+- `https://www.animeboxd.app`
+- `https://www.animeboxd.app/`
+- `https://animebox-d.netlify.app`
+- `https://animebox-d.netlify.app/`
 
 ## 5. Current backend behavior
 

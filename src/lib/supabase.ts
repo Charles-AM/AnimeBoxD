@@ -4,6 +4,7 @@ import type { AppData } from "../types/anime";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const configuredSiteUrl = import.meta.env.VITE_SITE_URL as string | undefined;
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
@@ -30,6 +31,12 @@ function assertSupabase() {
   return supabase;
 }
 
+function authRedirectUrl() {
+  if (configuredSiteUrl) return configuredSiteUrl.replace(/\/+$/, "/");
+  if (typeof window !== "undefined") return `${window.location.origin}/`;
+  return "https://animeboxd.app/";
+}
+
 export function userToProfileFallback(user: User): CloudProfile {
   return {
     id: user.id,
@@ -53,6 +60,7 @@ export async function signUpWithEmail(email: string, password: string, username:
     email,
     password,
     options: {
+      emailRedirectTo: authRedirectUrl(),
       data: {
         username,
         avatar: "✨"

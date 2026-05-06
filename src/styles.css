@@ -106,9 +106,15 @@ select {
     border-radius: 1rem;
   }
 
-  .button-glow,
-  .button-ghost {
+  form .button-glow,
+  form .button-ghost {
     width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .react-calendar-heatmap {
+    min-width: 560px;
   }
 }
 

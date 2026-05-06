@@ -25,7 +25,7 @@ import {
 import { fixedAnime } from "./lib/fixedAnime";
 import { getAiringToday, getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, getSeasonal, getTopAiring, getUpcomingAnime, searchAnime, searchManga } from "./lib/jikan";
 import { loadData, saveData, setActiveUser } from "./lib/storage";
-import { createReport, deleteCloudAccount, getCurrentSession, isSupabaseConfigured, loadCloudData, loadProfile, resendSignupConfirmation, saveCloudData, signInWithEmail, signOutCloud, signUpWithEmail, upsertProfile, userToProfileFallback } from "./lib/supabase";
+import { createReport, deleteCloudAccount, getCurrentSession, isSupabaseConfigured, loadCloudData, loadProfile, resendSignupConfirmation, saveCloudData, sendPasswordResetEmail, signInWithEmail, signOutCloud, signUpWithEmail, updateCloudPassword, upsertProfile, userToProfileFallback } from "./lib/supabase";
 import type { AnimeDetail, AnimeSummary, AppData, LibraryEntry, LibraryStatus, MangaDetail, MangaEntry, MangaStatus, MangaSummary, Settings, ThemeMode } from "./types/anime";
 
 type UserAccount = { id: string; name: string; avatar: string; passcode: string; email?: string; isCloud?: boolean; memberSince?: string };
@@ -73,6 +73,11 @@ const mangaSections: { key: MangaStatus; title: string; icon: React.ReactElement
 const SITE_URL = "https://animeboxd.app/";
 const CREDIT_TEXT = "AnimeBoxD is an independent fan project. Anime and manga titles, artwork, synopses, trademarks, studios, publishers, streaming names, and source metadata belong to their respective owners. Discovery data is provided through Jikan and MyAnimeList references; AnimeBoxD does not claim ownership of third-party content.";
 const avatarOptions = ["✨", "🎴", "🍥", "🌀", "🌙", "🔥", "⚔️", "🛡️", "🧡", "💫", "🌸", "🐉", "👑", "🎧", "📚", "🦊", "👾", "⭐"];
+
+function getAuthHashType() {
+  if (typeof window === "undefined") return "";
+  return new URLSearchParams(window.location.hash.replace(/^#/, "")).get("type") || "";
+}
 
 function normalizeUserId(value: string) {
   const trimmed = value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
@@ -179,6 +184,8 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
   const [signupEmail, setSignupEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [resetMode, setResetMode] = useState(false);
+  const [resetSending, setResetSending] = useState(false);
 
   useEffect(() => {
     if (isSupabaseConfigured) return;
@@ -189,7 +196,13 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
   useEffect(() => {
     const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
     const authError = params.get("error_description") || params.get("error");
+    const authType = params.get("type");
     if (authError) setError(authError.replace(/\+/g, " "));
+    if (authType === "recovery") {
+      setMode("signin");
+      setResetMode(true);
+      setNotice("Set your new password below.");
+    }
     if (params.get("access_token") || params.get("refresh_token") || params.get("type")) {
       window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
     }
@@ -201,6 +214,7 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
     if (nextMode === mode) return;
     const keepEmail = mode === "signup" && nextMode === "signin" && signupEmail;
     setMode(nextMode);
+    setResetMode(false);
     setName("");
     setEmail(keepEmail ? signupEmail : "");
     setPasscode("");
@@ -301,6 +315,47 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
     }
   };
 
+  const sendResetEmail = async () => {
+    const targetEmail = email.trim();
+    if (!targetEmail) {
+      setError("Enter your email first, then tap forgot password.");
+      return;
+    }
+    setResetSending(true);
+    setError("");
+    setNotice("");
+    try {
+      await sendPasswordResetEmail(targetEmail);
+      setNotice("Password reset email sent. Open the link, then choose a new password.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send a reset email right now.");
+    } finally {
+      setResetSending(false);
+    }
+  };
+
+  const updatePassword = async () => {
+    setError("");
+    setNotice("");
+    if (!passwordMeetsRules) {
+      setError("Use at least 8 characters with letters and numbers.");
+      return;
+    }
+    setLoading(true);
+    try {
+      await updateCloudPassword(passcode.trim());
+      await signOutCloud();
+      setPasscode("");
+      setResetMode(false);
+      setMode("signin");
+      setNotice("Password updated. Sign in with your new password.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update your password.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="page-shell min-h-screen">
       <div className="mx-auto grid min-h-screen w-full max-w-4xl content-start px-3 py-4 sm:content-center sm:px-4 sm:py-12">
@@ -313,26 +368,32 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
             </div>
             <Film className="h-10 w-10 shrink-0 text-teal-500" />
           </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <button className={clsx("rounded-xl border px-3 py-2 text-sm font-semibold", mode === "signup" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300")} onClick={() => switchMode("signup")}>
-              Sign up
-            </button>
-            <button className={clsx("rounded-xl border px-3 py-2 text-sm font-semibold", mode === "signin" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300")} onClick={() => switchMode("signin")}>
-              Sign in
-            </button>
-          </div>
+          {resetMode ? (
+            <div className="rounded-xl border border-teal-300 bg-teal-50 px-3 py-2 text-sm font-bold text-teal-900 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-100">
+              Reset password
+            </div>
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2">
+              <button className={clsx("rounded-xl border px-3 py-2 text-sm font-semibold", mode === "signup" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300")} onClick={() => switchMode("signup")}>
+                Sign up
+              </button>
+              <button className={clsx("rounded-xl border px-3 py-2 text-sm font-semibold", mode === "signin" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300")} onClick={() => switchMode("signin")}>
+                Sign in
+              </button>
+            </div>
+          )}
           <div className="grid gap-4">
-            {(!isSupabaseConfigured || mode === "signup") && (
+            {(!resetMode && (!isSupabaseConfigured || mode === "signup")) && (
               <Field label="Display name">
                 <input className={inputClass()} placeholder="e.g. Mirai" value={name} onChange={(event) => setName(event.target.value)} />
               </Field>
             )}
-            {isSupabaseConfigured && (
+            {isSupabaseConfigured && !resetMode && (
               <Field label="Email">
                 <input className={inputClass()} type="email" placeholder="you@example.com" value={email} onChange={(event) => setEmail(event.target.value)} />
               </Field>
             )}
-            <Field label={isSupabaseConfigured ? "Password" : "Passcode"}>
+            <Field label={resetMode ? "New password" : isSupabaseConfigured ? "Password" : "Passcode"}>
               <input
                 className={inputClass()}
                 type="password"
@@ -341,7 +402,7 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
                 onChange={(event) => setPasscode(event.target.value)}
               />
             </Field>
-            {isSupabaseConfigured && mode === "signup" && (
+            {isSupabaseConfigured && (mode === "signup" || resetMode) && (
               <p className={clsx("text-xs", passcode && !passwordMeetsRules ? "text-amber-600 dark:text-amber-300" : "text-slate-500")}>
                 Passwords need at least 8 characters with letters and numbers.
               </p>
@@ -357,8 +418,18 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
                 )}
               </div>
             )}
-            <Button onClick={submit} disabled={loading}>{loading ? "One moment..." : mode === "signup" ? "Create account" : "Sign in"}</Button>
-            {!isSupabaseConfigured && <button className="button-ghost" onClick={loginDemo}>Use demo user</button>}
+            <Button onClick={resetMode ? updatePassword : submit} disabled={loading}>{loading ? "One moment..." : resetMode ? "Update password" : mode === "signup" ? "Create account" : "Sign in"}</Button>
+            {isSupabaseConfigured && mode === "signin" && !resetMode && (
+              <button className="button-ghost justify-self-start" onClick={sendResetEmail} disabled={resetSending} type="button">
+                {resetSending ? "Sending reset link..." : "Forgot password?"}
+              </button>
+            )}
+            {resetMode && (
+              <button className="button-ghost justify-self-start" onClick={() => { setResetMode(false); setPasscode(""); setNotice(""); setError(""); }} type="button">
+                Back to sign in
+              </button>
+            )}
+            {!isSupabaseConfigured && !resetMode && <button className="button-ghost" onClick={loginDemo}>Use demo user</button>}
           </div>
         </Card>
         <div className="mt-4 rounded-2xl border border-white/60 bg-white/55 p-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/45">
@@ -1129,9 +1200,11 @@ function formatBroadcastShort(value?: string) {
 
 function SeasonTracker({ trending, seasonal, upcoming, airingToday, updatedAt, loading, error, onRefresh, onAdd }: { trending: AnimeSummary[]; seasonal: AnimeSummary[]; upcoming: AnimeSummary[]; airingToday: AnimeSummary[]; updatedAt: string; loading: boolean; error: string; onRefresh: () => void; onAdd: (anime: AnimeSummary) => void }) {
   const [todayIndex, setTodayIndex] = useState(0);
+  const [scoreIndex, setScoreIndex] = useState(0);
   const seasonPool = [...seasonal, ...trending];
   const uniquePool = [...new Map(seasonPool.map((anime) => [anime.mal_id, anime])).values()];
-  const highestScored = uniquePool.filter((anime) => anime.score).sort((a, b) => (b.score || 0) - (a.score || 0))[0] || trending[0] || seasonal[0];
+  const highestScoredPool = uniquePool.filter((anime) => anime.score).sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 5);
+  const highestScored = highestScoredPool[scoreIndex] || highestScoredPool[0] || trending[0] || seasonal[0];
   const mostFavorited = uniquePool.filter((anime) => anime.favorites).sort((a, b) => (b.favorites || 0) - (a.favorites || 0))[0] || trending[0] || seasonal[0];
   const todayHighlights = [...new Map(airingToday.map((anime) => [anime.mal_id, anime])).values()]
     .sort((a, b) => (b.score || 0) - (a.score || 0) || (b.favorites || 0) - (a.favorites || 0))
@@ -1148,11 +1221,23 @@ function SeasonTracker({ trending, seasonal, upcoming, airingToday, updatedAt, l
   }, [todayHighlights.length]);
 
   useEffect(() => {
+    if (highestScoredPool.length < 2) return;
+    const timer = window.setInterval(() => {
+      setScoreIndex((current) => (current + 1) % highestScoredPool.length);
+    }, 5200);
+    return () => window.clearInterval(timer);
+  }, [highestScoredPool.length]);
+
+  useEffect(() => {
     if (todayIndex >= todayHighlights.length) setTodayIndex(0);
   }, [todayHighlights.length, todayIndex]);
 
+  useEffect(() => {
+    if (scoreIndex >= highestScoredPool.length) setScoreIndex(0);
+  }, [highestScoredPool.length, scoreIndex]);
+
   const trackerItems = [
-    highestScored && { label: "Highest Scored", anime: highestScored, stat: highestScored.score ? `${highestScored.score}/10` : "Rising", icon: <Star className="h-4 w-4" />, accent: "from-teal-400/25 to-cyan-300/10" },
+    highestScored && { label: highestScoredPool.length > 1 ? `Highest Scored ${scoreIndex + 1}/${highestScoredPool.length}` : "Highest Scored", anime: highestScored, stat: highestScored.score ? `${highestScored.score}/10` : "Rising", icon: <Star className="h-4 w-4" />, accent: "from-teal-400/25 to-cyan-300/10" },
     mostFavorited && { label: "Most Favorited", anime: mostFavorited, stat: formatCompactNumber(mostFavorited.favorites), icon: <Heart className="h-4 w-4" />, accent: "from-pink-300/30 to-teal-300/10" },
     newEpisodeToday && { label: todayHighlights.length > 1 ? `New Today ${todayIndex + 1}/${todayHighlights.length}` : "New Today", anime: newEpisodeToday, stat: formatBroadcastShort(newEpisodeToday.broadcast), icon: <Trophy className="h-4 w-4" />, accent: "from-amber-300/30 to-teal-300/10" },
     comingSoon && { label: "Coming Soon", anime: comingSoon, stat: comingSoon.year ? String(comingSoon.year) : "Soon", icon: <PlayCircle className="h-4 w-4" />, accent: "from-violet-300/30 to-cyan-300/10" }
@@ -1927,6 +2012,7 @@ function ProfilePage({ data, memberSince, onBack, onSaveProfile, onDeleteAccount
   const [isPublic, setIsPublic] = useState(data.settings.isPublic);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [error, setError] = useState("");
+  const [editOpen, setEditOpen] = useState(false);
   const animeCompleted = data.library.filter((entry) => entry.status === "Completed").length;
   const mangaCompleted = data.mangaLibrary.filter((entry) => entry.status === "Completed").length;
   const ratedItems = [...data.library, ...data.mangaLibrary].filter((entry) => entry.rating > 0);
@@ -1973,15 +2059,19 @@ function ProfilePage({ data, memberSince, onBack, onSaveProfile, onDeleteAccount
 
       <Card className="grid gap-5 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-start">
         <div className="grid gap-4">
-          <div className="flex items-center gap-4">
-            <div className="grid h-16 w-16 place-items-center rounded-2xl bg-teal-50 text-4xl shadow-sm dark:bg-teal-950/50">{avatar || data.settings.avatar}</div>
+          <button className="flex w-full items-center gap-4 rounded-2xl p-2 text-left transition hover:bg-white/60 dark:hover:bg-slate-900/60" onClick={() => setEditOpen((prev) => !prev)} type="button" aria-expanded={editOpen}>
+            <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-teal-50 text-4xl shadow-sm dark:bg-teal-950/50">{avatar || data.settings.avatar}</div>
             <div className="min-w-0">
               <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Member profile</p>
               <h3 className="break-words font-display text-4xl leading-tight">{data.settings.username || "Anime fan"}</h3>
               <p className="text-sm text-slate-500">Member since {formatDate(memberSince)}</p>
             </div>
-          </div>
-          <div className="grid gap-3 rounded-2xl border border-slate-200/70 bg-white/70 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+            <span className="ml-auto hidden shrink-0 items-center gap-1 text-xs font-black text-teal-600 sm:inline-flex">
+              {editOpen ? "Close editor" : "Edit profile"}
+              {editOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </span>
+          </button>
+          {editOpen && <div className="grid gap-3 rounded-2xl border border-slate-200/70 bg-white/70 p-4 dark:border-slate-800 dark:bg-slate-900/70">
             <div className="flex items-center justify-between gap-3">
               <h3 className="font-display text-2xl">Edit profile</h3>
               <Sparkles className="h-5 w-5 text-teal-500" />
@@ -2029,7 +2119,7 @@ function ProfilePage({ data, memberSince, onBack, onSaveProfile, onDeleteAccount
             {status === "error" && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-100">{error}</p>}
             {status === "saved" && <p className="rounded-xl bg-teal-50 p-3 text-sm font-semibold text-teal-800 dark:bg-teal-950/40 dark:text-teal-100">Profile saved.</p>}
             <Button onClick={saveProfile} disabled={status === "saving"}>{status === "saving" ? "Saving..." : "Save profile"}</Button>
-          </div>
+          </div>}
           <p className="rounded-2xl bg-white/60 p-4 text-sm leading-6 text-slate-600 dark:bg-slate-900/60 dark:text-slate-300">
             {bio || "Keeping track of anime, manga, ratings, and favorites."}
           </p>
@@ -2277,6 +2367,10 @@ function App() {
       if (!isSupabaseConfigured) setAuthLoading(false);
       return;
     }
+    if (getAuthHashType() === "recovery") {
+      setAuthLoading(false);
+      return;
+    }
     let cancelled = false;
     const restoreSession = async () => {
       try {
@@ -2390,6 +2484,7 @@ function App() {
   };
 
   const handleLogout = async () => {
+    if (!confirm("Are you sure you want to sign out?")) return;
     if (isSupabaseConfigured) {
       try {
         await signOutCloud();

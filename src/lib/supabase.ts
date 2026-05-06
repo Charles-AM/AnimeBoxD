@@ -109,6 +109,20 @@ export async function resendSignupConfirmation(email: string) {
   if (error) throw error;
 }
 
+export async function sendPasswordResetEmail(email: string) {
+  const client = assertSupabase();
+  const { error } = await client.auth.resetPasswordForEmail(email, {
+    redirectTo: authRedirectUrl()
+  });
+  if (error) throw error;
+}
+
+export async function updateCloudPassword(password: string) {
+  const client = assertSupabase();
+  const { error } = await client.auth.updateUser({ password });
+  if (error) throw error;
+}
+
 export async function signInWithEmail(email: string, password: string) {
   const client = assertSupabase();
   const { data, error } = await client.auth.signInWithPassword({ email, password });

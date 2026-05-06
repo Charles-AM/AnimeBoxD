@@ -31,6 +31,20 @@ export const defaultData: AppData = {
   settings: defaultSettings
 };
 
+export function normalizeAppData(data?: Partial<AppData> | null): AppData {
+  if (!data) return defaultData;
+  return {
+    ...defaultData,
+    ...data,
+    settings: { ...defaultSettings, ...data.settings },
+    lists: data.lists?.length ? data.lists : defaultLists,
+    library: data.library || [],
+    mangaLibrary: data.mangaLibrary || [],
+    reviews: data.reviews || [],
+    diary: data.diary || []
+  };
+}
+
 function dataKey(userId: string) {
   return `${STORAGE_KEY}_${userId}`;
 }
@@ -53,12 +67,7 @@ export function loadData(userId?: string): AppData {
   if (!raw) return defaultData;
   try {
     const parsed = JSON.parse(raw) as Partial<AppData>;
-    return {
-      ...defaultData,
-      ...parsed,
-      settings: { ...defaultSettings, ...parsed.settings },
-      lists: parsed.lists?.length ? parsed.lists : defaultLists
-    };
+    return normalizeAppData(parsed);
   } catch {
     return defaultData;
   }

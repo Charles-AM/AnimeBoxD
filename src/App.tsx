@@ -23,9 +23,10 @@ import {
 import { fixedAnime } from "./lib/fixedAnime";
 import { getAiringToday, getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, getSeasonal, getTopAiring, getUpcomingAnime, searchAnime, searchManga } from "./lib/jikan";
 import { loadData, saveData, setActiveUser } from "./lib/storage";
+import { createReport, getCurrentSession, isSupabaseConfigured, loadCloudData, loadProfile, saveCloudData, signInWithEmail, signOutCloud, signUpWithEmail, userToProfileFallback } from "./lib/supabase";
 import type { AnimeDetail, AnimeSummary, AppData, LibraryEntry, LibraryStatus, MangaDetail, MangaEntry, MangaStatus, MangaSummary, Settings, ThemeMode } from "./types/anime";
 
-type UserAccount = { id: string; name: string; avatar: string; passcode: string };
+type UserAccount = { id: string; name: string; avatar: string; passcode: string; email?: string; isCloud?: boolean };
 
 type AuthMode = "signin" | "signup";
 
@@ -162,19 +163,52 @@ function useTheme(settings: Settings) {
   }, [settings.theme]);
 }
 
-function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: AppData }) => void }) {
+function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: AppData }) => void | Promise<void> }) {
   const [mode, setMode] = useState<AuthMode>("signup");
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (isSupabaseConfigured) return;
     const nextUsers = ensureDemoUser(loadUsers());
     saveUsers(nextUsers);
   }, []);
 
-  const submit = () => {
+  const submit = async () => {
     setError("");
+    setNotice("");
+    if (isSupabaseConfigured) {
+      if (!email.trim() || !passcode.trim() || (mode === "signup" && !name.trim())) {
+        setError(mode === "signup" ? "Add your name, email, and password." : "Add your email and password.");
+        return;
+      }
+      setLoading(true);
+      try {
+        const response = mode === "signup"
+          ? await signUpWithEmail(email.trim(), passcode.trim(), name.trim())
+          : await signInWithEmail(email.trim(), passcode.trim());
+        if (!response.user || !response.session) {
+          setNotice("Check your email to confirm your account, then come back to sign in.");
+          return;
+        }
+        const profile = (await loadProfile(response.user.id)) || userToProfileFallback(response.user);
+        const nextData = await loadCloudData(response.user.id);
+        await onLogin({
+          user: { id: response.user.id, name: profile.username, avatar: profile.avatar, passcode: "", email: response.user.email, isCloud: true },
+          data: { ...nextData, settings: { ...nextData.settings, username: profile.username, avatar: profile.avatar, bio: profile.bio || nextData.settings.bio } }
+        });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Could not sign in right now.");
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     if (!name.trim() || !passcode.trim()) {
       setError("Please enter a name and passcode.");
       return;
@@ -220,7 +254,7 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
             <div className="min-w-0">
               <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Animeboxd</p>
               <h1 className="font-display text-4xl leading-tight sm:text-5xl">Welcome back</h1>
-              <p className="text-sm text-slate-500">Pick up where you left off.</p>
+            <p className="text-sm text-slate-500">{isSupabaseConfigured ? "Sign in and your library follows you." : "Pick up where you left off."}</p>
             </div>
             <Film className="h-10 w-10 shrink-0 text-teal-500" />
           </div>
@@ -233,15 +267,23 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
             </button>
           </div>
           <div className="grid gap-4">
-            <Field label="Display name">
-              <input className={inputClass()} placeholder="e.g. Mirai" value={name} onChange={(event) => setName(event.target.value)} />
-            </Field>
-            <Field label="Passcode">
-              <input className={inputClass()} type="password" placeholder="Simple passcode" value={passcode} onChange={(event) => setPasscode(event.target.value)} />
+            {(!isSupabaseConfigured || mode === "signup") && (
+              <Field label="Display name">
+                <input className={inputClass()} placeholder="e.g. Mirai" value={name} onChange={(event) => setName(event.target.value)} />
+              </Field>
+            )}
+            {isSupabaseConfigured && (
+              <Field label="Email">
+                <input className={inputClass()} type="email" placeholder="you@example.com" value={email} onChange={(event) => setEmail(event.target.value)} />
+              </Field>
+            )}
+            <Field label={isSupabaseConfigured ? "Password" : "Passcode"}>
+              <input className={inputClass()} type="password" placeholder={isSupabaseConfigured ? "Your password" : "Simple passcode"} value={passcode} onChange={(event) => setPasscode(event.target.value)} />
             </Field>
             {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{error}</p>}
-            <Button onClick={submit}>{mode === "signup" ? "Create diary" : "Enter diary"}</Button>
-            <button className="button-ghost" onClick={loginDemo}>Use demo user</button>
+            {notice && <p className="rounded-xl bg-teal-50 px-3 py-2 text-sm text-teal-800 dark:bg-teal-950/40 dark:text-teal-100">{notice}</p>}
+            <Button onClick={submit} disabled={loading}>{loading ? "One moment..." : mode === "signup" ? "Create account" : "Sign in"}</Button>
+            {!isSupabaseConfigured && <button className="button-ghost" onClick={loginDemo}>Use demo user</button>}
           </div>
         </Card>
       </div>
@@ -307,7 +349,7 @@ function Header({ user, theme, onThemeChange, onLogout, onHome, onMyStuff, onMyM
   );
 }
 
-function ReportIssueModal({ onClose }: { onClose: () => void }) {
+function ReportIssueModal({ onClose, userId }: { onClose: () => void; userId?: string }) {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [error, setError] = useState("");
 
@@ -320,6 +362,16 @@ function ReportIssueModal({ onClose }: { onClose: () => void }) {
     setError("");
 
     try {
+      if (isSupabaseConfigured) {
+        await createReport({
+          userId,
+          name: String(formData.get("name") || ""),
+          email: String(formData.get("email") || ""),
+          category: String(formData.get("category") || "Suggestion"),
+          message: String(formData.get("message") || "")
+        });
+      }
+
       const response = await fetch("https://formsubmit.co/ajax/vmb4manager@gmail.com", {
         method: "POST",
         headers: {
@@ -335,7 +387,7 @@ function ReportIssueModal({ onClose }: { onClose: () => void }) {
         })
       });
 
-      if (!response.ok) throw new Error("The report could not be sent right now.");
+      if (!response.ok && !isSupabaseConfigured) throw new Error("The report could not be sent right now.");
       setStatus("sent");
       form.reset();
     } catch (err) {
@@ -1875,6 +1927,9 @@ function DashboardPage({ data, onClearHistory, onBack }: { data: AppData; onClea
 function App() {
   const [userId, setUserId] = useState("");
   const [data, setData] = useState<AppData>(() => loadData());
+  const [authLoading, setAuthLoading] = useState(isSupabaseConfigured);
+  const [cloudSaveReady, setCloudSaveReady] = useState(!isSupabaseConfigured);
+  const [saveError, setSaveError] = useState("");
   const [page, setPage] = useState<"home" | "stuff" | "manga" | "add" | "add-manga" | "dashboard" | "explore">("home");
   const [selectedAnime, setSelectedAnime] = useState<AnimeSummary | null>(null);
   const [selectedManga, setSelectedManga] = useState<MangaSummary | null>(null);
@@ -1882,7 +1937,37 @@ function App() {
   useTheme(data.settings);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!isSupabaseConfigured || userId) {
+      if (!isSupabaseConfigured) setAuthLoading(false);
+      return;
+    }
+    let cancelled = false;
+    const restoreSession = async () => {
+      try {
+        const session = await getCurrentSession();
+        if (!session?.user || cancelled) return;
+        const profile = (await loadProfile(session.user.id)) || userToProfileFallback(session.user);
+        const nextData = await loadCloudData(session.user.id);
+        if (cancelled) return;
+        setCloudSaveReady(false);
+        setActiveUser(session.user.id);
+        setUserId(session.user.id);
+        setData({ ...nextData, settings: { ...nextData.settings, username: profile.username, avatar: profile.avatar, bio: profile.bio || nextData.settings.bio } });
+        window.setTimeout(() => setCloudSaveReady(true), 0);
+      } catch (err) {
+        setSaveError(err instanceof Error ? err.message : "Could not restore your session.");
+      } finally {
+        if (!cancelled) setAuthLoading(false);
+      }
+    };
+    restoreSession();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId || isSupabaseConfigured) return;
     const loaded = loadData(userId);
     const user = findUserById(userId);
     const name = user?.name || userId;
@@ -1892,8 +1977,18 @@ function App() {
 
   useEffect(() => {
     if (!userId) return;
-    saveData(userId, data);
-  }, [data, userId]);
+    if (!isSupabaseConfigured) {
+      saveData(userId, data);
+      return;
+    }
+    if (!cloudSaveReady) return;
+    const timer = window.setTimeout(() => {
+      saveCloudData(userId, data)
+        .then(() => setSaveError(""))
+        .catch((err) => setSaveError(err instanceof Error ? err.message : "Could not save your latest change."));
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [cloudSaveReady, data, userId]);
 
   const updateData = (patch: Partial<AppData>) => setData((prev) => ({ ...prev, ...patch }));
 
@@ -1948,13 +2043,23 @@ function App() {
   };
 
   const handleLogin = ({ user, data: nextData }: { user: UserAccount; data: AppData }) => {
+    setCloudSaveReady(!user.isCloud);
     setActiveUser(user.id);
     setUserId(user.id);
     setPage("home");
     setData(nextData);
+    if (user.isCloud) window.setTimeout(() => setCloudSaveReady(true), 0);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (isSupabaseConfigured) {
+      try {
+        await signOutCloud();
+      } catch (err) {
+        setSaveError(err instanceof Error ? err.message : "Could not sign out.");
+      }
+    }
+    setCloudSaveReady(false);
     setActiveUser("");
     setUserId("");
     setData(loadData());
@@ -1976,6 +2081,18 @@ function App() {
     setData((prev) => ({ ...prev, mangaLibrary: [] }));
   };
 
+  if (authLoading) {
+    return (
+      <div className="page-shell grid min-h-screen place-items-center px-4 text-slate-900 dark:text-slate-100">
+        <Card className="w-full max-w-md text-center">
+          <Film className="mx-auto h-10 w-10 text-teal-500" />
+          <h1 className="mt-3 font-display text-3xl">Opening Animeboxd</h1>
+          <p className="mt-1 text-sm text-slate-500">Getting your shelf ready.</p>
+        </Card>
+      </div>
+    );
+  }
+
   if (!userId) return <AuthPage onLogin={handleLogin} />;
 
   return (
@@ -1993,7 +2110,8 @@ function App() {
         onReportIssue={() => setReportOpen(true)}
         activePage={page}
       />
-      {reportOpen && <ReportIssueModal onClose={() => setReportOpen(false)} />}
+      {saveError && <div className="mx-auto mt-3 max-w-6xl px-3 text-sm text-rose-600 dark:text-rose-200 sm:px-4">{saveError}</div>}
+      {reportOpen && <ReportIssueModal userId={userId} onClose={() => setReportOpen(false)} />}
       {page === "home" && <HomePage addAnime={startAddFlow} />}
       {page === "explore" && <ExplorePage onAddAnime={startAddFlow} onAddManga={startAddMangaFlow} onBack={() => setPage("home")} />}
       {page === "stuff" && <MyStuffPage data={data} onSelect={startAddFlow} updateEntry={updateEntry} removeEntry={removeEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={clearAnimeHistory} />}

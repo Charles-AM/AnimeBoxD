@@ -102,3 +102,22 @@ drop trigger if exists touch_user_app_data_updated_at on public.user_app_data;
 create trigger touch_user_app_data_updated_at
 before update on public.user_app_data
 for each row execute function public.touch_updated_at();
+
+create or replace function public.delete_current_user()
+returns void
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  delete from auth.users
+  where id = auth.uid();
+end;
+$$;
+
+revoke all on function public.delete_current_user() from public;
+grant execute on function public.delete_current_user() to authenticated;

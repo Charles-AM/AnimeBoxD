@@ -37,6 +37,7 @@ export type CloudProfile = {
   bio: string;
   is_public: boolean;
   is_admin?: boolean;
+  created_at?: string;
 };
 
 function assertSupabase() {
@@ -56,7 +57,8 @@ export function userToProfileFallback(user: User): CloudProfile {
     username: (user.user_metadata?.username as string) || user.email?.split("@")[0] || "Anime fan",
     avatar: (user.user_metadata?.avatar as string) || "✨",
     bio: "",
-    is_public: true
+    is_public: true,
+    created_at: user.created_at
   };
 }
 
@@ -87,7 +89,8 @@ export async function signUpWithEmail(email: string, password: string, username:
       username,
       avatar: "✨",
       bio: "",
-      is_public: true
+      is_public: true,
+      created_at: data.user.created_at
     });
     await ensureCloudData(data.user.id, username);
   }
@@ -107,7 +110,8 @@ export async function signInWithEmail(email: string, password: string) {
         username,
         avatar: (data.user.user_metadata?.avatar as string) || "✨",
         bio: "",
-        is_public: true
+        is_public: true,
+        created_at: data.user.created_at
       });
     }
     await ensureCloudData(data.user.id, username);
@@ -125,7 +129,7 @@ export async function loadProfile(userId: string) {
   const client = assertSupabase();
   const { data, error } = await client
     .from("profiles")
-    .select("id, username, avatar, bio, is_public, is_admin")
+    .select("id, username, avatar, bio, is_public, is_admin, created_at")
     .eq("id", userId)
     .maybeSingle();
   if (error) throw error;
@@ -185,4 +189,11 @@ export async function createReport(payload: { userId?: string; name?: string; em
     message: payload.message
   });
   if (error) throw error;
+}
+
+export async function deleteCloudAccount() {
+  const client = assertSupabase();
+  const { error } = await client.rpc("delete_current_user");
+  if (error) throw error;
+  await client.auth.signOut();
 }

@@ -24,12 +24,13 @@ import {
 import { fixedAnime } from "./lib/fixedAnime";
 import { getAiringToday, getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, getSeasonal, getTopAiring, getUpcomingAnime, searchAnime, searchManga } from "./lib/jikan";
 import { loadData, saveData, setActiveUser } from "./lib/storage";
-import { createReport, getCurrentSession, isSupabaseConfigured, loadCloudData, loadProfile, saveCloudData, signInWithEmail, signOutCloud, signUpWithEmail, userToProfileFallback } from "./lib/supabase";
+import { createReport, deleteCloudAccount, getCurrentSession, isSupabaseConfigured, loadCloudData, loadProfile, saveCloudData, signInWithEmail, signOutCloud, signUpWithEmail, userToProfileFallback } from "./lib/supabase";
 import type { AnimeDetail, AnimeSummary, AppData, LibraryEntry, LibraryStatus, MangaDetail, MangaEntry, MangaStatus, MangaSummary, Settings, ThemeMode } from "./types/anime";
 
-type UserAccount = { id: string; name: string; avatar: string; passcode: string; email?: string; isCloud?: boolean };
+type UserAccount = { id: string; name: string; avatar: string; passcode: string; email?: string; isCloud?: boolean; memberSince?: string };
 
 type AuthMode = "signin" | "signup";
+type AppPage = "home" | "stuff" | "manga" | "add" | "add-manga" | "dashboard" | "explore" | "profile";
 
 type Section = { key: LibraryStatus; title: string; icon: React.ReactElement };
 
@@ -227,7 +228,7 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
         const profile = (await loadProfile(response.user.id)) || userToProfileFallback(response.user);
         const nextData = await loadCloudData(response.user.id);
         await onLogin({
-          user: { id: response.user.id, name: profile.username, avatar: profile.avatar, passcode: "", email: response.user.email, isCloud: true },
+          user: { id: response.user.id, name: profile.username, avatar: profile.avatar, passcode: "", email: response.user.email, isCloud: true, memberSince: profile.created_at || response.user.created_at },
           data: { ...nextData, settings: { ...nextData.settings, username: profile.username, avatar: profile.avatar, bio: profile.bio || nextData.settings.bio } }
         });
       } catch (err) {
@@ -334,7 +335,7 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
   );
 }
 
-function Header({ user, theme, onThemeChange, onLogout, onHome, onMyStuff, onMyManga, onDashboard, onExplore, onReportIssue, activePage }: { user: { name: string; avatar: string }; theme: ThemeMode; onThemeChange: (value: ThemeMode) => void; onLogout: () => void; onHome: () => void; onMyStuff: () => void; onMyManga: () => void; onDashboard: () => void; onExplore: () => void; onReportIssue: () => void; activePage: "home" | "stuff" | "manga" | "add" | "add-manga" | "dashboard" | "explore" }) {
+function Header({ user, theme, onThemeChange, onLogout, onHome, onMyStuff, onMyManga, onDashboard, onExplore, onProfile, onReportIssue, activePage }: { user: { name: string; avatar: string }; theme: ThemeMode; onThemeChange: (value: ThemeMode) => void; onLogout: () => void; onHome: () => void; onMyStuff: () => void; onMyManga: () => void; onDashboard: () => void; onExplore: () => void; onProfile: () => void; onReportIssue: () => void; activePage: AppPage }) {
   return (
     <header className="sticky top-0 z-20 border-b border-white/60 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
       <div className="mx-auto flex max-w-6xl flex-col gap-2 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3 lg:flex-row lg:items-center lg:justify-between">
@@ -347,7 +348,7 @@ function Header({ user, theme, onThemeChange, onLogout, onHome, onMyStuff, onMyM
             </div>
           </button>
           <div className="flex shrink-0 items-center gap-2 lg:hidden">
-            <span className="rounded-full bg-white/80 px-2 py-1 text-sm font-semibold shadow-sm dark:bg-slate-900/70">{user.avatar}</span>
+            <button className={clsx("rounded-full px-2 py-1 text-sm font-semibold shadow-sm", activePage === "profile" ? "bg-teal-50 text-teal-900 dark:bg-teal-400 dark:text-slate-950" : "bg-white/80 dark:bg-slate-900/70")} onClick={onProfile} type="button" aria-label="Open profile">{user.avatar}</button>
             <button className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200" onClick={onLogout} aria-label="Log out">
               <LogOut className="h-4 w-4" />
             </button>
@@ -369,6 +370,9 @@ function Header({ user, theme, onThemeChange, onLogout, onHome, onMyStuff, onMyM
           <button className={clsx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-2.5 py-2 text-sm font-semibold transition sm:gap-2 sm:px-3", activePage === "dashboard" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onDashboard}>
             Dashboard
           </button>
+          <button className={clsx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-2.5 py-2 text-sm font-semibold transition sm:gap-2 sm:px-3", activePage === "profile" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onProfile}>
+            {user.avatar} <span className="max-w-24 truncate sm:max-w-32">{user.name}</span>
+          </button>
           <button
             className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200/70 bg-white/80 px-2.5 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200 sm:gap-2 sm:px-3"
             onClick={onReportIssue}
@@ -379,10 +383,6 @@ function Header({ user, theme, onThemeChange, onLogout, onHome, onMyStuff, onMyM
           <select className={clsx(inputClass(), "!w-28 shrink-0")} value={theme} onChange={(event) => onThemeChange(event.target.value as ThemeMode)}>
             {["Dark", "Light", "System"].map((item) => <option key={item}>{item}</option>)}
           </select>
-          <div className="hidden shrink-0 items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-sm font-semibold text-slate-700 shadow-sm dark:bg-slate-900/70 dark:text-slate-200 lg:flex">
-            <span className="text-lg">{user.avatar}</span>
-            <span>{user.name}</span>
-          </div>
           <button className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/70 bg-white/80 text-slate-700 transition hover:-translate-y-0.5 hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200 lg:inline-flex" onClick={onLogout} aria-label="Log out">
             <LogOut className="h-4 w-4" />
           </button>
@@ -465,7 +465,6 @@ function ReportIssueModal({ onClose, userId }: { onClose: () => void; userId?: s
         {status === "sent" ? (
           <div className="mt-5 grid gap-3 rounded-2xl bg-teal-50 p-4 text-sm text-teal-800 dark:bg-teal-950/40 dark:text-teal-100">
             <p className="font-semibold">Thanks. vbuilder got your message.</p>
-            <p>If you left an email, I can follow up when there is something to clarify.</p>
           </div>
         ) : (
           <form className="mt-5 grid gap-3" onSubmit={submitReport}>
@@ -1876,6 +1875,88 @@ function MangaHighlights({ data, updateData }: { data: AppData; updateData: (pat
   );
 }
 
+function formatDate(value?: string) {
+  if (!value) return "New member";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "New member";
+  return date.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+}
+
+function ProfilePage({ data, memberSince, onBack, onDeleteAccount }: { data: AppData; memberSince?: string; onBack: () => void; onDeleteAccount: () => void | Promise<void> }) {
+  const animeCompleted = data.library.filter((entry) => entry.status === "Completed").length;
+  const mangaCompleted = data.mangaLibrary.filter((entry) => entry.status === "Completed").length;
+  const ratedItems = [...data.library, ...data.mangaLibrary].filter((entry) => entry.rating > 0);
+  const averageRating = ratedItems.length ? (ratedItems.reduce((sum, entry) => sum + entry.rating, 0) / ratedItems.length).toFixed(1) : "-";
+  const recentActivity = [
+    ...data.library.map((entry) => ({ kind: "Anime" as const, title: entry.title, image: entry.image_url, action: statusLabels[entry.status], date: entry.added_at, detail: entry.rating ? `${entry.rating}/10` : `${entry.episodes_watched}/${entry.total_episodes || "?"} eps` })),
+    ...data.mangaLibrary.map((entry) => ({ kind: "Manga" as const, title: entry.title, image: entry.image_url, action: mangaStatusLabels[entry.status], date: entry.added_at, detail: entry.rating ? `${entry.rating}/10` : "No rating yet" }))
+  ]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 8);
+
+  return (
+    <div className="mx-auto grid max-w-6xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="font-display text-3xl leading-tight">Profile</h2>
+        <Button onClick={onBack}>Back home</Button>
+      </div>
+
+      <Card className="grid gap-5 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-start">
+        <div className="grid gap-4">
+          <div className="flex items-center gap-4">
+            <div className="grid h-16 w-16 place-items-center rounded-2xl bg-teal-50 text-4xl shadow-sm dark:bg-teal-950/50">{data.settings.avatar}</div>
+            <div className="min-w-0">
+              <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Member profile</p>
+              <h3 className="break-words font-display text-4xl leading-tight">{data.settings.username || "Anime fan"}</h3>
+              <p className="text-sm text-slate-500">Member since {formatDate(memberSince)}</p>
+            </div>
+          </div>
+          <p className="rounded-2xl bg-white/60 p-4 text-sm leading-6 text-slate-600 dark:bg-slate-900/60 dark:text-slate-300">
+            {data.settings.bio || "Keeping track of anime, manga, ratings, and favorites."}
+          </p>
+          <div className="grid grid-cols-2 gap-3 text-center text-sm font-semibold sm:grid-cols-4 lg:grid-cols-2">
+            <span className="rounded-2xl bg-slate-100 p-3 dark:bg-slate-900"><strong className="block text-2xl text-slate-950 dark:text-white">{data.library.length}</strong>Anime</span>
+            <span className="rounded-2xl bg-slate-100 p-3 dark:bg-slate-900"><strong className="block text-2xl text-slate-950 dark:text-white">{data.mangaLibrary.length}</strong>Manga</span>
+            <span className="rounded-2xl bg-slate-100 p-3 dark:bg-slate-900"><strong className="block text-2xl text-slate-950 dark:text-white">{animeCompleted + mangaCompleted}</strong>Completed</span>
+            <span className="rounded-2xl bg-slate-100 p-3 dark:bg-slate-900"><strong className="block text-2xl text-slate-950 dark:text-white">{averageRating}</strong>Avg rating</span>
+          </div>
+        </div>
+
+        <div className="grid gap-3">
+          <h3 className="font-display text-2xl">Recent activity</h3>
+          {recentActivity.length === 0 ? (
+            <p className="rounded-2xl bg-slate-100 p-4 text-sm text-slate-500 dark:bg-slate-900">No activity yet. Add anime or manga to start building your profile.</p>
+          ) : (
+            recentActivity.map((entry) => (
+              <div key={`${entry.kind}-${entry.title}-${entry.date}`} className="grid grid-cols-[48px_minmax(0,1fr)] gap-3 rounded-2xl border border-slate-200/70 bg-white/70 p-3 dark:border-slate-800 dark:bg-slate-900/70">
+                <img src={entry.image} alt="" className="h-16 w-12 rounded-lg object-cover" />
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="line-clamp-1 font-semibold text-slate-900 dark:text-white">{entry.title}</p>
+                    <span className="rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-bold text-teal-700 dark:bg-teal-950 dark:text-teal-200">{entry.kind}</span>
+                  </div>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{entry.action} • {entry.detail}</p>
+                  <p className="text-xs text-slate-500">Added {formatDate(entry.date)}</p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
+
+      <Card className="border-rose-200/80 bg-rose-50/60 dark:border-rose-900/50 dark:bg-rose-950/20">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="font-display text-2xl">Delete account</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-300">This removes your account and saved AnimeBoxD data. This cannot be undone.</p>
+          </div>
+          <Button className="bg-rose-600 hover:bg-rose-700" onClick={onDeleteAccount}>Delete account</Button>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 function DashboardPage({ data, onClearHistory, onBack }: { data: AppData; onClearHistory: () => void; onBack: () => void }) {
   const counts = {
     total: data.library.length,
@@ -2065,7 +2146,8 @@ function App() {
   const [authLoading, setAuthLoading] = useState(isSupabaseConfigured);
   const [cloudSaveReady, setCloudSaveReady] = useState(!isSupabaseConfigured);
   const [saveError, setSaveError] = useState("");
-  const [page, setPage] = useState<"home" | "stuff" | "manga" | "add" | "add-manga" | "dashboard" | "explore">("home");
+  const [page, setPage] = useState<AppPage>("home");
+  const [memberSince, setMemberSince] = useState("");
   const [selectedAnime, setSelectedAnime] = useState<AnimeSummary | null>(null);
   const [selectedManga, setSelectedManga] = useState<MangaSummary | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
@@ -2087,6 +2169,7 @@ function App() {
         setCloudSaveReady(false);
         setActiveUser(session.user.id);
         setUserId(session.user.id);
+        setMemberSince(profile.created_at || session.user.created_at);
         setData({ ...nextData, settings: { ...nextData.settings, username: profile.username, avatar: profile.avatar, bio: profile.bio || nextData.settings.bio } });
         window.setTimeout(() => setCloudSaveReady(true), 0);
       } catch (err) {
@@ -2181,6 +2264,7 @@ function App() {
     setCloudSaveReady(!user.isCloud);
     setActiveUser(user.id);
     setUserId(user.id);
+    setMemberSince(user.memberSince || "");
     setPage("home");
     setData(nextData);
     if (user.isCloud) window.setTimeout(() => setCloudSaveReady(true), 0);
@@ -2197,8 +2281,28 @@ function App() {
     setCloudSaveReady(false);
     setActiveUser("");
     setUserId("");
+    setMemberSince("");
     setData(loadData());
     setPage("home");
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmation = prompt("Type DELETE to permanently remove this account.");
+    if (confirmation !== "DELETE") return;
+    setSaveError("");
+    try {
+      if (isSupabaseConfigured) {
+        await deleteCloudAccount();
+      }
+      setCloudSaveReady(false);
+      setActiveUser("");
+      setUserId("");
+      setMemberSince("");
+      setData(loadData());
+      setPage("home");
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Could not delete the account right now.");
+    }
   };
 
   const clearHistory = () => {
@@ -2242,6 +2346,7 @@ function App() {
         onMyManga={() => setPage("manga")}
         onDashboard={() => setPage("dashboard")}
         onExplore={() => setPage("explore")}
+        onProfile={() => setPage("profile")}
         onReportIssue={() => setReportOpen(true)}
         activePage={page}
       />
@@ -2252,6 +2357,7 @@ function App() {
       {page === "stuff" && <MyStuffPage data={data} onSelect={startAddFlow} updateEntry={updateEntry} removeEntry={removeEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={clearAnimeHistory} />}
       {page === "manga" && <MyMangaPage data={data} onSelect={startAddMangaFlow} updateEntry={updateMangaEntry} removeEntry={removeMangaEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={clearMangaHistory} />}
       {page === "dashboard" && <DashboardPage data={data} onClearHistory={clearHistory} onBack={() => setPage("home")} />}
+      {page === "profile" && <ProfilePage data={data} memberSince={memberSince} onBack={() => setPage("home")} onDeleteAccount={handleDeleteAccount} />}
       {page === "add" && selectedAnime && (
         <AddEntryPage
           anime={selectedAnime}

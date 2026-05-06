@@ -173,6 +173,7 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -188,6 +189,17 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
   }, []);
 
   const passwordMeetsRules = passcode.length >= 8 && /[A-Za-z]/.test(passcode) && /\d/.test(passcode);
+
+  const switchMode = (nextMode: AuthMode) => {
+    if (nextMode === mode) return;
+    const keepEmail = mode === "signup" && nextMode === "signin" && signupEmail;
+    setMode(nextMode);
+    setName("");
+    setEmail(keepEmail ? signupEmail : "");
+    setPasscode("");
+    setError("");
+    setNotice("");
+  };
 
   const submit = async () => {
     setError("");
@@ -207,6 +219,8 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
           ? await signUpWithEmail(email.trim(), passcode.trim(), name.trim())
           : await signInWithEmail(email.trim(), passcode.trim());
         if (!response.user || !response.session) {
+          setSignupEmail(email.trim());
+          setPasscode("");
           setNotice("Check your email to confirm your account, then come back to sign in.");
           return;
         }
@@ -264,7 +278,7 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
   return (
     <div className="page-shell min-h-screen">
       <div className="mx-auto grid min-h-screen w-full max-w-4xl content-start px-3 py-4 sm:content-center sm:px-4 sm:py-12">
-          <Card className="grid gap-5 p-4 sm:gap-6 sm:p-5">
+        <Card className="grid gap-5 p-4 sm:gap-6 sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Animeboxd</p>
@@ -274,10 +288,10 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
             <Film className="h-10 w-10 shrink-0 text-teal-500" />
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
-            <button className={clsx("rounded-xl border px-3 py-2 text-sm font-semibold", mode === "signup" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300")} onClick={() => setMode("signup")}>
+            <button className={clsx("rounded-xl border px-3 py-2 text-sm font-semibold", mode === "signup" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300")} onClick={() => switchMode("signup")}>
               Sign up
             </button>
-            <button className={clsx("rounded-xl border px-3 py-2 text-sm font-semibold", mode === "signin" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300")} onClick={() => setMode("signin")}>
+            <button className={clsx("rounded-xl border px-3 py-2 text-sm font-semibold", mode === "signin" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300")} onClick={() => switchMode("signin")}>
               Sign in
             </button>
           </div>

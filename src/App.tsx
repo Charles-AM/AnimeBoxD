@@ -1181,9 +1181,9 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
               <Search className="h-5 w-5 text-slate-400" />
               <input className={clsx(inputClass(), "border-0 bg-transparent px-0 focus:border-0")} placeholder={`Search ${mode} by title`} value={query} onChange={(event) => setQuery(event.target.value)} />
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
               <button className="button-ghost" type="button" onClick={clearExploreInput}>Clear search</button>
-              <button className="button-ghost" type="button" onClick={clearExploreAll}>Clear</button>
+              <button className="button-ghost" type="button" onClick={clearExploreAll}>Reset</button>
             </div>
           </div>
           {loading && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">Searching...</p>}
@@ -1191,7 +1191,7 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
           {!loading && !results.length && query.trim().length < 2 && (
             <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">Type a title to start.</p>
           )}
-          <div className="grid max-h-[70vh] gap-2 overflow-auto pr-1 md:max-h-[520px]">
+          <div className="scrollbar-soft grid max-h-[70vh] gap-2 overflow-auto pr-1 md:max-h-[520px]">
             {safeResults.map((item) => {
               const isSelected = item.mal_id === selectedId;
               const meta = mode === "anime"
@@ -1210,7 +1210,7 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
             })}
           </div>
         </Card>
-        <Card className={clsx("grid gap-4 lg:max-h-[72vh] lg:overflow-auto", selectedId ? "grid" : "hidden lg:grid")}>
+        <Card className={clsx("scrollbar-soft grid gap-4 lg:max-h-[72vh] lg:overflow-auto", selectedId ? "grid" : "hidden lg:grid")}>
           {selectedId && (
             <button className="button-ghost" onClick={() => setSelectedId(null)}>
               Back to results
@@ -1237,12 +1237,12 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
                     {detail.url ? <a className="inline-flex items-center rounded-xl border border-slate-200/70 bg-white/80 px-3 py-1 text-teal-600 transition hover:-translate-y-0.5 hover:border-teal-400 dark:border-slate-800 dark:bg-slate-950/70" href={detail.url} target="_blank" rel="noreferrer">Open on MAL</a> : null}
                   </div>
                   {mode === "anime" && animeDetail && (
-                    <Button className="w-fit bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => onAddAnime(animeDetail)}>
+                    <Button className="w-full bg-teal-400 text-slate-950 hover:bg-teal-300 sm:w-fit" onClick={() => onAddAnime(animeDetail)}>
                       <Plus className="h-4 w-4" /> Add to diary
                     </Button>
                   )}
                   {mode === "manga" && mangaDetail && (
-                    <Button className="w-fit bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => onAddManga(mangaDetail)}>
+                    <Button className="w-full bg-teal-400 text-slate-950 hover:bg-teal-300 sm:w-fit" onClick={() => onAddManga(mangaDetail)}>
                       <Plus className="h-4 w-4" /> Add to manga
                     </Button>
                   )}
@@ -1364,9 +1364,9 @@ function MyStuffPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
     <div className="mx-auto grid max-w-6xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-display text-3xl leading-tight">My Anime</h2>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
           <Button className="bg-rose-600 hover:bg-rose-700" onClick={onClearHistory}>Clear history</Button>
-          <Button className="bg-rose-600 hover:bg-rose-700" onClick={onBack}>Back to home</Button>
+          <Button className="bg-slate-900 hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300" onClick={onBack}>Back home</Button>
         </div>
       </div>
       <Card className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
@@ -1448,9 +1448,9 @@ function MyMangaPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
     <div className="mx-auto grid max-w-6xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-display text-3xl leading-tight">My Manga</h2>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
           <Button className="bg-rose-600 hover:bg-rose-700" onClick={onClearHistory}>Clear history</Button>
-          <Button className="bg-rose-600 hover:bg-rose-700" onClick={onBack}>Back to home</Button>
+          <Button className="bg-slate-900 hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300" onClick={onBack}>Back home</Button>
         </div>
       </div>
       <Card className="grid gap-4 border border-teal-200/70 bg-teal-50/40 dark:border-teal-900/60 dark:bg-slate-950/70 lg:grid-cols-[1.2fr_0.8fr]">
@@ -1580,7 +1580,7 @@ function ProfileHighlights({ data, updateData }: { data: AppData; updateData: (p
           <input className={inputClass()} placeholder="Search anime favorites" value={query} onChange={(event) => setQuery(event.target.value)} />
           {searchLoading && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">Searching anime...</p>}
           {searchError && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{searchError}</p>}
-          <div className="grid max-h-[70vh] gap-2 overflow-auto pr-1 md:max-h-96 md:grid-cols-2 xl:grid-cols-3">
+          <div className="scrollbar-soft grid max-h-[70vh] gap-2 overflow-auto pr-1 md:max-h-96 md:grid-cols-2 xl:grid-cols-3">
             {visibleCatalog.map((anime) => (
               <label key={anime.mal_id} className="grid grid-cols-[18px_44px_minmax(0,1fr)] items-center gap-2 rounded-xl border border-slate-200/70 bg-white/70 p-2 text-sm font-semibold dark:border-slate-800 dark:bg-slate-950/70">
                 <input type="checkbox" checked={validSelectedIds.includes(anime.mal_id)} onChange={() => toggleFavorite(anime)} />
@@ -1671,7 +1671,7 @@ function MangaHighlights({ data, updateData }: { data: AppData; updateData: (pat
           <input className={inputClass()} placeholder="Search manga favorites" value={query} onChange={(event) => setQuery(event.target.value)} />
           {searchLoading && <p className="rounded-xl bg-teal-50 p-3 text-sm text-slate-500 dark:bg-teal-950/30">Searching manga...</p>}
           {searchError && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{searchError}</p>}
-          <div className="grid max-h-[70vh] gap-2 overflow-auto pr-1 md:max-h-96 md:grid-cols-2 xl:grid-cols-3">
+          <div className="scrollbar-soft grid max-h-[70vh] gap-2 overflow-auto pr-1 md:max-h-96 md:grid-cols-2 xl:grid-cols-3">
             {visibleCatalog.map((manga) => (
               <label key={manga.mal_id} className="grid grid-cols-[18px_44px_minmax(0,1fr)] items-center gap-2 rounded-xl border border-teal-200/70 bg-white/70 p-2 text-sm font-semibold dark:border-teal-900/50 dark:bg-slate-950/70">
                 <input type="checkbox" checked={validSelectedIds.includes(manga.mal_id)} onChange={() => toggleFavorite(manga)} />
@@ -1743,9 +1743,9 @@ function DashboardPage({ data, onClearHistory, onBack }: { data: AppData; onClea
     <div className="mx-auto grid max-w-6xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-display text-3xl leading-tight">Dashboard</h2>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
           <Button className="bg-rose-600 hover:bg-rose-700" onClick={onClearHistory}>Clear history</Button>
-          <Button className="bg-rose-600 hover:bg-rose-700" onClick={onBack}>Back to home</Button>
+          <Button className="bg-slate-900 hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300" onClick={onBack}>Back home</Button>
         </div>
       </div>
       <Card className="grid gap-4">

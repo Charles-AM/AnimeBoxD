@@ -881,6 +881,31 @@ function formatCompactNumber(value?: number) {
   return String(value);
 }
 
+function formatBroadcastShort(value?: string) {
+  if (!value) return "Today";
+  const dayMap: Record<string, string> = {
+    Sundays: "Sun",
+    Mondays: "Mon",
+    Tuesdays: "Tue",
+    Wednesdays: "Wed",
+    Thursdays: "Thu",
+    Fridays: "Fri",
+    Saturdays: "Sat",
+    Sunday: "Sun",
+    Monday: "Mon",
+    Tuesday: "Tue",
+    Wednesday: "Wed",
+    Thursday: "Thu",
+    Friday: "Fri",
+    Saturday: "Sat"
+  };
+  const dayMatch = value.match(/\b(Sundays?|Mondays?|Tuesdays?|Wednesdays?|Thursdays?|Fridays?|Saturdays?)\b/);
+  const timeMatch = value.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+  const day = dayMatch ? dayMap[dayMatch[0]] : "";
+  const time = timeMatch ? timeMatch[0] : "";
+  return [day, time].filter(Boolean).join(" ") || "Today";
+}
+
 function SeasonTracker({ trending, seasonal, upcoming, airingToday, updatedAt, loading, error, onRefresh, onAdd }: { trending: AnimeSummary[]; seasonal: AnimeSummary[]; upcoming: AnimeSummary[]; airingToday: AnimeSummary[]; updatedAt: string; loading: boolean; error: string; onRefresh: () => void; onAdd: (anime: AnimeSummary) => void }) {
   const [todayIndex, setTodayIndex] = useState(0);
   const seasonPool = [...seasonal, ...trending];
@@ -908,7 +933,7 @@ function SeasonTracker({ trending, seasonal, upcoming, airingToday, updatedAt, l
   const trackerItems = [
     highestScored && { label: "Highest Scored", anime: highestScored, stat: highestScored.score ? `${highestScored.score}/10` : "Rising", icon: <Star className="h-4 w-4" />, accent: "from-teal-400/25 to-cyan-300/10" },
     mostFavorited && { label: "Most Favorited", anime: mostFavorited, stat: formatCompactNumber(mostFavorited.favorites), icon: <Heart className="h-4 w-4" />, accent: "from-pink-300/30 to-teal-300/10" },
-    newEpisodeToday && { label: todayHighlights.length > 1 ? `New Today ${todayIndex + 1}/${todayHighlights.length}` : "New Today", anime: newEpisodeToday, stat: newEpisodeToday.broadcast || "Today", icon: <Trophy className="h-4 w-4" />, accent: "from-amber-300/30 to-teal-300/10" },
+    newEpisodeToday && { label: todayHighlights.length > 1 ? `New Today ${todayIndex + 1}/${todayHighlights.length}` : "New Today", anime: newEpisodeToday, stat: formatBroadcastShort(newEpisodeToday.broadcast), icon: <Trophy className="h-4 w-4" />, accent: "from-amber-300/30 to-teal-300/10" },
     comingSoon && { label: "Coming Soon", anime: comingSoon, stat: comingSoon.year ? String(comingSoon.year) : "Soon", icon: <PlayCircle className="h-4 w-4" />, accent: "from-violet-300/30 to-cyan-300/10" }
   ].filter(Boolean) as { label: string; anime: AnimeSummary; stat: string; icon: React.ReactElement; accent: string }[];
 
@@ -936,7 +961,7 @@ function SeasonTracker({ trending, seasonal, upcoming, airingToday, updatedAt, l
                   {icon} {label}
                 </div>
                 <p className="mt-1.5 line-clamp-2 text-sm font-black text-slate-950 dark:text-white">{anime.title}</p>
-                <p className="mt-0.5 line-clamp-1 text-base font-black text-teal-700 dark:text-teal-300">{stat}</p>
+                <p className="mt-0.5 truncate text-base font-black text-teal-700 dark:text-teal-300" title={stat}>{stat}</p>
                 <p className="line-clamp-1 text-xs text-slate-500">{anime.genres.slice(0, 2).join(", ") || "Anime"}</p>
               </div>
             </div>

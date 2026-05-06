@@ -153,13 +153,14 @@ export async function saveCloudData(userId: string, appData: AppData) {
   if (error) throw error;
 }
 
-export async function createReport(payload: { userId?: string; name?: string; email?: string; category: string; message: string }) {
+export async function createReport(payload: { userId?: string; name?: string; email?: string; category: string; priority?: string; message: string }) {
   const client = assertSupabase();
   const { error } = await client.from("user_reports").insert({
     user_id: payload.userId || null,
     name: payload.name || null,
     email: payload.email || null,
     category: payload.category,
+    priority: payload.priority || "Normal",
     message: payload.message
   });
   if (error) throw error;

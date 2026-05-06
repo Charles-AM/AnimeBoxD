@@ -381,13 +381,18 @@ function ReportIssueModal({ onClose, userId }: { onClose: () => void; userId?: s
 
     try {
       if (isSupabaseConfigured) {
-        await createReport({
-          userId,
-          name: String(formData.get("name") || ""),
-          email: String(formData.get("email") || ""),
-          category: String(formData.get("category") || "Suggestion"),
-          message: String(formData.get("message") || "")
-        });
+        try {
+          await createReport({
+            userId,
+            name: String(formData.get("name") || ""),
+            email: String(formData.get("email") || ""),
+            category: String(formData.get("category") || "Suggestion"),
+            priority: String(formData.get("priority") || "Normal"),
+            message: String(formData.get("message") || "")
+          });
+        } catch {
+          // Email delivery still runs if the report table needs a schema update.
+        }
       }
 
       const response = await fetch("https://formsubmit.co/ajax/vmb4manager@gmail.com", {
@@ -397,10 +402,14 @@ function ReportIssueModal({ onClose, userId }: { onClose: () => void; userId?: s
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          _subject: "AnimeBoxD issue or suggestion",
+          _subject: `AnimeBoxD ${formData.get("category") || "feedback"} - ${formData.get("priority") || "Normal"}`,
+          _replyto: formData.get("email"),
+          app: "AnimeBoxD",
+          owner: "vbuilder",
           name: formData.get("name"),
           email: formData.get("email"),
           category: formData.get("category"),
+          priority: formData.get("priority"),
           message: formData.get("message")
         })
       });
@@ -429,30 +438,45 @@ function ReportIssueModal({ onClose, userId }: { onClose: () => void; userId?: s
         </div>
 
         {status === "sent" ? (
-          <div className="mt-5 rounded-2xl bg-teal-50 p-4 text-sm text-teal-800 dark:bg-teal-950/40 dark:text-teal-100">
-            Thanks. Your message has been sent.
+          <div className="mt-5 grid gap-3 rounded-2xl bg-teal-50 p-4 text-sm text-teal-800 dark:bg-teal-950/40 dark:text-teal-100">
+            <p className="font-semibold">Thanks. vbuilder got your message.</p>
+            <p>If you left an email, I can follow up when there is something to clarify.</p>
           </div>
         ) : (
           <form className="mt-5 grid gap-3" onSubmit={submitReport}>
             <input className="hidden" name="website" tabIndex={-1} autoComplete="off" />
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Name">
-                <input className={inputClass()} name="name" placeholder="Your name" />
+                <input className={inputClass()} name="name" placeholder="Your name" autoComplete="name" />
               </Field>
               <Field label="Email">
-                <input className={inputClass()} name="email" type="email" placeholder="you@example.com" />
+                <input className={inputClass()} name="email" type="email" placeholder="you@example.com" autoComplete="email" />
               </Field>
             </div>
-            <Field label="Type">
-              <select className={inputClass()} name="category" defaultValue="Suggestion">
-                <option>Issue</option>
-                <option>Concern</option>
-                <option>Suggestion</option>
-              </select>
-            </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Type">
+                <select className={inputClass()} name="category" defaultValue="Suggestion">
+                  <option>Bug</option>
+                  <option>Account help</option>
+                  <option>Anime or manga data</option>
+                  <option>Suggestion</option>
+                  <option>Concern</option>
+                </select>
+              </Field>
+              <Field label="Priority">
+                <select className={inputClass()} name="priority" defaultValue="Normal">
+                  <option>Normal</option>
+                  <option>Important</option>
+                  <option>Urgent</option>
+                </select>
+              </Field>
+            </div>
             <Field label="Message">
-              <textarea className={clsx(inputClass(), "min-h-32 resize-y")} name="message" minLength={10} required placeholder="What should I know?" />
+              <textarea className={clsx(inputClass(), "min-h-36 resize-y")} name="message" minLength={10} required placeholder="Tell me what happened, what device you used, and what you expected to see." />
             </Field>
+            <p className="text-xs leading-5 text-slate-500">
+              Reports go to vbuilder at <a className="font-semibold text-teal-600 dark:text-teal-300" href="mailto:vmb4manager@gmail.com">vmb4manager@gmail.com</a> and are saved for follow-up.
+            </p>
             {status === "error" && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-100">{error}</p>}
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
               <button className="button-ghost" onClick={onClose} type="button">Cancel</button>

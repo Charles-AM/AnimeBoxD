@@ -26,10 +26,14 @@ create table if not exists public.user_reports (
   name text,
   email text,
   category text not null default 'Suggestion',
+  priority text not null default 'Normal',
   message text not null,
   status text not null default 'new',
   created_at timestamptz not null default now()
 );
+
+alter table public.user_reports
+add column if not exists priority text not null default 'Normal';
 
 create table if not exists public.anime_home_cache (
   cache_key text primary key,

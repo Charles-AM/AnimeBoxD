@@ -6,10 +6,23 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 const configuredSiteUrl = import.meta.env.VITE_SITE_URL as string | undefined;
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+function normalizeSupabaseUrl(value?: string) {
+  if (!value) return "";
+  const trimmed = value.trim();
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.origin;
+  } catch {
+    return trimmed.replace(/\/+$/, "");
+  }
+}
+
+const normalizedSupabaseUrl = normalizeSupabaseUrl(supabaseUrl);
+
+export const isSupabaseConfigured = Boolean(normalizedSupabaseUrl && supabaseAnonKey);
 
 export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl!, supabaseAnonKey!, {
+  ? createClient(normalizedSupabaseUrl, supabaseAnonKey!, {
       auth: {
         persistSession: true,
         autoRefreshToken: true

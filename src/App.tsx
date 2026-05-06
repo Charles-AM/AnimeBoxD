@@ -100,7 +100,7 @@ function ensureDemoUser(users: UserAccount[]) {
 }
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <div className={clsx("glass-card rounded-2xl p-5 text-slate-900 dark:text-slate-100", className)}>{children}</div>;
+  return <div className={clsx("glass-card min-w-0 rounded-2xl p-5 text-slate-900 dark:text-slate-100", className)}>{children}</div>;
 }
 
 function Button({ children, className, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
@@ -263,7 +263,7 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
 
   return (
     <div className="page-shell min-h-screen">
-      <div className="mx-auto grid min-h-screen max-w-4xl items-start px-3 py-4 sm:items-center sm:px-4 sm:py-12">
+      <div className="mx-auto grid min-h-screen w-full max-w-4xl items-start px-3 py-4 sm:items-center sm:px-4 sm:py-12">
         <Card className="grid gap-5 p-4 sm:gap-6 sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
@@ -337,20 +337,20 @@ function Header({ user, theme, onThemeChange, onLogout, onHome, onMyStuff, onMyM
             </button>
           </div>
         </div>
-        <div className="scrollbar-soft -mx-1 flex w-[calc(100%+0.5rem)] items-center gap-1.5 overflow-x-auto px-1 pb-1 sm:gap-2 lg:mx-0 lg:w-auto lg:overflow-visible lg:px-0 lg:pb-0">
-          <button className={clsx("inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition", activePage === "home" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onHome}>
+        <div className="scrollbar-soft -mx-1 flex w-[calc(100%+0.5rem)] max-w-[calc(100%+0.5rem)] touch-pan-x items-center gap-1.5 overflow-x-auto overscroll-x-contain px-1 pb-1 sm:gap-2 lg:mx-0 lg:w-auto lg:max-w-none lg:overflow-visible lg:px-0 lg:pb-0">
+          <button className={clsx("inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-semibold transition", activePage === "home" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onHome}>
             Home
           </button>
-          <button className={clsx("inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition", activePage === "explore" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onExplore}>
+          <button className={clsx("inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-semibold transition", activePage === "explore" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onExplore}>
             <Search className="h-4 w-4" /> Explore
           </button>
-          <button className={clsx("inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition", activePage === "stuff" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onMyStuff}>
+          <button className={clsx("inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-semibold transition", activePage === "stuff" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onMyStuff}>
             <Plus className="h-4 w-4" /> My Anime
           </button>
-          <button className={clsx("inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition", activePage === "manga" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onMyManga}>
+          <button className={clsx("inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-semibold transition", activePage === "manga" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onMyManga}>
             <BookOpen className="h-4 w-4" /> My Manga
           </button>
-          <button className={clsx("inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition", activePage === "dashboard" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onDashboard}>
+          <button className={clsx("inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-semibold transition", activePage === "dashboard" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onDashboard}>
             Dashboard
           </button>
           <button

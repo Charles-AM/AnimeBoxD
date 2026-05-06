@@ -23,6 +23,8 @@ VITE_SUPABASE_ANON_KEY=your-public-anon-key
 VITE_SITE_URL=https://animeboxd.app/
 ```
 
+Use only the Supabase project root URL for `VITE_SUPABASE_URL`. Do not use a URL ending in `/rest/v1`, `/auth/v1`, or any other path.
+
 For Netlify, add the same two values in:
 
 Site configuration > Environment variables

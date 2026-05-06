@@ -65,6 +65,7 @@ export function normalizeAnime(item: JikanAnime): AnimeSummary {
     studios: item.studios?.map((s) => s.name) || [],
     synopsis: item.synopsis || "",
     aired: item.aired?.string || "",
+    broadcast: item.broadcast?.string || "",
     score: item.score || 0,
     rank: item.rank || 0,
     favorites: item.favorites || 0,
@@ -279,6 +280,18 @@ export async function getTopAiring() {
   const cached = readCache<AnimeSummary[]>(key);
   if (cached) return cached;
   const payload = await requestJson<{ data?: JikanAnime[] }>("/top/anime?filter=airing&limit=10");
+  const data = Array.isArray(payload.data) ? payload.data.map(normalizeAnime) : [];
+  writeCache(key, data);
+  return data;
+}
+
+export async function getAiringToday() {
+  const weekdays = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const today = weekdays[new Date().getDay()];
+  const key = `airing_today_cache_v2_${today}`;
+  const cached = readCache<AnimeSummary[]>(key);
+  if (cached) return cached;
+  const payload = await requestJson<{ data?: JikanAnime[] }>(`/schedules?filter=${today}&limit=10`);
   const data = Array.isArray(payload.data) ? payload.data.map(normalizeAnime) : [];
   writeCache(key, data);
   return data;

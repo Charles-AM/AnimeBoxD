@@ -21,7 +21,7 @@ import {
   X
 } from "lucide-react";
 import { fixedAnime } from "./lib/fixedAnime";
-import { getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, getSeasonal, getTopAiring, getUpcomingAnime, searchAnime, searchManga } from "./lib/jikan";
+import { getAiringToday, getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, getSeasonal, getTopAiring, getUpcomingAnime, searchAnime, searchManga } from "./lib/jikan";
 import { loadData, saveData, setActiveUser } from "./lib/storage";
 import type { AnimeDetail, AnimeSummary, AppData, LibraryEntry, LibraryStatus, MangaDetail, MangaEntry, MangaStatus, MangaSummary, Settings, ThemeMode } from "./types/anime";
 
@@ -881,18 +881,18 @@ function formatCompactNumber(value?: number) {
   return String(value);
 }
 
-function SeasonTracker({ trending, seasonal, upcoming, updatedAt, loading, error, onRefresh, onAdd }: { trending: AnimeSummary[]; seasonal: AnimeSummary[]; upcoming: AnimeSummary[]; updatedAt: string; loading: boolean; error: string; onRefresh: () => void; onAdd: (anime: AnimeSummary) => void }) {
+function SeasonTracker({ trending, seasonal, upcoming, airingToday, updatedAt, loading, error, onRefresh, onAdd }: { trending: AnimeSummary[]; seasonal: AnimeSummary[]; upcoming: AnimeSummary[]; airingToday: AnimeSummary[]; updatedAt: string; loading: boolean; error: string; onRefresh: () => void; onAdd: (anime: AnimeSummary) => void }) {
   const seasonPool = [...seasonal, ...trending];
   const uniquePool = [...new Map(seasonPool.map((anime) => [anime.mal_id, anime])).values()];
   const highestScored = uniquePool.filter((anime) => anime.score).sort((a, b) => (b.score || 0) - (a.score || 0))[0] || trending[0] || seasonal[0];
   const mostFavorited = uniquePool.filter((anime) => anime.favorites).sort((a, b) => (b.favorites || 0) - (a.favorites || 0))[0] || trending[0] || seasonal[0];
-  const popularAiring = [...trending].sort((a, b) => (b.popularity || 0) - (a.popularity || 0))[0] || trending[0] || seasonal[0];
+  const newEpisodeToday = airingToday[0];
   const comingSoon = upcoming[0];
   const trackerItems = [
     highestScored && { label: "Highest Scored", anime: highestScored, stat: highestScored.score ? `${highestScored.score}/10` : "Rising", icon: <Star className="h-4 w-4" />, accent: "from-teal-400/25 to-cyan-300/10" },
-    mostFavorited && { label: "Most Favorited", anime: mostFavorited, stat: `${formatCompactNumber(mostFavorited.favorites)} saves`, icon: <Heart className="h-4 w-4" />, accent: "from-pink-300/30 to-teal-300/10" },
-    popularAiring && { label: "Popular Airing", anime: popularAiring, stat: popularAiring.rank ? `Rank #${popularAiring.rank}` : "On the rise", icon: <Trophy className="h-4 w-4" />, accent: "from-amber-300/30 to-teal-300/10" },
-    comingSoon && { label: "Next Up", anime: comingSoon, stat: comingSoon.year ? String(comingSoon.year) : "Soon", icon: <PlayCircle className="h-4 w-4" />, accent: "from-violet-300/30 to-cyan-300/10" }
+    mostFavorited && { label: "Most Favorited", anime: mostFavorited, stat: formatCompactNumber(mostFavorited.favorites), icon: <Heart className="h-4 w-4" />, accent: "from-pink-300/30 to-teal-300/10" },
+    newEpisodeToday && { label: "New Episode Today", anime: newEpisodeToday, stat: newEpisodeToday.broadcast || "Today", icon: <Trophy className="h-4 w-4" />, accent: "from-amber-300/30 to-teal-300/10" },
+    comingSoon && { label: "Coming Soon", anime: comingSoon, stat: comingSoon.year ? String(comingSoon.year) : "Soon", icon: <PlayCircle className="h-4 w-4" />, accent: "from-violet-300/30 to-cyan-300/10" }
   ].filter(Boolean) as { label: string; anime: AnimeSummary; stat: string; icon: React.ReactElement; accent: string }[];
 
   return (
@@ -901,7 +901,7 @@ function SeasonTracker({ trending, seasonal, upcoming, updatedAt, loading, error
         <div className="max-w-2xl">
           <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Live Season Tracker</p>
           <h2 className="font-display text-3xl leading-tight sm:text-4xl">A compact pulse check for the season.</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-500">Real Jikan data, sorted into quick signals: score, favorites, popularity, and what is coming next.</p>
+          <p className="mt-2 text-sm leading-6 text-slate-500">Real Jikan data, sorted into quick signals: score, favorites, today's schedule, and upcoming anime.</p>
         </div>
         <Button className="self-start bg-slate-900 text-white hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300 sm:self-auto" onClick={onRefresh} disabled={loading}>
           <RefreshCcw className="h-4 w-4" /> {loading ? "Updating" : "Refresh"}
@@ -940,6 +940,7 @@ function HomePage({ addAnime }: { addAnime: (anime: AnimeSummary) => void }) {
   const [trending, setTrending] = useState<AnimeSummary[]>([]);
   const [seasonal, setSeasonal] = useState<AnimeSummary[]>([]);
   const [upcoming, setUpcoming] = useState<AnimeSummary[]>([]);
+  const [airingToday, setAiringToday] = useState<AnimeSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [updatedAt, setUpdatedAt] = useState("");
@@ -951,9 +952,11 @@ function HomePage({ addAnime }: { addAnime: (anime: AnimeSummary) => void }) {
       const trendingAnime = await getTopAiring();
       const seasonalAnime = await getSeasonal();
       const upcomingAnime = await getUpcomingAnime();
+      const todayAnime = await getAiringToday();
       setTrending(trendingAnime);
       setSeasonal(seasonalAnime);
       setUpcoming(upcomingAnime);
+      setAiringToday(todayAnime);
       setUpdatedAt(new Date().toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Anime updates are taking a little longer than usual.");
@@ -980,7 +983,7 @@ function HomePage({ addAnime }: { addAnime: (anime: AnimeSummary) => void }) {
         </div>
       </Card>
 
-      <SeasonTracker trending={trending} seasonal={seasonal} upcoming={upcoming} updatedAt={updatedAt} loading={loading} error={error} onRefresh={loadHomeUpdates} onAdd={addAnime} />
+      <SeasonTracker trending={trending} seasonal={seasonal} upcoming={upcoming} airingToday={airingToday} updatedAt={updatedAt} loading={loading} error={error} onRefresh={loadHomeUpdates} onAdd={addAnime} />
 
       {loading && !trending.length ? (
         <div className="grid grid-cols-1 gap-4 min-[520px]:grid-cols-2 xl:grid-cols-3">

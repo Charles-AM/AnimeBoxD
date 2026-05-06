@@ -12,6 +12,7 @@ export interface AnimeSummary {
   platforms?: string[];
   synopsis?: string;
   aired?: string;
+  broadcast?: string;
   score?: number;
   rank?: number;
   favorites?: number;

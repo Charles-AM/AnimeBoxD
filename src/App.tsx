@@ -882,16 +882,33 @@ function formatCompactNumber(value?: number) {
 }
 
 function SeasonTracker({ trending, seasonal, upcoming, airingToday, updatedAt, loading, error, onRefresh, onAdd }: { trending: AnimeSummary[]; seasonal: AnimeSummary[]; upcoming: AnimeSummary[]; airingToday: AnimeSummary[]; updatedAt: string; loading: boolean; error: string; onRefresh: () => void; onAdd: (anime: AnimeSummary) => void }) {
+  const [todayIndex, setTodayIndex] = useState(0);
   const seasonPool = [...seasonal, ...trending];
   const uniquePool = [...new Map(seasonPool.map((anime) => [anime.mal_id, anime])).values()];
   const highestScored = uniquePool.filter((anime) => anime.score).sort((a, b) => (b.score || 0) - (a.score || 0))[0] || trending[0] || seasonal[0];
   const mostFavorited = uniquePool.filter((anime) => anime.favorites).sort((a, b) => (b.favorites || 0) - (a.favorites || 0))[0] || trending[0] || seasonal[0];
-  const newEpisodeToday = airingToday[0];
+  const todayHighlights = [...new Map(airingToday.map((anime) => [anime.mal_id, anime])).values()]
+    .sort((a, b) => (b.score || 0) - (a.score || 0) || (b.favorites || 0) - (a.favorites || 0))
+    .slice(0, 5);
+  const newEpisodeToday = todayHighlights[todayIndex] || todayHighlights[0];
   const comingSoon = upcoming[0];
+
+  useEffect(() => {
+    if (todayHighlights.length < 2) return;
+    const timer = window.setInterval(() => {
+      setTodayIndex((current) => (current + 1) % todayHighlights.length);
+    }, 4500);
+    return () => window.clearInterval(timer);
+  }, [todayHighlights.length]);
+
+  useEffect(() => {
+    if (todayIndex >= todayHighlights.length) setTodayIndex(0);
+  }, [todayHighlights.length, todayIndex]);
+
   const trackerItems = [
     highestScored && { label: "Highest Scored", anime: highestScored, stat: highestScored.score ? `${highestScored.score}/10` : "Rising", icon: <Star className="h-4 w-4" />, accent: "from-teal-400/25 to-cyan-300/10" },
     mostFavorited && { label: "Most Favorited", anime: mostFavorited, stat: formatCompactNumber(mostFavorited.favorites), icon: <Heart className="h-4 w-4" />, accent: "from-pink-300/30 to-teal-300/10" },
-    newEpisodeToday && { label: "New Episode Today", anime: newEpisodeToday, stat: newEpisodeToday.broadcast || "Today", icon: <Trophy className="h-4 w-4" />, accent: "from-amber-300/30 to-teal-300/10" },
+    newEpisodeToday && { label: todayHighlights.length > 1 ? `New Today ${todayIndex + 1}/${todayHighlights.length}` : "New Today", anime: newEpisodeToday, stat: newEpisodeToday.broadcast || "Today", icon: <Trophy className="h-4 w-4" />, accent: "from-amber-300/30 to-teal-300/10" },
     comingSoon && { label: "Coming Soon", anime: comingSoon, stat: comingSoon.year ? String(comingSoon.year) : "Soon", icon: <PlayCircle className="h-4 w-4" />, accent: "from-violet-300/30 to-cyan-300/10" }
   ].filter(Boolean) as { label: string; anime: AnimeSummary; stat: string; icon: React.ReactElement; accent: string }[];
 
@@ -910,21 +927,21 @@ function SeasonTracker({ trending, seasonal, upcoming, airingToday, updatedAt, l
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {trackerItems.map(({ label, anime, stat, icon, accent }) => (
-          <button key={`${label}-${anime.mal_id}`} className={clsx("group touch-card relative min-h-[168px] overflow-hidden rounded-2xl border border-slate-200/70 bg-white/75 p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300 dark:border-slate-800 dark:bg-slate-900/70", `bg-gradient-to-br ${accent}`)} onClick={() => onAdd(anime)}>
+          <button key={`${label}-${anime.mal_id}`} className={clsx("group touch-card relative min-h-[148px] overflow-hidden rounded-2xl border border-slate-200/70 bg-white/75 p-2.5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300 dark:border-slate-800 dark:bg-slate-900/70", `bg-gradient-to-br ${accent}`)} onClick={() => onAdd(anime)}>
             <div className="absolute right-2 top-2 h-20 w-20 rounded-full bg-white/40 blur-2xl dark:bg-teal-400/10" />
-            <div className="relative grid grid-cols-[64px_minmax(0,1fr)] gap-3">
-              <img src={anime.image_url} alt="" className="h-24 w-16 rounded-xl object-cover shadow-md" />
+            <div className="relative grid grid-cols-[56px_minmax(0,1fr)] gap-2.5">
+              <img src={anime.image_url} alt="" className="h-20 w-14 rounded-xl object-cover shadow-md" />
               <div className="min-w-0">
-                <div className="inline-flex items-center gap-1 rounded-full bg-white/75 px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-700 dark:bg-slate-950/70 dark:text-slate-200">
+                <div className="inline-flex max-w-full items-center gap-1 rounded-full bg-white/75 px-2 py-1 text-[9px] font-black uppercase tracking-[0.08em] text-slate-700 dark:bg-slate-950/70 dark:text-slate-200">
                   {icon} {label}
                 </div>
-                <p className="mt-2 line-clamp-2 text-sm font-black text-slate-950 dark:text-white">{anime.title}</p>
-                <p className="mt-1 text-xl font-black text-teal-700 dark:text-teal-300">{stat}</p>
+                <p className="mt-1.5 line-clamp-2 text-sm font-black text-slate-950 dark:text-white">{anime.title}</p>
+                <p className="mt-0.5 line-clamp-1 text-base font-black text-teal-700 dark:text-teal-300">{stat}</p>
                 <p className="line-clamp-1 text-xs text-slate-500">{anime.genres.slice(0, 2).join(", ") || "Anime"}</p>
               </div>
             </div>
-            <span className="relative mt-3 inline-flex items-center gap-1 rounded-full bg-slate-950 px-3 py-1.5 text-xs font-bold text-white transition group-hover:bg-teal-500 group-hover:text-slate-950 dark:bg-teal-400 dark:text-slate-950">
-              <Plus className="h-3 w-3" /> Save to list
+            <span className="relative mt-2 inline-flex items-center gap-1 rounded-full bg-slate-950 px-2.5 py-1 text-[11px] font-bold text-white transition group-hover:bg-teal-500 group-hover:text-slate-950 dark:bg-teal-400 dark:text-slate-950">
+              <Plus className="h-3 w-3" /> Save
             </span>
           </button>
         ))}

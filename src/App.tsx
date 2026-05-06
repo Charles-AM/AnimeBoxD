@@ -178,12 +178,18 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
     saveUsers(nextUsers);
   }, []);
 
+  const passwordMeetsRules = passcode.length >= 8 && /[A-Za-z]/.test(passcode) && /\d/.test(passcode);
+
   const submit = async () => {
     setError("");
     setNotice("");
     if (isSupabaseConfigured) {
       if (!email.trim() || !passcode.trim() || (mode === "signup" && !name.trim())) {
         setError(mode === "signup" ? "Add your name, email, and password." : "Add your email and password.");
+        return;
+      }
+      if (mode === "signup" && !passwordMeetsRules) {
+        setError("Use at least 8 characters with letters and numbers.");
         return;
       }
       setLoading(true);
@@ -278,8 +284,19 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
               </Field>
             )}
             <Field label={isSupabaseConfigured ? "Password" : "Passcode"}>
-              <input className={inputClass()} type="password" placeholder={isSupabaseConfigured ? "Your password" : "Simple passcode"} value={passcode} onChange={(event) => setPasscode(event.target.value)} />
+              <input
+                className={inputClass()}
+                type="password"
+                placeholder={isSupabaseConfigured ? "At least 8 characters" : "Simple passcode"}
+                value={passcode}
+                onChange={(event) => setPasscode(event.target.value)}
+              />
             </Field>
+            {isSupabaseConfigured && mode === "signup" && (
+              <p className={clsx("text-xs", passcode && !passwordMeetsRules ? "text-amber-600 dark:text-amber-300" : "text-slate-500")}>
+                Passwords need at least 8 characters with letters and numbers.
+              </p>
+            )}
             {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{error}</p>}
             {notice && <p className="rounded-xl bg-teal-50 px-3 py-2 text-sm text-teal-800 dark:bg-teal-950/40 dark:text-teal-100">{notice}</p>}
             <Button onClick={submit} disabled={loading}>{loading ? "One moment..." : mode === "signup" ? "Create account" : "Sign in"}</Button>

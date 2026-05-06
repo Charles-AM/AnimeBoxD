@@ -15,6 +15,7 @@ import {
   RefreshCcw,
   Search,
   Send,
+  Share2,
   Star,
   Trash2,
   Trophy,
@@ -67,6 +68,8 @@ const mangaSections: { key: MangaStatus; title: string; icon: React.ReactElement
   { key: "Dropped", title: "Dropped", icon: <Trash2 className="h-5 w-5" /> }
 ];
 
+const SITE_URL = "https://animeboxd.app/";
+const CREDIT_TEXT = "AnimeBoxD is an independent fan project. Anime and manga titles, artwork, synopses, trademarks, studios, publishers, streaming names, and source metadata belong to their respective owners. Discovery data is provided through Jikan and MyAnimeList references; AnimeBoxD does not claim ownership of third-party content.";
 
 function normalizeUserId(value: string) {
   const trimmed = value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
@@ -351,6 +354,7 @@ function Header({ user, theme, onThemeChange, onLogout, onHome, onMyStuff, onMyM
           >
             <Mail className="h-4 w-4" /> Report issue
           </button>
+          <ShareSiteButton />
           <select className={clsx(inputClass(), "!w-28 shrink-0")} value={theme} onChange={(event) => onThemeChange(event.target.value as ThemeMode)}>
             {["Dark", "Light", "System"].map((item) => <option key={item}>{item}</option>)}
           </select>
@@ -491,6 +495,45 @@ function ReportIssueModal({ onClose, userId }: { onClose: () => void; userId?: s
   );
 }
 
+function ShareSiteButton() {
+  const [copied, setCopied] = useState(false);
+
+  const share = async () => {
+    const payload = {
+      title: "AnimeBoxD",
+      text: "Track anime and manga, keep ratings and notes, and follow live anime updates.",
+      url: SITE_URL
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(payload);
+      } else {
+        await navigator.clipboard.writeText(SITE_URL);
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1800);
+      }
+    } catch {
+      try {
+        await navigator.clipboard.writeText(SITE_URL);
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1800);
+      } catch {
+        setCopied(false);
+      }
+    }
+  };
+
+  return (
+    <button
+      className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-teal-200/80 bg-teal-50 px-3 py-2 text-sm font-semibold text-teal-800 transition hover:-translate-y-0.5 hover:border-teal-400 dark:border-teal-900 dark:bg-teal-950/50 dark:text-teal-100"
+      onClick={share}
+      type="button"
+    >
+      <Share2 className="h-4 w-4" /> {copied ? "Link copied" : "Share"}
+    </button>
+  );
+}
+
 function SiteFooter() {
   const links = [
     { label: "About", href: "/about.html" },
@@ -499,15 +542,21 @@ function SiteFooter() {
     { label: "Terms", href: "/terms.html" }
   ];
   return (
-    <footer className="mx-auto flex max-w-6xl flex-col gap-3 px-3 pb-8 pt-4 text-sm text-slate-500 sm:px-4 md:flex-row md:items-center md:justify-between">
-      <p>AnimeBoxD is an independent anime and manga diary.</p>
-      <nav className="flex flex-wrap gap-3">
-        {links.map((link) => (
-          <a key={link.href} className="font-semibold text-slate-600 transition hover:text-teal-600 dark:text-slate-300 dark:hover:text-teal-300" href={link.href}>
-            {link.label}
-          </a>
-        ))}
-      </nav>
+    <footer className="mx-auto grid max-w-6xl gap-3 px-3 pb-8 pt-4 text-sm text-slate-500 sm:px-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <p>AnimeBoxD is an independent anime and manga diary.</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <ShareSiteButton />
+          <nav className="flex flex-wrap gap-3">
+            {links.map((link) => (
+              <a key={link.href} className="font-semibold text-slate-600 transition hover:text-teal-600 dark:text-slate-300 dark:hover:text-teal-300" href={link.href}>
+                {link.label}
+              </a>
+            ))}
+          </nav>
+        </div>
+      </div>
+      <p className="max-w-4xl text-xs leading-5 text-slate-500 dark:text-slate-400">{CREDIT_TEXT}</p>
     </footer>
   );
 }
@@ -1318,7 +1367,7 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
                   <div>
                     <p className="line-clamp-2 text-sm font-semibold text-slate-900 dark:text-white">{item.title}</p>
                     <p className="text-xs text-slate-500">{meta}</p>
-                    <p className="line-clamp-2 text-xs text-slate-500">{item.synopsis || "No synopsis available."}</p>
+                    <p className="line-clamp-1 text-xs text-slate-500">{item.synopsis || "No synopsis available."}</p>
                   </div>
                 </button>
               );
@@ -1344,7 +1393,10 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
                     {detail.title_english && <p className="text-sm text-slate-500">{detail.title_english}</p>}
                     {detail.title_japanese && <p className="text-sm text-slate-500">{detail.title_japanese}</p>}
                   </div>
-                  <p className="text-sm text-slate-600 dark:text-slate-300">{detail.synopsis || "No synopsis available."}</p>
+                  <p className="line-clamp-4 text-sm leading-6 text-slate-600 dark:text-slate-300">{detail.synopsis || "No synopsis available."}</p>
+                  <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                    Artwork and reference details are credited to their respective owners. AnimeBoxD uses public Jikan/MyAnimeList reference data and does not claim ownership of third-party content.
+                  </p>
                   <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
                     {detail.score ? <span className="rounded-xl bg-slate-100 px-3 py-1 dark:bg-slate-900">Score {detail.score}</span> : null}
                     {detail.rank ? <span className="rounded-xl bg-slate-100 px-3 py-1 dark:bg-slate-900">Rank #{detail.rank}</span> : null}

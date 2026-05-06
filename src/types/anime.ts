@@ -131,6 +131,7 @@ export interface Settings {
   username: string;
   bio: string;
   avatar: string;
+  isPublic: boolean;
   favoriteAnimeIds: number[];
   favoriteAnimeCatalog: AnimeSummary[];
   favoriteMangaIds: number[];

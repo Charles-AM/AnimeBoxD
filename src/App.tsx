@@ -24,7 +24,7 @@ import {
 import { fixedAnime } from "./lib/fixedAnime";
 import { getAiringToday, getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, getSeasonal, getTopAiring, getUpcomingAnime, searchAnime, searchManga } from "./lib/jikan";
 import { loadData, saveData, setActiveUser } from "./lib/storage";
-import { createReport, deleteCloudAccount, getCurrentSession, isSupabaseConfigured, loadCloudData, loadProfile, saveCloudData, signInWithEmail, signOutCloud, signUpWithEmail, userToProfileFallback } from "./lib/supabase";
+import { createReport, deleteCloudAccount, getCurrentSession, isSupabaseConfigured, loadCloudData, loadProfile, saveCloudData, signInWithEmail, signOutCloud, signUpWithEmail, upsertProfile, userToProfileFallback } from "./lib/supabase";
 import type { AnimeDetail, AnimeSummary, AppData, LibraryEntry, LibraryStatus, MangaDetail, MangaEntry, MangaStatus, MangaSummary, Settings, ThemeMode } from "./types/anime";
 
 type UserAccount = { id: string; name: string; avatar: string; passcode: string; email?: string; isCloud?: boolean; memberSince?: string };
@@ -229,7 +229,7 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
         const nextData = await loadCloudData(response.user.id);
         await onLogin({
           user: { id: response.user.id, name: profile.username, avatar: profile.avatar, passcode: "", email: response.user.email, isCloud: true, memberSince: profile.created_at || response.user.created_at },
-          data: { ...nextData, settings: { ...nextData.settings, username: profile.username, avatar: profile.avatar, bio: profile.bio || nextData.settings.bio } }
+          data: { ...nextData, settings: { ...nextData.settings, username: profile.username, avatar: profile.avatar, bio: profile.bio || nextData.settings.bio, isPublic: profile.is_public } }
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not sign in right now.");
@@ -1882,7 +1882,13 @@ function formatDate(value?: string) {
   return date.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
 }
 
-function ProfilePage({ data, memberSince, onBack, onDeleteAccount }: { data: AppData; memberSince?: string; onBack: () => void; onDeleteAccount: () => void | Promise<void> }) {
+function ProfilePage({ data, memberSince, onBack, onSaveProfile, onDeleteAccount }: { data: AppData; memberSince?: string; onBack: () => void; onSaveProfile: (settings: Pick<Settings, "username" | "avatar" | "bio" | "isPublic">) => void | Promise<void>; onDeleteAccount: () => void | Promise<void> }) {
+  const [username, setUsername] = useState(data.settings.username || "");
+  const [avatar, setAvatar] = useState(data.settings.avatar || "✨");
+  const [bio, setBio] = useState(data.settings.bio || "");
+  const [isPublic, setIsPublic] = useState(data.settings.isPublic);
+  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [error, setError] = useState("");
   const animeCompleted = data.library.filter((entry) => entry.status === "Completed").length;
   const mangaCompleted = data.mangaLibrary.filter((entry) => entry.status === "Completed").length;
   const ratedItems = [...data.library, ...data.mangaLibrary].filter((entry) => entry.rating > 0);
@@ -1894,6 +1900,32 @@ function ProfilePage({ data, memberSince, onBack, onDeleteAccount }: { data: App
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 8);
 
+  useEffect(() => {
+    setUsername(data.settings.username || "");
+    setAvatar(data.settings.avatar || "✨");
+    setBio(data.settings.bio || "");
+    setIsPublic(data.settings.isPublic);
+  }, [data.settings.avatar, data.settings.bio, data.settings.isPublic, data.settings.username]);
+
+  const saveProfile = async () => {
+    const nextUsername = username.trim() || "Anime fan";
+    setStatus("saving");
+    setError("");
+    try {
+      await onSaveProfile({
+        username: nextUsername,
+        avatar: avatar.trim() || "✨",
+        bio: bio.trim(),
+        isPublic
+      });
+      setStatus("saved");
+      window.setTimeout(() => setStatus("idle"), 1800);
+    } catch (err) {
+      setStatus("error");
+      setError(err instanceof Error ? err.message : "Could not save profile.");
+    }
+  };
+
   return (
     <div className="mx-auto grid max-w-6xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -1904,15 +1936,39 @@ function ProfilePage({ data, memberSince, onBack, onDeleteAccount }: { data: App
       <Card className="grid gap-5 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-start">
         <div className="grid gap-4">
           <div className="flex items-center gap-4">
-            <div className="grid h-16 w-16 place-items-center rounded-2xl bg-teal-50 text-4xl shadow-sm dark:bg-teal-950/50">{data.settings.avatar}</div>
+            <div className="grid h-16 w-16 place-items-center rounded-2xl bg-teal-50 text-4xl shadow-sm dark:bg-teal-950/50">{avatar || data.settings.avatar}</div>
             <div className="min-w-0">
               <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Member profile</p>
               <h3 className="break-words font-display text-4xl leading-tight">{data.settings.username || "Anime fan"}</h3>
               <p className="text-sm text-slate-500">Member since {formatDate(memberSince)}</p>
             </div>
           </div>
+          <div className="grid gap-3 rounded-2xl border border-slate-200/70 bg-white/70 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+            <h3 className="font-display text-2xl">Edit profile</h3>
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_96px]">
+              <Field label="Username">
+                <input className={inputClass()} maxLength={40} value={username} onChange={(event) => setUsername(event.target.value)} />
+              </Field>
+              <Field label="Avatar">
+                <input className={inputClass()} maxLength={4} value={avatar} onChange={(event) => setAvatar(event.target.value)} />
+              </Field>
+            </div>
+            <Field label="Bio">
+              <textarea className={clsx(inputClass(), "min-h-24 resize-y")} maxLength={180} value={bio} onChange={(event) => setBio(event.target.value)} />
+            </Field>
+            <label className="flex items-center justify-between gap-3 rounded-xl bg-slate-100 p-3 text-sm font-semibold text-slate-700 dark:bg-slate-950/70 dark:text-slate-200">
+              <span>
+                Public profile
+                <span className="block text-xs font-normal text-slate-500">Mock visibility for now, ready for public profiles later.</span>
+              </span>
+              <input className="h-5 w-5 accent-teal-500" type="checkbox" checked={isPublic} onChange={(event) => setIsPublic(event.target.checked)} />
+            </label>
+            {status === "error" && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-100">{error}</p>}
+            {status === "saved" && <p className="rounded-xl bg-teal-50 p-3 text-sm font-semibold text-teal-800 dark:bg-teal-950/40 dark:text-teal-100">Profile saved.</p>}
+            <Button onClick={saveProfile} disabled={status === "saving"}>{status === "saving" ? "Saving..." : "Save profile"}</Button>
+          </div>
           <p className="rounded-2xl bg-white/60 p-4 text-sm leading-6 text-slate-600 dark:bg-slate-900/60 dark:text-slate-300">
-            {data.settings.bio || "Keeping track of anime, manga, ratings, and favorites."}
+            {bio || "Keeping track of anime, manga, ratings, and favorites."}
           </p>
           <div className="grid grid-cols-2 gap-3 text-center text-sm font-semibold sm:grid-cols-4 lg:grid-cols-2">
             <span className="rounded-2xl bg-slate-100 p-3 dark:bg-slate-900"><strong className="block text-2xl text-slate-950 dark:text-white">{data.library.length}</strong>Anime</span>
@@ -2170,7 +2226,7 @@ function App() {
         setActiveUser(session.user.id);
         setUserId(session.user.id);
         setMemberSince(profile.created_at || session.user.created_at);
-        setData({ ...nextData, settings: { ...nextData.settings, username: profile.username, avatar: profile.avatar, bio: profile.bio || nextData.settings.bio } });
+        setData({ ...nextData, settings: { ...nextData.settings, username: profile.username, avatar: profile.avatar, bio: profile.bio || nextData.settings.bio, isPublic: profile.is_public } });
         window.setTimeout(() => setCloudSaveReady(true), 0);
       } catch (err) {
         setSaveError(err instanceof Error ? err.message : "Could not restore your session.");
@@ -2305,6 +2361,21 @@ function App() {
     }
   };
 
+  const handleSaveProfile = async (profileSettings: Pick<Settings, "username" | "avatar" | "bio" | "isPublic">) => {
+    const nextSettings = { ...data.settings, ...profileSettings };
+    setData((prev) => ({ ...prev, settings: { ...prev.settings, ...profileSettings } }));
+    if (isSupabaseConfigured && userId) {
+      await saveCloudData(userId, { ...data, settings: nextSettings });
+      await upsertProfile({
+        id: userId,
+        username: profileSettings.username,
+        avatar: profileSettings.avatar,
+        bio: profileSettings.bio,
+        is_public: profileSettings.isPublic
+      });
+    }
+  };
+
   const clearHistory = () => {
     if (!confirm("Clear all anime and manga history for this account?")) return;
     setData((prev) => ({ ...prev, library: [], mangaLibrary: [] }));
@@ -2357,7 +2428,7 @@ function App() {
       {page === "stuff" && <MyStuffPage data={data} onSelect={startAddFlow} updateEntry={updateEntry} removeEntry={removeEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={clearAnimeHistory} />}
       {page === "manga" && <MyMangaPage data={data} onSelect={startAddMangaFlow} updateEntry={updateMangaEntry} removeEntry={removeMangaEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={clearMangaHistory} />}
       {page === "dashboard" && <DashboardPage data={data} onClearHistory={clearHistory} onBack={() => setPage("home")} />}
-      {page === "profile" && <ProfilePage data={data} memberSince={memberSince} onBack={() => setPage("home")} onDeleteAccount={handleDeleteAccount} />}
+      {page === "profile" && <ProfilePage data={data} memberSince={memberSince} onBack={() => setPage("home")} onSaveProfile={handleSaveProfile} onDeleteAccount={handleDeleteAccount} />}
       {page === "add" && selectedAnime && (
         <AddEntryPage
           anime={selectedAnime}

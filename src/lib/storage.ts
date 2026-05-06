@@ -16,6 +16,7 @@ export const defaultSettings: Settings = {
   username: "You",
   bio: "Building a better anime memory palace.",
   avatar: "✨",
+  isPublic: true,
   favoriteAnimeIds: [],
   favoriteAnimeCatalog: [],
   favoriteMangaIds: [],

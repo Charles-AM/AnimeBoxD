@@ -138,7 +138,8 @@ export async function loadProfile(userId: string) {
 
 export async function upsertProfile(profile: CloudProfile) {
   const client = assertSupabase();
-  const { error } = await client.from("profiles").upsert(profile, { onConflict: "id" });
+  const { created_at, ...writeableProfile } = profile;
+  const { error } = await client.from("profiles").upsert(writeableProfile, { onConflict: "id" });
   if (error) throw error;
 }
 

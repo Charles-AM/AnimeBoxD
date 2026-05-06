@@ -97,6 +97,18 @@ export async function signUpWithEmail(email: string, password: string, username:
   return data;
 }
 
+export async function resendSignupConfirmation(email: string) {
+  const client = assertSupabase();
+  const { error } = await client.auth.resend({
+    type: "signup",
+    email,
+    options: {
+      emailRedirectTo: authRedirectUrl()
+    }
+  });
+  if (error) throw error;
+}
+
 export async function signInWithEmail(email: string, password: string) {
   const client = assertSupabase();
   const { data, error } = await client.auth.signInWithPassword({ email, password });

@@ -25,7 +25,7 @@ import {
 import { fixedAnime } from "./lib/fixedAnime";
 import { getAiringToday, getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, getSeasonal, getTopAiring, getUpcomingAnime, searchAnime, searchManga } from "./lib/jikan";
 import { loadData, saveData, setActiveUser } from "./lib/storage";
-import { createReport, deleteCloudAccount, getCurrentSession, isSupabaseConfigured, loadCloudData, loadProfile, saveCloudData, signInWithEmail, signOutCloud, signUpWithEmail, upsertProfile, userToProfileFallback } from "./lib/supabase";
+import { createReport, deleteCloudAccount, getCurrentSession, isSupabaseConfigured, loadCloudData, loadProfile, resendSignupConfirmation, saveCloudData, signInWithEmail, signOutCloud, signUpWithEmail, upsertProfile, userToProfileFallback } from "./lib/supabase";
 import type { AnimeDetail, AnimeSummary, AppData, LibraryEntry, LibraryStatus, MangaDetail, MangaEntry, MangaStatus, MangaSummary, Settings, ThemeMode } from "./types/anime";
 
 type UserAccount = { id: string; name: string; avatar: string; passcode: string; email?: string; isCloud?: boolean; memberSince?: string };
@@ -178,6 +178,7 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
   const [notice, setNotice] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
 
   useEffect(() => {
     if (isSupabaseConfigured) return;
@@ -189,6 +190,9 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
     const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
     const authError = params.get("error_description") || params.get("error");
     if (authError) setError(authError.replace(/\+/g, " "));
+    if (params.get("access_token") || params.get("refresh_token") || params.get("type")) {
+      window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+    }
   }, []);
 
   const passwordMeetsRules = passcode.length >= 8 && /[A-Za-z]/.test(passcode) && /\d/.test(passcode);
@@ -224,7 +228,7 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
         if (!response.user || !response.session) {
           setSignupEmail(email.trim());
           setPasscode("");
-          setNotice("Check your email to confirm your account, then come back to sign in.");
+          setNotice("Check your email to confirm your account. After confirming, return here and sign in.");
           return;
         }
         const profile = (await loadProfile(response.user.id)) || userToProfileFallback(response.user);
@@ -278,6 +282,25 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
     onLogin({ user: DEMO_USER, data: { ...nextData, settings: { ...nextData.settings, username: DEMO_USER.name, avatar: DEMO_USER.avatar } } });
   };
 
+  const resendVerification = async () => {
+    const targetEmail = signupEmail || email.trim();
+    if (!targetEmail) {
+      setError("Enter your email first.");
+      return;
+    }
+    setResending(true);
+    setError("");
+    try {
+      await resendSignupConfirmation(targetEmail);
+      setSignupEmail(targetEmail);
+      setNotice("Verification email sent again. Check your inbox and spam folder.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not resend the verification email.");
+    } finally {
+      setResending(false);
+    }
+  };
+
   return (
     <div className="page-shell min-h-screen">
       <div className="mx-auto grid min-h-screen w-full max-w-4xl content-start px-3 py-4 sm:content-center sm:px-4 sm:py-12">
@@ -324,7 +347,16 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
               </p>
             )}
             {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{error}</p>}
-            {notice && <p className="rounded-xl bg-teal-50 px-3 py-2 text-sm text-teal-800 dark:bg-teal-950/40 dark:text-teal-100">{notice}</p>}
+            {notice && (
+              <div className="grid gap-2 rounded-xl bg-teal-50 px-3 py-2 text-sm text-teal-800 dark:bg-teal-950/40 dark:text-teal-100">
+                <p>{notice}</p>
+                {isSupabaseConfigured && signupEmail && (
+                  <button className="justify-self-start text-sm font-black text-teal-700 underline decoration-teal-300 underline-offset-4 disabled:opacity-50 dark:text-teal-200" onClick={resendVerification} disabled={resending} type="button">
+                    {resending ? "Sending..." : "Resend verification email"}
+                  </button>
+                )}
+              </div>
+            )}
             <Button onClick={submit} disabled={loading}>{loading ? "One moment..." : mode === "signup" ? "Create account" : "Sign in"}</Button>
             {!isSupabaseConfigured && <button className="button-ghost" onClick={loginDemo}>Use demo user</button>}
           </div>

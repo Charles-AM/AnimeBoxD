@@ -14,6 +14,8 @@ export interface AnimeSummary {
   aired?: string;
   score?: number;
   rank?: number;
+  favorites?: number;
+  popularity?: number;
   year?: number;
   url?: string;
 }
@@ -30,8 +32,6 @@ export interface AnimeDetail extends AnimeSummary {
   season?: string;
   title_english?: string;
   title_japanese?: string;
-  popularity?: number;
-  favorites?: number;
 }
 
 export interface MangaSummary {

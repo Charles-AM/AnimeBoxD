@@ -7,6 +7,7 @@ import {
   ChevronUp,
   CheckCircle2,
   Film,
+  Heart,
   LogOut,
   Mail,
   PlayCircle,
@@ -14,7 +15,9 @@ import {
   RefreshCcw,
   Search,
   Send,
+  Star,
   Trash2,
+  Trophy,
   X
 } from "lucide-react";
 import { fixedAnime } from "./lib/fixedAnime";
@@ -871,48 +874,64 @@ function AnimeRail({ title, kicker, items, onAdd }: { title: string; kicker: str
   );
 }
 
-function AnimeDispatch({ trending, seasonal, upcoming, updatedAt, loading, error, onRefresh, onAdd }: { trending: AnimeSummary[]; seasonal: AnimeSummary[]; upcoming: AnimeSummary[]; updatedAt: string; loading: boolean; error: string; onRefresh: () => void; onAdd: (anime: AnimeSummary) => void }) {
-  const dispatchItems = [
-    seasonal[0] && { label: "Currently airing", anime: seasonal[0], note: `${seasonal[0].genres.slice(0, 2).join(", ") || "New season"} • ${seasonal[0].total_episodes || "?"} eps` },
-    trending[0] && { label: "Popular airing", anime: trending[0], note: `${trending[0].score ? `${trending[0].score}/10` : "Audience favorite"} • rank ${trending[0].rank || "rising"}` },
-    upcoming[0] && { label: "Coming next", anime: upcoming[0], note: `${upcoming[0].year || "Soon"} • ${upcoming[0].genres.slice(0, 2).join(", ") || "Upcoming"}` }
-  ].filter(Boolean) as { label: string; anime: AnimeSummary; note: string }[];
+function formatCompactNumber(value?: number) {
+  if (!value) return "-";
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+  return String(value);
+}
+
+function SeasonTracker({ trending, seasonal, upcoming, updatedAt, loading, error, onRefresh, onAdd }: { trending: AnimeSummary[]; seasonal: AnimeSummary[]; upcoming: AnimeSummary[]; updatedAt: string; loading: boolean; error: string; onRefresh: () => void; onAdd: (anime: AnimeSummary) => void }) {
+  const seasonPool = [...seasonal, ...trending];
+  const uniquePool = [...new Map(seasonPool.map((anime) => [anime.mal_id, anime])).values()];
+  const highestScored = uniquePool.filter((anime) => anime.score).sort((a, b) => (b.score || 0) - (a.score || 0))[0] || trending[0] || seasonal[0];
+  const mostFavorited = uniquePool.filter((anime) => anime.favorites).sort((a, b) => (b.favorites || 0) - (a.favorites || 0))[0] || trending[0] || seasonal[0];
+  const popularAiring = [...trending].sort((a, b) => (b.popularity || 0) - (a.popularity || 0))[0] || trending[0] || seasonal[0];
+  const comingSoon = upcoming[0];
+  const trackerItems = [
+    highestScored && { label: "Highest Scored", anime: highestScored, stat: highestScored.score ? `${highestScored.score}/10` : "Rising", icon: <Star className="h-4 w-4" />, accent: "from-teal-400/25 to-cyan-300/10" },
+    mostFavorited && { label: "Most Favorited", anime: mostFavorited, stat: `${formatCompactNumber(mostFavorited.favorites)} saves`, icon: <Heart className="h-4 w-4" />, accent: "from-pink-300/30 to-teal-300/10" },
+    popularAiring && { label: "Popular Airing", anime: popularAiring, stat: popularAiring.rank ? `Rank #${popularAiring.rank}` : "On the rise", icon: <Trophy className="h-4 w-4" />, accent: "from-amber-300/30 to-teal-300/10" },
+    comingSoon && { label: "Next Up", anime: comingSoon, stat: comingSoon.year ? String(comingSoon.year) : "Soon", icon: <PlayCircle className="h-4 w-4" />, accent: "from-violet-300/30 to-cyan-300/10" }
+  ].filter(Boolean) as { label: string; anime: AnimeSummary; stat: string; icon: React.ReactElement; accent: string }[];
 
   return (
-    <Card className="grid gap-4 overflow-hidden border border-teal-200/60 bg-white/80 dark:border-teal-900/50 dark:bg-slate-950/70 lg:grid-cols-[0.9fr_1.1fr]">
-      <div className="grid content-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Anime Dispatch</p>
-          <h2 className="font-display text-3xl leading-tight sm:text-4xl">A quick read before you pick a show.</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-500">Live-style updates from current Jikan listings: what is airing, what is popular, and what is about to land.</p>
+    <Card className="grid gap-4 overflow-hidden border border-teal-200/60 bg-white/80 dark:border-teal-900/50 dark:bg-slate-950/70">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="max-w-2xl">
+          <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Live Season Tracker</p>
+          <h2 className="font-display text-3xl leading-tight sm:text-4xl">A compact pulse check for the season.</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-500">Real Jikan data, sorted into quick signals: score, favorites, popularity, and what is coming next.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300" onClick={onRefresh} disabled={loading}>
-            <RefreshCcw className="h-4 w-4" /> {loading ? "Updating" : "Refresh"}
-          </Button>
-          {updatedAt && <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-500 dark:bg-slate-900">Updated {updatedAt}</span>}
-        </div>
-        {error && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-100">{error}</p>}
+        <Button className="self-start bg-slate-900 text-white hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300 sm:self-auto" onClick={onRefresh} disabled={loading}>
+          <RefreshCcw className="h-4 w-4" /> {loading ? "Updating" : "Refresh"}
+        </Button>
       </div>
 
-      <div className="grid gap-2">
-        {dispatchItems.map(({ label, anime, note }) => (
-          <button key={`${label}-${anime.mal_id}`} className="group grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-slate-200/70 bg-white/70 p-2 text-left transition hover:border-teal-300 hover:bg-teal-50/60 dark:border-slate-800 dark:bg-slate-900/70 dark:hover:bg-teal-950/30" onClick={() => onAdd(anime)}>
-            <img src={anime.image_url} alt="" className="h-20 w-14 rounded-xl object-cover" />
-            <div className="min-w-0">
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-teal-600 dark:text-teal-300">{label}</p>
-              <p className="line-clamp-1 text-sm font-bold text-slate-900 dark:text-white">{anime.title}</p>
-              <p className="line-clamp-1 text-xs text-slate-500">{note}</p>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {trackerItems.map(({ label, anime, stat, icon, accent }) => (
+          <button key={`${label}-${anime.mal_id}`} className={clsx("group touch-card relative min-h-[168px] overflow-hidden rounded-2xl border border-slate-200/70 bg-white/75 p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300 dark:border-slate-800 dark:bg-slate-900/70", `bg-gradient-to-br ${accent}`)} onClick={() => onAdd(anime)}>
+            <div className="absolute right-2 top-2 h-20 w-20 rounded-full bg-white/40 blur-2xl dark:bg-teal-400/10" />
+            <div className="relative grid grid-cols-[64px_minmax(0,1fr)] gap-3">
+              <img src={anime.image_url} alt="" className="h-24 w-16 rounded-xl object-cover shadow-md" />
+              <div className="min-w-0">
+                <div className="inline-flex items-center gap-1 rounded-full bg-white/75 px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-700 dark:bg-slate-950/70 dark:text-slate-200">
+                  {icon} {label}
+                </div>
+                <p className="mt-2 line-clamp-2 text-sm font-black text-slate-950 dark:text-white">{anime.title}</p>
+                <p className="mt-1 text-xl font-black text-teal-700 dark:text-teal-300">{stat}</p>
+                <p className="line-clamp-1 text-xs text-slate-500">{anime.genres.slice(0, 2).join(", ") || "Anime"}</p>
+              </div>
             </div>
-            <Plus className="h-4 w-4 text-slate-400 transition group-hover:text-teal-500" />
+            <span className="relative mt-3 inline-flex items-center gap-1 rounded-full bg-slate-950 px-3 py-1.5 text-xs font-bold text-white transition group-hover:bg-teal-500 group-hover:text-slate-950 dark:bg-teal-400 dark:text-slate-950">
+              <Plus className="h-3 w-3" /> Save to list
+            </span>
           </button>
         ))}
-        {!dispatchItems.length && (
-          <div className="rounded-2xl border border-slate-200/70 bg-white/70 p-4 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900/70">
-            Updates are loading.
-          </div>
-        )}
       </div>
+
+      {updatedAt && <p className="text-xs font-semibold text-slate-500">Updated {updatedAt}</p>}
+      {error && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-100">{error}</p>}
     </Card>
   );
 }
@@ -961,7 +980,7 @@ function HomePage({ addAnime }: { addAnime: (anime: AnimeSummary) => void }) {
         </div>
       </Card>
 
-      <AnimeDispatch trending={trending} seasonal={seasonal} upcoming={upcoming} updatedAt={updatedAt} loading={loading} error={error} onRefresh={loadHomeUpdates} onAdd={addAnime} />
+      <SeasonTracker trending={trending} seasonal={seasonal} upcoming={upcoming} updatedAt={updatedAt} loading={loading} error={error} onRefresh={loadHomeUpdates} onAdd={addAnime} />
 
       {loading && !trending.length ? (
         <div className="grid grid-cols-1 gap-4 min-[520px]:grid-cols-2 xl:grid-cols-3">

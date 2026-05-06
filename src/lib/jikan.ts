@@ -67,6 +67,8 @@ export function normalizeAnime(item: JikanAnime): AnimeSummary {
     aired: item.aired?.string || "",
     score: item.score || 0,
     rank: item.rank || 0,
+    favorites: item.favorites || 0,
+    popularity: item.popularity || 0,
     year: item.year || undefined,
     url: item.url
   };

@@ -128,6 +128,52 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function FieldGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="grid gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+      <span>{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function normalizeRating(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return Math.min(10, Math.max(0.5, Math.round(value * 2) / 2));
+}
+
+function StarRating({ value, onChange }: { value: number; onChange: (value: number) => void }) {
+  const rating = normalizeRating(value);
+  return (
+    <div className="grid gap-2">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {Array.from({ length: 10 }).map((_, index) => {
+          const score = index + 1;
+          const fillWidth = rating >= score ? "100%" : rating >= score - 0.5 ? "50%" : "0%";
+          return (
+            <span key={score} className="relative h-7 w-7 shrink-0 sm:h-8 sm:w-8">
+              <Star className="absolute inset-0 h-full w-full text-slate-300 dark:text-slate-700" />
+              <span className="absolute inset-0 overflow-hidden" style={{ width: fillWidth }}>
+                <Star className="h-7 w-7 fill-amber-400 text-amber-400 sm:h-8 sm:w-8" />
+              </span>
+              <button className="absolute left-0 top-0 h-full w-1/2 rounded-l-md focus:outline-none focus:ring-2 focus:ring-teal-400" onClick={() => onChange(score - 0.5)} type="button" aria-label={`Rate ${score - 0.5} out of 10`} />
+              <button className="absolute right-0 top-0 h-full w-1/2 rounded-r-md focus:outline-none focus:ring-2 focus:ring-teal-400" onClick={() => onChange(score)} type="button" aria-label={`Rate ${score} out of 10`} />
+            </span>
+          );
+        })}
+        <span className="ml-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-black text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+          {rating ? `${rating}/10` : "No rating"}
+        </span>
+      </div>
+      {rating > 0 && (
+        <button className="justify-self-start text-xs font-black text-slate-500 underline decoration-slate-300 underline-offset-4 hover:text-teal-600 dark:text-slate-400" onClick={() => onChange(0)} type="button">
+          Clear rating
+        </button>
+      )}
+    </div>
+  );
+}
+
 function inputClass() {
   return "w-full min-w-0 rounded-xl border border-slate-200/70 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-teal-500 dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-100";
 }
@@ -869,7 +915,7 @@ function applyMangaStatus(entry: MangaEntry, status: MangaStatus): MangaEntry {
 
 function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave: (entry: LibraryEntry) => void; onCancel: () => void }) {
   const [status, setStatus] = useState<LibraryStatus>("Plan to Watch");
-  const [ratingInput, setRatingInput] = useState("");
+  const [rating, setRating] = useState(0);
   const [episodesWatchedInput, setEpisodesWatchedInput] = useState("");
   const [review, setReview] = useState("");
   const [notes, setNotes] = useState("");
@@ -900,17 +946,6 @@ function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave
                   {statuses.map((item) => <option key={item} value={item}>{statusLabels[item]}</option>)}
                 </select>
               </Field>
-              <Field label="Rating">
-                <input
-                  className={inputClass()}
-                  type="number"
-                  min={0}
-                  max={10}
-                  placeholder="0-10"
-                  value={ratingInput}
-                  onChange={(event) => setRatingInput(event.target.value)}
-                />
-              </Field>
               <Field label="Episodes watched">
                 <input
                   className={inputClass()}
@@ -922,6 +957,9 @@ function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave
                 />
               </Field>
             </div>
+            <FieldGroup label="Rating">
+              <StarRating value={rating} onChange={setRating} />
+            </FieldGroup>
             <Field label="Review">
               <textarea className={clsx(inputClass(), "min-h-24")} value={review} onChange={(event) => setReview(event.target.value)} />
             </Field>
@@ -936,7 +974,6 @@ function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave
             <div className="flex items-center gap-2">
               <Button className="bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => {
                 const entry = mergeAnimeToEntry(anime);
-                const rating = ratingInput.trim() ? Number(ratingInput) : 0;
                 const episodesWatched = status === "Completed" && anime.total_episodes > 0 ? anime.total_episodes : episodesWatchedInput.trim() ? Number(episodesWatchedInput) : 0;
                 onSave(applyAnimeStatus({ ...entry, status, rating, episodes_watched: episodesWatched, review, notes, drop_reason: dropReason }, status));
               }}>Save</Button>
@@ -951,7 +988,7 @@ function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave
 
 function AddMangaPage({ manga, onSave, onCancel }: { manga: MangaSummary; onSave: (entry: MangaEntry) => void; onCancel: () => void }) {
   const [status, setStatus] = useState<MangaStatus>("Plan to Read");
-  const [ratingInput, setRatingInput] = useState("");
+  const [rating, setRating] = useState(0);
   const [review, setReview] = useState("");
   const [notes, setNotes] = useState("");
   const [dropReason, setDropReason] = useState("");
@@ -976,18 +1013,10 @@ function AddMangaPage({ manga, onSave, onCancel }: { manga: MangaSummary; onSave
                   {mangaStatuses.map((item) => <option key={item} value={item}>{mangaStatusLabels[item]}</option>)}
                 </select>
               </Field>
-              <Field label="Rating">
-                <input
-                  className={inputClass()}
-                  type="number"
-                  min={0}
-                  max={10}
-                  placeholder="0-10"
-                  value={ratingInput}
-                  onChange={(event) => setRatingInput(event.target.value)}
-                />
-              </Field>
             </div>
+            <FieldGroup label="Rating">
+              <StarRating value={rating} onChange={setRating} />
+            </FieldGroup>
             <Field label="Review">
               <textarea className={clsx(inputClass(), "min-h-24")} value={review} onChange={(event) => setReview(event.target.value)} />
             </Field>
@@ -1002,7 +1031,6 @@ function AddMangaPage({ manga, onSave, onCancel }: { manga: MangaSummary; onSave
             <div className="flex items-center gap-2">
               <Button className="bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => {
                 const entry = mergeMangaToEntry(manga);
-                const rating = ratingInput.trim() ? Number(ratingInput) : 0;
                 onSave(applyMangaStatus({ ...entry, status, rating, review, notes, drop_reason: dropReason }, status));
               }}>Save</Button>
               <button className="button-ghost" onClick={onCancel}>Cancel</button>
@@ -1045,7 +1073,7 @@ function LibraryCard({ entry, onUpdate, onRemove }: { entry: LibraryEntry; onUpd
       )}
       {expanded && (
         <>
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-2">
             <Field label="Status">
               <select className={inputClass()} value={draft.status} onChange={(event) => setDraft(applyAnimeStatus(draft, event.target.value as LibraryStatus))}>
                 {statuses.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}
@@ -1054,10 +1082,10 @@ function LibraryCard({ entry, onUpdate, onRemove }: { entry: LibraryEntry; onUpd
             <Field label="Episodes watched">
               <input className={inputClass()} type="number" min={0} max={draft.total_episodes || undefined} value={draft.episodes_watched} onChange={(event) => setDraft({ ...draft, episodes_watched: Number(event.target.value) })} />
             </Field>
-            <Field label="Rating">
-              <input className={inputClass()} type="number" min={0} max={10} value={draft.rating} onChange={(event) => setDraft({ ...draft, rating: Number(event.target.value) })} />
-            </Field>
           </div>
+          <FieldGroup label="Rating">
+            <StarRating value={draft.rating} onChange={(rating) => setDraft({ ...draft, rating })} />
+          </FieldGroup>
           <Field label="Review">
             <textarea className={clsx(inputClass(), "min-h-24")} value={draft.review} onChange={(event) => setDraft({ ...draft, review: event.target.value })} />
           </Field>
@@ -1114,10 +1142,10 @@ function MangaCard({ entry, onUpdate, onRemove }: { entry: MangaEntry; onUpdate:
                 {mangaStatuses.map((status) => <option key={status} value={status}>{mangaStatusLabels[status]}</option>)}
               </select>
             </Field>
-            <Field label="Rating">
-              <input className={inputClass()} type="number" min={0} max={10} value={draft.rating} onChange={(event) => setDraft({ ...draft, rating: Number(event.target.value) })} />
-            </Field>
           </div>
+          <FieldGroup label="Rating">
+            <StarRating value={draft.rating} onChange={(rating) => setDraft({ ...draft, rating })} />
+          </FieldGroup>
           <Field label="Review">
             <textarea className={clsx(inputClass(), "min-h-24")} value={draft.review} onChange={(event) => setDraft({ ...draft, review: event.target.value })} />
           </Field>

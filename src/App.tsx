@@ -79,6 +79,30 @@ function getAuthHashType() {
   return new URLSearchParams(window.location.hash.replace(/^#/, "")).get("type") || "";
 }
 
+function friendlyAuthError(error: unknown, fallback = "Something went wrong. Please try again.") {
+  const message = error instanceof Error ? error.message : String(error || "");
+  const normalized = message.toLowerCase();
+  if (normalized.includes("auth session missing") || normalized.includes("session missing")) {
+    return "This sign-in link has expired or was already used. Please request a fresh email and try again.";
+  }
+  if (normalized.includes("invalid login credentials")) {
+    return "That email or password does not look right.";
+  }
+  if (normalized.includes("email not confirmed") || normalized.includes("email_not_confirmed")) {
+    return "Please confirm your email before signing in.";
+  }
+  if (normalized.includes("user already registered") || normalized.includes("already registered")) {
+    return "An account already exists for this email. Sign in instead.";
+  }
+  if (normalized.includes("password")) {
+    return "Please use a stronger password with at least 8 characters, including letters and numbers.";
+  }
+  if (normalized.includes("rate limit") || normalized.includes("too many")) {
+    return "Too many tries right now. Please wait a minute, then try again.";
+  }
+  return message || fallback;
+}
+
 function normalizeUserId(value: string) {
   const trimmed = value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   return trimmed || "viewer";
@@ -248,7 +272,7 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
       const authType = hashParams.get("type") || queryParams.get("type");
       const hasAuthPayload = hashParams.get("access_token") || hashParams.get("refresh_token") || hashParams.get("type") || queryParams.get("code") || queryParams.get("type");
 
-      if (authError) setError(authError.replace(/\+/g, " "));
+      if (authError) setError(friendlyAuthError(authError.replace(/\+/g, " "), "This link could not be opened. Please request a fresh email."));
       if (authType === "recovery") {
         setMode("signin");
         setResetMode(true);
@@ -265,7 +289,7 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
           }
         }
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Could not open this reset link. Try sending a fresh one.");
+        if (!cancelled) setError(friendlyAuthError(err, "Could not open this reset link. Try sending a fresh one."));
       } finally {
         if (!cancelled && hasAuthPayload) {
           window.history.replaceState({}, document.title, window.location.pathname);
@@ -322,7 +346,7 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
           data: { ...nextData, settings: { ...nextData.settings, username: profile.username, avatar: profile.avatar, bio: profile.bio || nextData.settings.bio, isPublic: profile.is_public } }
         });
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Could not sign in right now.");
+        setError(friendlyAuthError(err, "Could not sign in right now."));
       } finally {
         setLoading(false);
       }
@@ -379,7 +403,7 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
       setSignupEmail(targetEmail);
       setNotice("Verification email sent again. Check your inbox and spam folder.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not resend the verification email.");
+      setError(friendlyAuthError(err, "Could not resend the verification email."));
     } finally {
       setResending(false);
     }
@@ -398,7 +422,7 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
       await sendPasswordResetEmail(targetEmail);
       setNotice("Password reset email sent. Open the link, then choose a new password.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not send a reset email right now.");
+      setError(friendlyAuthError(err, "Could not send a reset email right now."));
     } finally {
       setResetSending(false);
     }
@@ -420,7 +444,7 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
       setMode("signin");
       setNotice("Password updated. Sign in with your new password.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not update your password.");
+      setError(friendlyAuthError(err, "Could not update your password."));
     } finally {
       setLoading(false);
     }
@@ -2453,7 +2477,7 @@ function App() {
         setData({ ...nextData, settings: { ...nextData.settings, username: profile.username, avatar: profile.avatar, bio: profile.bio || nextData.settings.bio, isPublic: profile.is_public } });
         window.setTimeout(() => setCloudSaveReady(true), 0);
       } catch (err) {
-        setSaveError(err instanceof Error ? err.message : "Could not restore your session.");
+        setSaveError(friendlyAuthError(err, "Could not restore your session."));
       } finally {
         if (!cancelled) setAuthLoading(false);
       }
@@ -2483,7 +2507,7 @@ function App() {
     const timer = window.setTimeout(() => {
       saveCloudData(userId, data)
         .then(() => setSaveError(""))
-        .catch((err) => setSaveError(err instanceof Error ? err.message : "Could not save your latest change."));
+        .catch((err) => setSaveError(friendlyAuthError(err, "Could not save your latest change.")));
     }, 500);
     return () => window.clearTimeout(timer);
   }, [cloudSaveReady, data, userId]);
@@ -2556,7 +2580,7 @@ function App() {
       try {
         await signOutCloud();
       } catch (err) {
-        setSaveError(err instanceof Error ? err.message : "Could not sign out.");
+        setSaveError(friendlyAuthError(err, "Could not sign out."));
       }
     }
     setCloudSaveReady(false);
@@ -2582,7 +2606,7 @@ function App() {
       setData(loadData());
       setPage("home");
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Could not delete the account right now.");
+      setSaveError(friendlyAuthError(err, "Could not delete the account right now."));
     }
   };
 

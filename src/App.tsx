@@ -25,13 +25,13 @@ import {
 import { fixedAnime } from "./lib/fixedAnime";
 import { getAiringToday, getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, getSeasonal, getTopAiring, getUpcomingAnime, searchAnime, searchManga } from "./lib/jikan";
 import { loadData, saveData, setActiveUser } from "./lib/storage";
-import { completeAuthSessionFromUrl, createReport, deleteCloudAccount, getCurrentSession, isSupabaseConfigured, loadCloudData, loadProfile, resendSignupConfirmation, saveCloudData, sendPasswordResetEmail, signInWithEmail, signOutCloud, signUpWithEmail, updateCloudPassword, upsertProfile, userToProfileFallback } from "./lib/supabase";
-import type { AnimeDetail, AnimeSummary, AppData, LibraryEntry, LibraryStatus, MangaDetail, MangaEntry, MangaStatus, MangaSummary, Settings, ThemeMode } from "./types/anime";
+import { completeAuthSessionFromUrl, createReport, deleteCloudAccount, getCurrentSession, isSupabaseConfigured, loadAdminDashboard, loadCloudData, loadProfile, logActivityEvent, markProfileSeen, resendSignupConfirmation, saveCloudData, sendPasswordResetEmail, signInWithEmail, signOutCloud, signUpWithEmail, updateCloudPassword, upsertProfile, userToProfileFallback } from "./lib/supabase";
+import type { AdminDashboardData, AnimeDetail, AnimeSummary, AppData, LibraryEntry, LibraryStatus, MangaDetail, MangaEntry, MangaStatus, MangaSummary, Settings, ThemeMode } from "./types/anime";
 
-type UserAccount = { id: string; name: string; avatar: string; passcode: string; email?: string; isCloud?: boolean; memberSince?: string };
+type UserAccount = { id: string; name: string; avatar: string; passcode: string; email?: string; isCloud?: boolean; isAdmin?: boolean; memberSince?: string };
 
 type AuthMode = "signin" | "signup";
-type AppPage = "home" | "stuff" | "manga" | "add" | "add-manga" | "dashboard" | "explore" | "profile";
+type AppPage = "home" | "stuff" | "manga" | "add" | "add-manga" | "dashboard" | "explore" | "profile" | "admin";
 
 type Section = { key: LibraryStatus; title: string; icon: React.ReactElement };
 
@@ -342,7 +342,7 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
         const profile = (await loadProfile(response.user.id)) || userToProfileFallback(response.user);
         const nextData = await loadCloudData(response.user.id);
         await onLogin({
-          user: { id: response.user.id, name: profile.username, avatar: profile.avatar, passcode: "", email: response.user.email, isCloud: true, memberSince: profile.created_at || response.user.created_at },
+          user: { id: response.user.id, name: profile.username, avatar: profile.avatar, passcode: "", email: response.user.email, isCloud: true, isAdmin: Boolean(profile.is_admin), memberSince: profile.created_at || response.user.created_at },
           data: { ...nextData, settings: { ...nextData.settings, username: profile.username, avatar: profile.avatar, bio: profile.bio || nextData.settings.bio, isPublic: profile.is_public } }
         });
       } catch (err) {
@@ -534,7 +534,7 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
   );
 }
 
-function Header({ user, theme, onThemeChange, onLogout, onHome, onMyStuff, onMyManga, onDashboard, onExplore, onProfile, onReportIssue, activePage }: { user: { name: string; avatar: string }; theme: ThemeMode; onThemeChange: (value: ThemeMode) => void; onLogout: () => void; onHome: () => void; onMyStuff: () => void; onMyManga: () => void; onDashboard: () => void; onExplore: () => void; onProfile: () => void; onReportIssue: () => void; activePage: AppPage }) {
+function Header({ user, theme, isAdmin, onThemeChange, onLogout, onHome, onMyStuff, onMyManga, onDashboard, onExplore, onProfile, onAdmin, onReportIssue, activePage }: { user: { name: string; avatar: string }; theme: ThemeMode; isAdmin: boolean; onThemeChange: (value: ThemeMode) => void; onLogout: () => void; onHome: () => void; onMyStuff: () => void; onMyManga: () => void; onDashboard: () => void; onExplore: () => void; onProfile: () => void; onAdmin: () => void; onReportIssue: () => void; activePage: AppPage }) {
   return (
     <header className="sticky top-0 z-20 border-b border-white/60 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
       <div className="mx-auto flex max-w-6xl flex-col gap-2 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3 lg:flex-row lg:items-center lg:justify-between">
@@ -569,6 +569,11 @@ function Header({ user, theme, onThemeChange, onLogout, onHome, onMyStuff, onMyM
           <button className={clsx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-2.5 py-2 text-sm font-semibold transition sm:gap-2 sm:px-3", activePage === "dashboard" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onDashboard}>
             Dashboard
           </button>
+          {isAdmin && (
+            <button className={clsx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-2.5 py-2 text-sm font-semibold transition sm:gap-2 sm:px-3", activePage === "admin" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onAdmin}>
+              Admin
+            </button>
+          )}
           <button
             className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200/70 bg-white/80 px-2.5 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200 sm:gap-2 sm:px-3"
             onClick={onReportIssue}
@@ -2476,6 +2481,117 @@ function DashboardPage({ data, onClearHistory, onBack }: { data: AppData; onClea
   );
 }
 
+function AdminPage({ onBack }: { onBack: () => void }) {
+  const [dashboard, setDashboard] = useState<AdminDashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const refresh = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      setDashboard(await loadAdminDashboard());
+    } catch (err) {
+      setError(friendlyAuthError(err, "Could not load the admin board. Make sure the admin SQL has been run and your profile is marked as admin."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  const profiles = dashboard?.profiles || [];
+  const reports = dashboard?.reports || [];
+  const activity = dashboard?.activity || [];
+  const notifications = dashboard?.notifications || [];
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const activeThisWeek = profiles.filter((profile) => profile.last_seen && new Date(profile.last_seen).getTime() >= weekAgo).length;
+  const openReports = reports.filter((report) => report.status !== "closed").length;
+  const unread = notifications.filter((note) => !note.is_read).length;
+
+  return (
+    <div className="mx-auto grid max-w-6xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Owner tools</p>
+          <h2 className="font-display text-3xl leading-tight">Admin board</h2>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={refresh} disabled={loading}><RefreshCcw className="h-4 w-4" /> {loading ? "Loading" : "Refresh"}</Button>
+          <Button className="bg-slate-900 hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300" onClick={onBack}>Back home</Button>
+        </div>
+      </div>
+
+      {error && <p className="rounded-2xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-100">{error}</p>}
+
+      <div className="grid grid-cols-1 gap-3 min-[520px]:grid-cols-2 lg:grid-cols-4">
+        <Card><p className="text-sm font-semibold text-slate-500">Users</p><p className="mt-1 text-4xl font-black">{profiles.length}</p><p className="text-xs text-slate-500">{activeThisWeek} active this week</p></Card>
+        <Card><p className="text-sm font-semibold text-slate-500">Reports</p><p className="mt-1 text-4xl font-black">{reports.length}</p><p className="text-xs text-slate-500">{openReports} open</p></Card>
+        <Card><p className="text-sm font-semibold text-slate-500">Activity</p><p className="mt-1 text-4xl font-black">{activity.length}</p><p className="text-xs text-slate-500">Latest tracked events</p></Card>
+        <Card><p className="text-sm font-semibold text-slate-500">Notifications</p><p className="mt-1 text-4xl font-black">{unread}</p><p className="text-xs text-slate-500">Unread owner notes</p></Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="grid gap-3">
+          <h3 className="font-display text-2xl">Recent users</h3>
+          {profiles.slice(0, 8).map((profile) => (
+            <div key={profile.id} className="grid grid-cols-[44px_minmax(0,1fr)] gap-3 rounded-2xl border border-slate-200/70 bg-white/70 p-3 dark:border-slate-800 dark:bg-slate-900/70">
+              <div className="grid h-11 w-11 place-items-center rounded-xl bg-teal-50 text-2xl dark:bg-teal-950/40">{profile.avatar || "✨"}</div>
+              <div className="min-w-0">
+                <p className="truncate font-bold text-slate-900 dark:text-white">{profile.username} {profile.is_admin ? "(admin)" : ""}</p>
+                <p className="truncate text-xs text-slate-500">{profile.email || "No email saved"}</p>
+                <p className="text-xs text-slate-500">Joined {formatDate(profile.created_at)} • Last seen {formatDate(profile.last_seen)}</p>
+              </div>
+            </div>
+          ))}
+          {!profiles.length && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No users loaded yet.</p>}
+        </Card>
+
+        <Card className="grid gap-3">
+          <h3 className="font-display text-2xl">Reports inbox</h3>
+          {reports.slice(0, 8).map((report) => (
+            <div key={report.id} className="rounded-2xl border border-slate-200/70 bg-white/70 p-3 dark:border-slate-800 dark:bg-slate-900/70">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-bold text-teal-700 dark:bg-teal-950 dark:text-teal-200">{report.category}</span>
+                <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 dark:bg-rose-950 dark:text-rose-100">{report.priority}</span>
+                <span className="text-xs text-slate-500">{formatDate(report.created_at)}</span>
+              </div>
+              <p className="mt-2 line-clamp-3 text-sm text-slate-700 dark:text-slate-200">{report.message}</p>
+              <p className="mt-1 truncate text-xs text-slate-500">{report.name || "Anonymous"} • {report.email || "No email"}</p>
+            </div>
+          ))}
+          {!reports.length && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No reports yet.</p>}
+        </Card>
+
+        <Card className="grid gap-3">
+          <h3 className="font-display text-2xl">Live activity</h3>
+          {activity.slice(0, 10).map((event) => (
+            <div key={event.id} className="rounded-2xl border border-slate-200/70 bg-white/70 p-3 dark:border-slate-800 dark:bg-slate-900/70">
+              <p className="font-bold text-slate-900 dark:text-white">{event.event_type.replace(/_/g, " ")}</p>
+              <p className="text-xs text-slate-500">{formatDate(event.created_at)} • {event.user_id || "Unknown user"}</p>
+            </div>
+          ))}
+          {!activity.length && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No activity logged yet.</p>}
+        </Card>
+
+        <Card className="grid gap-3">
+          <h3 className="font-display text-2xl">Notifications</h3>
+          {notifications.slice(0, 10).map((note) => (
+            <div key={note.id} className="rounded-2xl border border-slate-200/70 bg-white/70 p-3 dark:border-slate-800 dark:bg-slate-900/70">
+              <p className="font-bold text-slate-900 dark:text-white">{note.title}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">{note.body}</p>
+              <p className="text-xs text-slate-500">{formatDate(note.created_at)}</p>
+            </div>
+          ))}
+          {!notifications.length && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No notifications yet.</p>}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [userId, setUserId] = useState("");
   const [data, setData] = useState<AppData>(() => loadData());
@@ -2483,6 +2599,7 @@ function App() {
   const [cloudSaveReady, setCloudSaveReady] = useState(!isSupabaseConfigured);
   const [saveError, setSaveError] = useState("");
   const [page, setPage] = useState<AppPage>("home");
+  const [isAdmin, setIsAdmin] = useState(false);
   const [memberSince, setMemberSince] = useState("");
   const [selectedAnime, setSelectedAnime] = useState<AnimeSummary | null>(null);
   const [selectedManga, setSelectedManga] = useState<MangaSummary | null>(null);
@@ -2510,8 +2627,10 @@ function App() {
         setCloudSaveReady(false);
         setActiveUser(session.user.id);
         setUserId(session.user.id);
+        setIsAdmin(Boolean(profile.is_admin));
         setMemberSince(profile.created_at || session.user.created_at);
         setData({ ...nextData, settings: { ...nextData.settings, username: profile.username, avatar: profile.avatar, bio: profile.bio || nextData.settings.bio, isPublic: profile.is_public } });
+        markProfileSeen(session.user.id).catch(() => undefined);
         window.setTimeout(() => setCloudSaveReady(true), 0);
       } catch (err) {
         setSaveError(friendlyAuthError(err, "Could not restore your session."));
@@ -2550,6 +2669,10 @@ function App() {
   }, [cloudSaveReady, data, userId]);
 
   const updateData = (patch: Partial<AppData>) => setData((prev) => ({ ...prev, ...patch }));
+  const logEvent = (eventType: string, metadata: Record<string, unknown> = {}) => {
+    if (!isSupabaseConfigured || !userId) return;
+    logActivityEvent(userId, eventType, metadata).catch(() => undefined);
+  };
 
   const addAnime = (anime: AnimeSummary) => {
     setData((prev) => {
@@ -2565,6 +2688,7 @@ function App() {
       const library = exists ? prev.library.map((item) => item.mal_id === entry.mal_id ? entry : item) : [entry, ...prev.library];
       return { ...prev, library };
     });
+    logEvent("anime_saved", { mal_id: entry.mal_id, title: entry.title, status: entry.status, rating: entry.rating });
   };
 
   const addMangaEntry = (entry: MangaEntry) => {
@@ -2573,6 +2697,7 @@ function App() {
       const mangaLibrary = exists ? prev.mangaLibrary.map((item) => item.mal_id === entry.mal_id ? entry : item) : [entry, ...prev.mangaLibrary];
       return { ...prev, mangaLibrary };
     });
+    logEvent("manga_saved", { mal_id: entry.mal_id, title: entry.title, status: entry.status, rating: entry.rating });
   };
 
   const startAddFlow = (anime: AnimeSummary) => {
@@ -2587,10 +2712,12 @@ function App() {
 
   const updateEntry = (entry: LibraryEntry) => {
     setData((prev) => ({ ...prev, library: prev.library.map((item) => item.mal_id === entry.mal_id ? entry : item) }));
+    logEvent("anime_updated", { mal_id: entry.mal_id, title: entry.title, status: entry.status, rating: entry.rating });
   };
 
   const updateMangaEntry = (entry: MangaEntry) => {
     setData((prev) => ({ ...prev, mangaLibrary: prev.mangaLibrary.map((item) => item.mal_id === entry.mal_id ? entry : item) }));
+    logEvent("manga_updated", { mal_id: entry.mal_id, title: entry.title, status: entry.status, rating: entry.rating });
   };
 
   const removeEntry = (idValue: number) => {
@@ -2605,6 +2732,7 @@ function App() {
     setCloudSaveReady(!user.isCloud);
     setActiveUser(user.id);
     setUserId(user.id);
+    setIsAdmin(Boolean(user.isAdmin));
     setMemberSince(user.memberSince || "");
     setPage("home");
     setData(nextData);
@@ -2622,6 +2750,7 @@ function App() {
     setCloudSaveReady(false);
     setActiveUser("");
     setUserId("");
+    setIsAdmin(false);
     setMemberSince("");
     setData(loadData());
     setPage("home");
@@ -2637,6 +2766,7 @@ function App() {
       setCloudSaveReady(false);
       setActiveUser("");
       setUserId("");
+      setIsAdmin(false);
       setMemberSince("");
       setData(loadData());
       setPage("home");
@@ -2659,20 +2789,24 @@ function App() {
         is_public: profileSettings.isPublic
       });
     }
+    logEvent("profile_updated", { username: profileSettings.username, isPublic: profileSettings.isPublic });
   };
 
   const clearHistory = () => {
     setData((prev) => ({ ...prev, library: [], mangaLibrary: [] }));
+    logEvent("history_cleared", { scope: "all" });
     setConfirmAction(null);
   };
 
   const clearAnimeHistory = () => {
     setData((prev) => ({ ...prev, library: [] }));
+    logEvent("history_cleared", { scope: "anime" });
     setConfirmAction(null);
   };
 
   const clearMangaHistory = () => {
     setData((prev) => ({ ...prev, mangaLibrary: [] }));
+    logEvent("history_cleared", { scope: "manga" });
     setConfirmAction(null);
   };
 
@@ -2695,6 +2829,7 @@ function App() {
       <Header
         user={{ name: data.settings.username, avatar: data.settings.avatar }}
         theme={data.settings.theme}
+        isAdmin={isAdmin}
         onThemeChange={(value) => updateData({ settings: { ...data.settings, theme: value } })}
         onLogout={() => setConfirmAction("logout")}
         onHome={() => setPage("home")}
@@ -2703,6 +2838,7 @@ function App() {
         onDashboard={() => setPage("dashboard")}
         onExplore={() => setPage("explore")}
         onProfile={() => setPage("profile")}
+        onAdmin={() => setPage("admin")}
         onReportIssue={() => setReportOpen(true)}
         activePage={page}
       />
@@ -2729,6 +2865,7 @@ function App() {
       {page === "manga" && <MyMangaPage data={data} onSelect={startAddMangaFlow} updateEntry={updateMangaEntry} removeEntry={removeMangaEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={() => setConfirmAction("clear-manga")} />}
       {page === "dashboard" && <DashboardPage data={data} onClearHistory={() => setConfirmAction("clear-all")} onBack={() => setPage("home")} />}
       {page === "profile" && <ProfilePage data={data} memberSince={memberSince} onBack={() => setPage("home")} onSaveProfile={handleSaveProfile} onDeleteAccount={() => setConfirmAction("delete-account")} />}
+      {page === "admin" && isAdmin && <AdminPage onBack={() => setPage("home")} />}
       {page === "add" && selectedAnime && (
         <AddEntryPage
           anime={selectedAnime}

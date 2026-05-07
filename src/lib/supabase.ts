@@ -1,6 +1,6 @@
 import { createClient, type User } from "@supabase/supabase-js";
 import { defaultData, normalizeAppData } from "./storage";
-import type { AppData } from "../types/anime";
+import type { AdminDashboardData, AppData } from "../types/anime";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
@@ -32,12 +32,14 @@ export const supabase = isSupabaseConfigured
 
 export type CloudProfile = {
   id: string;
+  email?: string;
   username: string;
   avatar: string;
   bio: string;
   is_public: boolean;
   is_admin?: boolean;
   created_at?: string;
+  last_seen?: string;
 };
 
 function assertSupabase() {
@@ -55,6 +57,7 @@ export function userToProfileFallback(user: User): CloudProfile {
   return {
     id: user.id,
     username: (user.user_metadata?.username as string) || user.email?.split("@")[0] || "Anime fan",
+    email: user.email,
     avatar: (user.user_metadata?.avatar as string) || "✨",
     bio: "",
     is_public: false,
@@ -115,6 +118,7 @@ export async function signUpWithEmail(email: string, password: string, username:
   if (data.user && data.session) {
     await upsertProfile({
       id: data.user.id,
+      email: data.user.email,
       username,
       avatar: "✨",
       bio: "",
@@ -162,6 +166,7 @@ export async function signInWithEmail(email: string, password: string) {
     if (!profile) {
       await upsertProfile({
         id: data.user.id,
+        email: data.user.email,
         username,
         avatar: (data.user.user_metadata?.avatar as string) || "✨",
         bio: "",
@@ -170,6 +175,8 @@ export async function signInWithEmail(email: string, password: string) {
       });
     }
     await ensureCloudData(data.user.id, username);
+    await markProfileSeen(data.user.id).catch(() => undefined);
+    await logActivityEvent(data.user.id, "sign_in", { method: "password" }).catch(() => undefined);
   }
   return data;
 }
@@ -184,7 +191,7 @@ export async function loadProfile(userId: string) {
   const client = assertSupabase();
   const { data, error } = await client
     .from("profiles")
-    .select("id, username, avatar, bio, is_public, is_admin, created_at")
+    .select("id, email, username, avatar, bio, is_public, is_admin, created_at, last_seen")
     .eq("id", userId)
     .maybeSingle();
   if (error) throw error;
@@ -193,8 +200,24 @@ export async function loadProfile(userId: string) {
 
 export async function upsertProfile(profile: CloudProfile) {
   const client = assertSupabase();
-  const { created_at, ...writeableProfile } = profile;
+  const { created_at, last_seen, ...writeableProfile } = profile;
   const { error } = await client.from("profiles").upsert(writeableProfile, { onConflict: "id" });
+  if (error) throw error;
+}
+
+export async function markProfileSeen(userId: string) {
+  const client = assertSupabase();
+  const { error } = await client.from("profiles").update({ last_seen: new Date().toISOString() }).eq("id", userId);
+  if (error) throw error;
+}
+
+export async function logActivityEvent(userId: string, eventType: string, metadata: Record<string, unknown> = {}) {
+  const client = assertSupabase();
+  const { error } = await client.from("activity_events").insert({
+    user_id: userId,
+    event_type: eventType,
+    metadata
+  });
   if (error) throw error;
 }
 
@@ -245,6 +268,42 @@ export async function createReport(payload: { userId?: string; name?: string; em
     message: payload.message
   });
   if (error) throw error;
+}
+
+export async function loadAdminDashboard(): Promise<AdminDashboardData> {
+  const client = assertSupabase();
+  const [profiles, reports, activity, notifications] = await Promise.all([
+    client
+      .from("profiles")
+      .select("id, email, username, avatar, bio, is_public, is_admin, created_at, last_seen")
+      .order("created_at", { ascending: false })
+      .limit(100),
+    client
+      .from("user_reports")
+      .select("id, user_id, name, email, category, priority, message, status, created_at")
+      .order("created_at", { ascending: false })
+      .limit(50),
+    client
+      .from("activity_events")
+      .select("id, user_id, event_type, metadata, created_at")
+      .order("created_at", { ascending: false })
+      .limit(100),
+    client
+      .from("admin_notifications")
+      .select("id, kind, title, body, is_read, created_at")
+      .order("created_at", { ascending: false })
+      .limit(50)
+  ]);
+
+  const firstError = profiles.error || reports.error || activity.error || notifications.error;
+  if (firstError) throw firstError;
+
+  return {
+    profiles: profiles.data || [],
+    reports: reports.data || [],
+    activity: activity.data || [],
+    notifications: notifications.data || []
+  } as AdminDashboardData;
 }
 
 export async function deleteCloudAccount() {

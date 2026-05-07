@@ -12,7 +12,7 @@ select
   end as status
 from pg_tables
 where schemaname = 'public'
-  and tablename in ('profiles', 'user_app_data', 'user_reports', 'anime_home_cache')
+  and tablename in ('profiles', 'user_app_data', 'user_reports', 'anime_home_cache', 'activity_events', 'admin_notifications')
 order by tablename;
 
 select
@@ -26,7 +26,7 @@ select
   with_check
 from pg_policies
 where schemaname = 'public'
-  and tablename in ('profiles', 'user_app_data', 'user_reports', 'anime_home_cache')
+  and tablename in ('profiles', 'user_app_data', 'user_reports', 'anime_home_cache', 'activity_events', 'admin_notifications')
 order by tablename, policyname;
 
 select
@@ -67,4 +67,24 @@ select
       and tablename = 'anime_home_cache'
       and policyname = 'Anyone can read anime home cache'
       and cmd = 'SELECT'
+  )
+union all
+select
+  'activity owner/admin read only',
+  exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'activity_events'
+      and policyname = 'Users read own activity'
+      and qual ilike '%current_user_is_admin%'
+  )
+union all
+select
+  'admin notifications admin read only',
+  exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'admin_notifications'
+      and policyname = 'Admins read notifications'
+      and qual ilike '%current_user_is_admin%'
   );

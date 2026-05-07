@@ -146,3 +146,51 @@ export interface AppData {
   diary: DiaryEntry[];
   settings: Settings;
 }
+
+export interface AdminProfileSummary {
+  id: string;
+  username: string;
+  email?: string;
+  avatar: string;
+  bio: string;
+  is_public: boolean;
+  is_admin: boolean;
+  created_at?: string;
+  last_seen?: string;
+}
+
+export interface AdminReportSummary {
+  id: string;
+  user_id?: string | null;
+  name?: string | null;
+  email?: string | null;
+  category: string;
+  priority: string;
+  message: string;
+  status: string;
+  created_at: string;
+}
+
+export interface AdminActivityEvent {
+  id: string;
+  user_id?: string | null;
+  event_type: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface AdminNotification {
+  id: string;
+  kind: string;
+  title: string;
+  body: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface AdminDashboardData {
+  profiles: AdminProfileSummary[];
+  reports: AdminReportSummary[];
+  activity: AdminActivityEvent[];
+  notifications: AdminNotification[];
+}

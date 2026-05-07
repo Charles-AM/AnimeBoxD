@@ -66,3 +66,27 @@ For production, use:
 - Add admin dashboard screens for signups, activity, and reports.
 - Move public community reviews/activity from mock data to database tables.
 - Add analytics, privacy pages, and AdSense-ready consent/legal pages.
+
+## Admin signup email notifications
+
+AnimeBoxD includes a Supabase Edge Function at `supabase/functions/admin-signup-email`.
+It sends `vmb4manager@gmail.com` an email when a new user profile is created.
+
+Deploy it from the project root:
+
+```bash
+supabase functions deploy admin-signup-email --no-verify-jwt
+```
+
+Set secrets in Supabase:
+
+```bash
+supabase secrets set RESEND_API_KEY=your_resend_api_key
+supabase secrets set ADMIN_EMAIL=vmb4manager@gmail.com
+supabase secrets set ADMIN_EMAIL_FROM="AnimeBoxD <no-reply@mail.animeboxd.app>"
+supabase secrets set ADMIN_NOTIFY_SECRET=use-a-long-random-secret-here
+```
+
+Then open `supabase/signup_email_notifications.sql`, replace `REPLACE_WITH_ADMIN_NOTIFY_SECRET` with the same `ADMIN_NOTIFY_SECRET`, and run it in Supabase SQL Editor.
+
+Keep the Resend API key in Supabase secrets only. Do not add it to Netlify or frontend environment variables.

@@ -69,6 +69,35 @@ export async function getCurrentSession() {
   return data.session;
 }
 
+export async function completeAuthSessionFromUrl() {
+  const client = assertSupabase();
+  if (typeof window === "undefined") return null;
+
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const queryParams = new URLSearchParams(window.location.search);
+  const type = hashParams.get("type") || queryParams.get("type") || "";
+  const accessToken = hashParams.get("access_token");
+  const refreshToken = hashParams.get("refresh_token");
+  const code = queryParams.get("code");
+
+  if (accessToken && refreshToken) {
+    const { data, error } = await client.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken
+    });
+    if (error) throw error;
+    return { type, session: data.session };
+  }
+
+  if (code) {
+    const { data, error } = await client.auth.exchangeCodeForSession(code);
+    if (error) throw error;
+    return { type, session: data.session };
+  }
+
+  return { type, session: null };
+}
+
 export async function signUpWithEmail(email: string, password: string, username: string) {
   const client = assertSupabase();
   const { data, error } = await client.auth.signUp({

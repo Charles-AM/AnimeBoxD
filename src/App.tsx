@@ -25,7 +25,7 @@ import {
 import { fixedAnime } from "./lib/fixedAnime";
 import { getAiringToday, getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, getSeasonal, getTopAiring, getUpcomingAnime, searchAnime, searchManga } from "./lib/jikan";
 import { loadData, saveData, setActiveUser } from "./lib/storage";
-import { createReport, deleteCloudAccount, getCurrentSession, isSupabaseConfigured, loadCloudData, loadProfile, resendSignupConfirmation, saveCloudData, sendPasswordResetEmail, signInWithEmail, signOutCloud, signUpWithEmail, updateCloudPassword, upsertProfile, userToProfileFallback } from "./lib/supabase";
+import { completeAuthSessionFromUrl, createReport, deleteCloudAccount, getCurrentSession, isSupabaseConfigured, loadCloudData, loadProfile, resendSignupConfirmation, saveCloudData, sendPasswordResetEmail, signInWithEmail, signOutCloud, signUpWithEmail, updateCloudPassword, upsertProfile, userToProfileFallback } from "./lib/supabase";
 import type { AnimeDetail, AnimeSummary, AppData, LibraryEntry, LibraryStatus, MangaDetail, MangaEntry, MangaStatus, MangaSummary, Settings, ThemeMode } from "./types/anime";
 
 type UserAccount = { id: string; name: string; avatar: string; passcode: string; email?: string; isCloud?: boolean; memberSince?: string };
@@ -194,18 +194,42 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
   }, []);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-    const authError = params.get("error_description") || params.get("error");
-    const authType = params.get("type");
-    if (authError) setError(authError.replace(/\+/g, " "));
-    if (authType === "recovery") {
-      setMode("signin");
-      setResetMode(true);
-      setNotice("Set your new password below.");
-    }
-    if (params.get("access_token") || params.get("refresh_token") || params.get("type")) {
-      window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
-    }
+    let cancelled = false;
+    const handleAuthCallback = async () => {
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const queryParams = new URLSearchParams(window.location.search);
+      const authError = hashParams.get("error_description") || hashParams.get("error") || queryParams.get("error_description") || queryParams.get("error");
+      const authType = hashParams.get("type") || queryParams.get("type");
+      const hasAuthPayload = hashParams.get("access_token") || hashParams.get("refresh_token") || hashParams.get("type") || queryParams.get("code") || queryParams.get("type");
+
+      if (authError) setError(authError.replace(/\+/g, " "));
+      if (authType === "recovery") {
+        setMode("signin");
+        setResetMode(true);
+        setNotice("Opening your reset form...");
+      }
+
+      try {
+        if (isSupabaseConfigured && hasAuthPayload) {
+          const result = await completeAuthSessionFromUrl();
+          if (!cancelled && result?.type === "recovery") {
+            setMode("signin");
+            setResetMode(true);
+            setNotice("Set your new password below.");
+          }
+        }
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Could not open this reset link. Try sending a fresh one.");
+      } finally {
+        if (!cancelled && hasAuthPayload) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+    };
+    handleAuthCallback();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const passwordMeetsRules = passcode.length >= 8 && /[A-Za-z]/.test(passcode) && /\d/.test(passcode);

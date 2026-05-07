@@ -606,6 +606,15 @@ function Header({ user, theme, isAdmin, onThemeChange, onLogout, onHome, onMyStu
   );
 }
 
+const REPORT_RATE_KEY = "animeboxd_last_report_at";
+const REPORT_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
+
+function getReportCooldownRemaining() {
+  const last = Number(localStorage.getItem(REPORT_RATE_KEY) || 0);
+  const remaining = REPORT_COOLDOWN_MS - (Date.now() - last);
+  return remaining > 0 ? remaining : 0;
+}
+
 function ReportIssueModal({ onClose, userId }: { onClose: () => void; userId?: string }) {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [error, setError] = useState("");
@@ -615,6 +624,15 @@ function ReportIssueModal({ onClose, userId }: { onClose: () => void; userId?: s
     const form = event.currentTarget;
     const formData = new FormData(form);
     if (String(formData.get("website") || "").trim()) return;
+
+    const cooldown = getReportCooldownRemaining();
+    if (cooldown > 0) {
+      const mins = Math.ceil(cooldown / 60000);
+      setStatus("error");
+      setError(`You already sent a report recently. Please wait ${mins} minute${mins === 1 ? "" : "s"} before sending another.`);
+      return;
+    }
+
     setStatus("sending");
     setError("");
 
@@ -654,6 +672,7 @@ function ReportIssueModal({ onClose, userId }: { onClose: () => void; userId?: s
       });
 
       if (!response.ok && !isSupabaseConfigured) throw new Error("The report could not be sent right now.");
+      localStorage.setItem(REPORT_RATE_KEY, String(Date.now()));
       setStatus("sent");
       form.reset();
     } catch (err) {

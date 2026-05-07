@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
@@ -2755,6 +2755,7 @@ function App() {
   const [reportOpen, setReportOpen] = useState(false);
   const [authNotice, setAuthNotice] = useState("");
   const [confirmAction, setConfirmAction] = useState<null | "logout" | "delete-account" | "clear-all" | "clear-anime" | "clear-manga">(null);
+  const lastActivityAtRef = useRef(Date.now());
   useTheme(data.settings);
 
   useEffect(() => {
@@ -2912,21 +2913,36 @@ function App() {
 
   useEffect(() => {
     if (!userId) return;
-    let timeoutId = window.setTimeout(() => undefined, inactivityTimeoutMs);
-    const resetTimer = () => {
+    let timeoutId: number | undefined;
+    const signOutForInactivity = () => {
+      handleLogout("You were signed out after being inactive. Sign in again to continue.");
+    };
+    const scheduleTimer = () => {
       window.clearTimeout(timeoutId);
-      timeoutId = window.setTimeout(() => {
-        handleLogout("You were signed out after being inactive. Sign in again to continue.");
-      }, inactivityTimeoutMs);
+      const remaining = inactivityTimeoutMs - (Date.now() - lastActivityAtRef.current);
+      timeoutId = window.setTimeout(signOutForInactivity, Math.max(0, remaining));
+    };
+    const recordActivity = () => {
+      lastActivityAtRef.current = Date.now();
+      scheduleTimer();
+    };
+    const checkVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastActivityAtRef.current >= inactivityTimeoutMs) {
+        signOutForInactivity();
+        return;
+      }
+      scheduleTimer();
     };
     const activityEvents = ["pointerdown", "keydown", "touchstart", "scroll"] as const;
-    activityEvents.forEach((eventName) => window.addEventListener(eventName, resetTimer, { passive: true }));
-    document.addEventListener("visibilitychange", resetTimer);
-    resetTimer();
+    lastActivityAtRef.current = Date.now();
+    activityEvents.forEach((eventName) => window.addEventListener(eventName, recordActivity, { passive: true }));
+    document.addEventListener("visibilitychange", checkVisibility);
+    scheduleTimer();
     return () => {
       window.clearTimeout(timeoutId);
-      activityEvents.forEach((eventName) => window.removeEventListener(eventName, resetTimer));
-      document.removeEventListener("visibilitychange", resetTimer);
+      activityEvents.forEach((eventName) => window.removeEventListener(eventName, recordActivity));
+      document.removeEventListener("visibilitychange", checkVisibility);
     };
   }, [userId]);
 

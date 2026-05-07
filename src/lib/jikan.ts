@@ -253,11 +253,8 @@ export async function searchAnime(query: string): Promise<AnimeSummary[]> {
   const normalizedQuery = normalizeQuery(query);
   if (isBlockedQuery(normalizedQuery)) return [];
   const key = `search_cache_v3_safe_${normalizedQuery}`;
-  const cached = localStorage.getItem(key);
-  if (cached) {
-    const parsed = JSON.parse(cached) as { at: number; data: AnimeSummary[] };
-    if (Date.now() - parsed.at < hour) return filterSafeAnimeSummaries(parsed.data);
-  }
+  const cached = readCache<AnimeSummary[]>(key, hour);
+  if (cached) return filterSafeAnimeSummaries(cached);
   await throttleSearch("anime");
   const payload = await requestJson<{ data?: JikanAnime[] }>(`/anime?q=${encodeURIComponent(query)}&limit=25&sfw=true`);
   const items = Array.isArray(payload.data) ? filterSafeAnime(sanitizeItems(payload.data)) : [];
@@ -275,7 +272,7 @@ export async function searchAnime(query: string): Promise<AnimeSummary[]> {
   }
 
   const data = (filtered.length ? filtered : items).slice(0, 12).map(normalizeAnime);
-  localStorage.setItem(key, JSON.stringify({ at: Date.now(), data }));
+  writeCache(key, data);
   return data;
 }
 
@@ -283,11 +280,8 @@ export async function searchManga(query: string): Promise<MangaSummary[]> {
   const normalizedQuery = normalizeQuery(query);
   if (isBlockedQuery(normalizedQuery)) return [];
   const key = `search_manga_cache_v3_safe_${normalizedQuery}`;
-  const cached = localStorage.getItem(key);
-  if (cached) {
-    const parsed = JSON.parse(cached) as { at: number; data: MangaSummary[] };
-    if (Date.now() - parsed.at < hour) return filterSafeMangaSummaries(parsed.data);
-  }
+  const cached = readCache<MangaSummary[]>(key, hour);
+  if (cached) return filterSafeMangaSummaries(cached);
   await throttleSearch("manga");
   const payload = await requestJson<{ data?: JikanManga[] }>(`/manga?q=${encodeURIComponent(query)}&limit=25&sfw=true`);
   const items = Array.isArray(payload.data) ? filterSafeManga(sanitizeItems(payload.data)) : [];
@@ -305,7 +299,7 @@ export async function searchManga(query: string): Promise<MangaSummary[]> {
   }
 
   const data = (filtered.length ? filtered : items).slice(0, 12).map(normalizeManga);
-  localStorage.setItem(key, JSON.stringify({ at: Date.now(), data }));
+  writeCache(key, data);
   return data;
 }
 

@@ -855,6 +855,9 @@ function SearchPanel({ onSelect }: { onSelect: (anime: AnimeSummary) => void }) 
       </div>
       {loading && <div className="mt-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-40 animate-pulse rounded-md bg-slate-100 dark:bg-slate-800" />)}</div>}
       {error && <p className="mt-3 rounded-md bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950 dark:text-rose-200">{error}</p>}
+      {!loading && !error && query.trim().length >= 2 && !results.length && (
+        <p className="mt-3 rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No safe anime results found. Try another title.</p>
+      )}
       {!!results.length && (
         <div className="mt-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {results.map((anime) => (
@@ -900,6 +903,9 @@ function SearchMangaPanel({ onSelect }: { onSelect: (manga: MangaSummary) => voi
       </div>
       {loading && <div className="mt-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-40 animate-pulse rounded-md bg-slate-100 dark:bg-slate-800" />)}</div>}
       {error && <p className="mt-3 rounded-md bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950 dark:text-rose-200">{error}</p>}
+      {!loading && !error && query.trim().length >= 2 && !results.length && (
+        <p className="mt-3 rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No safe manga results found. Try another title.</p>
+      )}
       {!!results.length && (
         <div className="mt-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {results.map((manga) => (
@@ -1399,6 +1405,9 @@ function SeasonTracker({ trending, seasonal, upcoming, airingToday, updatedAt, l
           </button>
         ))}
       </div>
+      {!loading && !trackerItems.length && (
+        <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">Live updates are quiet right now. Try refresh in a moment.</p>
+      )}
 
       {updatedAt && <p className="text-xs font-semibold text-slate-500">Updated {updatedAt}</p>}
       {error && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-100">{error}</p>}
@@ -1627,6 +1636,9 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
           </div>
           {loading && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">Searching...</p>}
           {error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{error}</p>}
+          {!loading && query.trim().length >= 2 && !safeResults.length && !error && (
+            <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No safe results found. Try a different title.</p>
+          )}
           {!loading && !results.length && query.trim().length < 2 && (
             <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">Type a title to start.</p>
           )}

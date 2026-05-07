@@ -1250,6 +1250,10 @@ function formatBroadcastShort(value?: string) {
   return [day, time].filter(Boolean).join(" ") || "Today";
 }
 
+function shuffleLiveItems(items: AnimeSummary[]) {
+  return [...items].sort(() => Math.random() - 0.5);
+}
+
 function SeasonTracker({ trending, seasonal, upcoming, airingToday, updatedAt, loading, error, onRefresh, onAdd }: { trending: AnimeSummary[]; seasonal: AnimeSummary[]; upcoming: AnimeSummary[]; airingToday: AnimeSummary[]; updatedAt: string; loading: boolean; error: string; onRefresh: () => void; onAdd: (anime: AnimeSummary) => void }) {
   const [todayIndex, setTodayIndex] = useState(0);
   const [scoreIndex, setScoreIndex] = useState(0);
@@ -1345,18 +1349,20 @@ function HomePage({ addAnime }: { addAnime: (anime: AnimeSummary) => void }) {
   const [error, setError] = useState("");
   const [updatedAt, setUpdatedAt] = useState("");
 
-  const loadHomeUpdates = async () => {
+  const loadHomeUpdates = async (force = false) => {
     setLoading(true);
     setError("");
     try {
-      const trendingAnime = await getTopAiring();
-      const seasonalAnime = await getSeasonal();
-      const upcomingAnime = await getUpcomingAnime();
-      const todayAnime = await getAiringToday();
-      setTrending(trendingAnime);
-      setSeasonal(seasonalAnime);
-      setUpcoming(upcomingAnime);
-      setAiringToday(todayAnime);
+      const [trendingAnime, seasonalAnime, upcomingAnime, todayAnime] = await Promise.all([
+        getTopAiring(force),
+        getSeasonal(force),
+        getUpcomingAnime(force),
+        getAiringToday(force)
+      ]);
+      setTrending(shuffleLiveItems(trendingAnime));
+      setSeasonal(shuffleLiveItems(seasonalAnime));
+      setUpcoming(shuffleLiveItems(upcomingAnime));
+      setAiringToday(shuffleLiveItems(todayAnime));
       setUpdatedAt(new Date().toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Updates are slow right now. Try again in a bit.");
@@ -1368,6 +1374,15 @@ function HomePage({ addAnime }: { addAnime: (anime: AnimeSummary) => void }) {
 
   useEffect(() => {
     loadHomeUpdates();
+    const timer = window.setInterval(() => loadHomeUpdates(true), 15 * 60 * 1000);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") loadHomeUpdates();
+    };
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
   }, []);
 
   return (
@@ -1383,7 +1398,7 @@ function HomePage({ addAnime }: { addAnime: (anime: AnimeSummary) => void }) {
         </div>
       </Card>
 
-      <SeasonTracker trending={trending} seasonal={seasonal} upcoming={upcoming} airingToday={airingToday} updatedAt={updatedAt} loading={loading} error={error} onRefresh={loadHomeUpdates} onAdd={addAnime} />
+      <SeasonTracker trending={trending} seasonal={seasonal} upcoming={upcoming} airingToday={airingToday} updatedAt={updatedAt} loading={loading} error={error} onRefresh={() => loadHomeUpdates(true)} onAdd={addAnime} />
 
       {loading && !trending.length ? (
         <div className="grid grid-cols-1 gap-4 min-[520px]:grid-cols-2 xl:grid-cols-3">

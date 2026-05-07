@@ -2,6 +2,7 @@ import type { AnimeDetail, AnimeSummary, MangaDetail, MangaSummary } from "../ty
 
 const API = "https://api.jikan.moe/v4";
 const hour = 60 * 60 * 1000;
+const liveCacheTime = 10 * 60 * 1000;
 const minSearchInterval = 1000;
 const lastSearchAt: Record<"anime" | "manga", number> = { anime: 0, manga: 0 };
 
@@ -173,12 +174,12 @@ function sanitizeItems<T extends { mal_id?: number; title?: string }>(items: T[]
   return items.filter((item) => item && typeof item.mal_id === "number" && Boolean(item.title));
 }
 
-function readCache<T>(key: string): T | null {
+function readCache<T>(key: string, maxAge = hour): T | null {
   const cached = localStorage.getItem(key);
   if (!cached) return null;
   try {
     const parsed = JSON.parse(cached) as { at: number; data: T };
-    if (Date.now() - parsed.at < hour) return parsed.data;
+    if (Date.now() - parsed.at < maxAge) return parsed.data;
   } catch {
     localStorage.removeItem(key);
   }
@@ -275,23 +276,23 @@ export async function getAnimeThemes(id: number) {
   };
 }
 
-export async function getTopAiring() {
+export async function getTopAiring(force = false) {
   const key = "top_airing_cache_v2";
-  const cached = readCache<AnimeSummary[]>(key);
+  const cached = force ? null : readCache<AnimeSummary[]>(key, liveCacheTime);
   if (cached) return cached;
-  const payload = await requestJson<{ data?: JikanAnime[] }>("/top/anime?filter=airing&limit=10");
+  const payload = await requestJson<{ data?: JikanAnime[] }>("/top/anime?filter=airing&limit=25");
   const data = Array.isArray(payload.data) ? payload.data.map(normalizeAnime) : [];
   writeCache(key, data);
   return data;
 }
 
-export async function getAiringToday() {
+export async function getAiringToday(force = false) {
   const weekdays = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
   const today = weekdays[new Date().getDay()];
   const key = `airing_today_cache_v2_${today}`;
-  const cached = readCache<AnimeSummary[]>(key);
+  const cached = force ? null : readCache<AnimeSummary[]>(key, liveCacheTime);
   if (cached) return cached;
-  const payload = await requestJson<{ data?: JikanAnime[] }>(`/schedules?filter=${today}&limit=10`);
+  const payload = await requestJson<{ data?: JikanAnime[] }>(`/schedules?filter=${today}&limit=25`);
   const data = Array.isArray(payload.data) ? payload.data.map(normalizeAnime) : [];
   writeCache(key, data);
   return data;
@@ -315,21 +316,21 @@ export async function getRandomAnimeList(limit = 8) {
   return topAnime.sort(() => Math.random() - 0.5).slice(0, limit);
 }
 
-export async function getSeasonal() {
+export async function getSeasonal(force = false) {
   const key = "seasonal_anime_cache_v2";
-  const cached = readCache<AnimeSummary[]>(key);
+  const cached = force ? null : readCache<AnimeSummary[]>(key, liveCacheTime);
   if (cached) return cached;
-  const payload = await requestJson<{ data?: JikanAnime[] }>("/seasons/now?limit=10");
+  const payload = await requestJson<{ data?: JikanAnime[] }>("/seasons/now?limit=25");
   const data = Array.isArray(payload.data) ? payload.data.map(normalizeAnime) : [];
   writeCache(key, data);
   return data;
 }
 
-export async function getUpcomingAnime() {
+export async function getUpcomingAnime(force = false) {
   const key = "upcoming_anime_cache_v2";
-  const cached = readCache<AnimeSummary[]>(key);
+  const cached = force ? null : readCache<AnimeSummary[]>(key, liveCacheTime);
   if (cached) return cached;
-  const payload = await requestJson<{ data?: JikanAnime[] }>("/seasons/upcoming?limit=10");
+  const payload = await requestJson<{ data?: JikanAnime[] }>("/seasons/upcoming?limit=25");
   const data = Array.isArray(payload.data) ? payload.data.map(normalizeAnime) : [];
   writeCache(key, data);
   return data;

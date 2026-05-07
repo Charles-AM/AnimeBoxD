@@ -5,6 +5,8 @@ const hour = 60 * 60 * 1000;
 const liveCacheTime = 10 * 60 * 1000;
 const minSearchInterval = 1000;
 const lastSearchAt: Record<"anime" | "manga", number> = { anime: 0, manga: 0 };
+const blockedContentTerms = ["hentai", "erotica", "ecchi"];
+const blockedRatingTerms = ["rx", "hentai"];
 
 type JikanAnime = {
   mal_id: number;
@@ -174,6 +176,63 @@ function sanitizeItems<T extends { mal_id?: number; title?: string }>(items: T[]
   return items.filter((item) => item && typeof item.mal_id === "number" && Boolean(item.title));
 }
 
+function normalizeTerm(value?: string) {
+  return String(value || "").toLowerCase().trim();
+}
+
+function hasBlockedTerm(values: (string | undefined)[]) {
+  return values.some((value) => {
+    const normalized = normalizeTerm(value);
+    return blockedContentTerms.some((term) => normalized === term || normalized.includes(term));
+  });
+}
+
+function isBlockedQuery(query: string) {
+  const normalized = normalizeTerm(query);
+  return blockedContentTerms.some((term) => normalized === term || normalized.includes(term));
+}
+
+function isSafeAnime(item: JikanAnime) {
+  const rating = normalizeTerm(item.rating);
+  const names = [
+    item.title,
+    item.title_english,
+    item.synopsis,
+    ...(item.genres || []).map((itemGenre) => itemGenre.name),
+    ...(item.themes || []).map((theme) => theme.name),
+    ...(item.demographics || []).map((demo) => demo.name)
+  ];
+  return !blockedRatingTerms.some((term) => rating.includes(term)) && !hasBlockedTerm(names);
+}
+
+function isSafeManga(item: JikanManga) {
+  const names = [
+    item.title,
+    item.title_english,
+    item.synopsis,
+    ...(item.genres || []).map((itemGenre) => itemGenre.name),
+    ...(item.themes || []).map((theme) => theme.name),
+    ...(item.demographics || []).map((demo) => demo.name)
+  ];
+  return !hasBlockedTerm(names);
+}
+
+function filterSafeAnime(items: JikanAnime[]) {
+  return items.filter(isSafeAnime);
+}
+
+function filterSafeManga(items: JikanManga[]) {
+  return items.filter(isSafeManga);
+}
+
+function filterSafeAnimeSummaries(items: AnimeSummary[]) {
+  return items.filter((item) => !hasBlockedTerm([...(item.genres || []), item.title, item.synopsis]));
+}
+
+function filterSafeMangaSummaries(items: MangaSummary[]) {
+  return items.filter((item) => !hasBlockedTerm([...(item.genres || []), item.title, item.synopsis]));
+}
+
 function readCache<T>(key: string, maxAge = hour): T | null {
   const cached = localStorage.getItem(key);
   if (!cached) return null;
@@ -192,23 +251,24 @@ function writeCache<T>(key: string, data: T) {
 
 export async function searchAnime(query: string): Promise<AnimeSummary[]> {
   const normalizedQuery = normalizeQuery(query);
-  const key = `search_cache_v2_${normalizedQuery}`;
+  if (isBlockedQuery(normalizedQuery)) return [];
+  const key = `search_cache_v3_safe_${normalizedQuery}`;
   const cached = localStorage.getItem(key);
   if (cached) {
     const parsed = JSON.parse(cached) as { at: number; data: AnimeSummary[] };
-    if (Date.now() - parsed.at < hour) return parsed.data;
+    if (Date.now() - parsed.at < hour) return filterSafeAnimeSummaries(parsed.data);
   }
   await throttleSearch("anime");
-  const payload = await requestJson<{ data?: JikanAnime[] }>(`/anime?q=${encodeURIComponent(query)}&limit=25`);
-  const items = Array.isArray(payload.data) ? sanitizeItems(payload.data) : [];
+  const payload = await requestJson<{ data?: JikanAnime[] }>(`/anime?q=${encodeURIComponent(query)}&limit=25&sfw=true`);
+  const items = Array.isArray(payload.data) ? filterSafeAnime(sanitizeItems(payload.data)) : [];
   let filtered = items.filter((item) => matchesQuery(item, normalizedQuery));
 
   if (!filtered.length && normalizedQuery.includes(" ")) {
     const token = normalizedQuery.split(" ").sort((a, b) => b.length - a.length)[0];
     if (token) {
       await throttleSearch("anime");
-      const fallback = await requestJson<{ data?: JikanAnime[] }>(`/anime?q=${encodeURIComponent(token)}&limit=25`);
-      const fallbackItems = Array.isArray(fallback.data) ? sanitizeItems(fallback.data) : [];
+      const fallback = await requestJson<{ data?: JikanAnime[] }>(`/anime?q=${encodeURIComponent(token)}&limit=25&sfw=true`);
+      const fallbackItems = Array.isArray(fallback.data) ? filterSafeAnime(sanitizeItems(fallback.data)) : [];
       filtered = fallbackItems.filter((item) => matchesQuery(item, normalizedQuery));
       if (!filtered.length) filtered = fallbackItems;
     }
@@ -221,23 +281,24 @@ export async function searchAnime(query: string): Promise<AnimeSummary[]> {
 
 export async function searchManga(query: string): Promise<MangaSummary[]> {
   const normalizedQuery = normalizeQuery(query);
-  const key = `search_manga_cache_v2_${normalizedQuery}`;
+  if (isBlockedQuery(normalizedQuery)) return [];
+  const key = `search_manga_cache_v3_safe_${normalizedQuery}`;
   const cached = localStorage.getItem(key);
   if (cached) {
     const parsed = JSON.parse(cached) as { at: number; data: MangaSummary[] };
-    if (Date.now() - parsed.at < hour) return parsed.data;
+    if (Date.now() - parsed.at < hour) return filterSafeMangaSummaries(parsed.data);
   }
   await throttleSearch("manga");
-  const payload = await requestJson<{ data?: JikanManga[] }>(`/manga?q=${encodeURIComponent(query)}&limit=25`);
-  const items = Array.isArray(payload.data) ? sanitizeItems(payload.data) : [];
+  const payload = await requestJson<{ data?: JikanManga[] }>(`/manga?q=${encodeURIComponent(query)}&limit=25&sfw=true`);
+  const items = Array.isArray(payload.data) ? filterSafeManga(sanitizeItems(payload.data)) : [];
   let filtered = items.filter((item) => matchesQuery(item, normalizedQuery));
 
   if (!filtered.length && normalizedQuery.includes(" ")) {
     const token = normalizedQuery.split(" ").sort((a, b) => b.length - a.length)[0];
     if (token) {
       await throttleSearch("manga");
-      const fallback = await requestJson<{ data?: JikanManga[] }>(`/manga?q=${encodeURIComponent(token)}&limit=25`);
-      const fallbackItems = Array.isArray(fallback.data) ? sanitizeItems(fallback.data) : [];
+      const fallback = await requestJson<{ data?: JikanManga[] }>(`/manga?q=${encodeURIComponent(token)}&limit=25&sfw=true`);
+      const fallbackItems = Array.isArray(fallback.data) ? filterSafeManga(sanitizeItems(fallback.data)) : [];
       filtered = fallbackItems.filter((item) => matchesQuery(item, normalizedQuery));
       if (!filtered.length) filtered = fallbackItems;
     }
@@ -250,11 +311,13 @@ export async function searchManga(query: string): Promise<MangaSummary[]> {
 
 export async function getAnime(id: number): Promise<AnimeDetail> {
   const payload = await requestJson<{ data: JikanAnime }>(`/anime/${id}/full`);
+  if (!isSafeAnime(payload.data)) throw new Error("This title is not available on AnimeBoxD.");
   return normalizeAnimeDetail(payload.data);
 }
 
 export async function getManga(id: number): Promise<MangaDetail> {
   const payload = await requestJson<{ data: JikanManga }>(`/manga/${id}/full`);
+  if (!isSafeManga(payload.data)) throw new Error("This title is not available on AnimeBoxD.");
   return normalizeMangaDetail(payload.data);
 }
 
@@ -277,11 +340,11 @@ export async function getAnimeThemes(id: number) {
 }
 
 export async function getTopAiring(force = false) {
-  const key = "top_airing_cache_v2";
+  const key = "top_airing_cache_v3_safe";
   const cached = force ? null : readCache<AnimeSummary[]>(key, liveCacheTime);
-  if (cached) return cached;
-  const payload = await requestJson<{ data?: JikanAnime[] }>("/top/anime?filter=airing&limit=25");
-  const data = Array.isArray(payload.data) ? payload.data.map(normalizeAnime) : [];
+  if (cached) return filterSafeAnimeSummaries(cached);
+  const payload = await requestJson<{ data?: JikanAnime[] }>("/top/anime?filter=airing&limit=25&sfw=true");
+  const data = Array.isArray(payload.data) ? filterSafeAnime(payload.data).map(normalizeAnime) : [];
   writeCache(key, data);
   return data;
 }
@@ -289,24 +352,24 @@ export async function getTopAiring(force = false) {
 export async function getAiringToday(force = false) {
   const weekdays = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
   const today = weekdays[new Date().getDay()];
-  const key = `airing_today_cache_v2_${today}`;
+  const key = `airing_today_cache_v3_safe_${today}`;
   const cached = force ? null : readCache<AnimeSummary[]>(key, liveCacheTime);
-  if (cached) return cached;
-  const payload = await requestJson<{ data?: JikanAnime[] }>(`/schedules?filter=${today}&limit=25`);
-  const data = Array.isArray(payload.data) ? payload.data.map(normalizeAnime) : [];
+  if (cached) return filterSafeAnimeSummaries(cached);
+  const payload = await requestJson<{ data?: JikanAnime[] }>(`/schedules?filter=${today}&limit=25&sfw=true`);
+  const data = Array.isArray(payload.data) ? filterSafeAnime(payload.data).map(normalizeAnime) : [];
   writeCache(key, data);
   return data;
 }
 
 export async function getTopAnime(limit = 12) {
-  const key = `top_anime_cache_v2_${limit}`;
+  const key = `top_anime_cache_v3_safe_${limit}`;
   const cached = localStorage.getItem(key);
   if (cached) {
     const parsed = JSON.parse(cached) as { at: number; data: AnimeSummary[] };
-    if (Date.now() - parsed.at < hour && Array.isArray(parsed.data)) return parsed.data;
+    if (Date.now() - parsed.at < hour && Array.isArray(parsed.data)) return filterSafeAnimeSummaries(parsed.data);
   }
-  const payload = await requestJson<{ data?: JikanAnime[] }>(`/top/anime?limit=${limit}`);
-  const data = Array.isArray(payload.data) ? payload.data.map(normalizeAnime) : [];
+  const payload = await requestJson<{ data?: JikanAnime[] }>(`/top/anime?limit=${limit}&sfw=true`);
+  const data = Array.isArray(payload.data) ? filterSafeAnime(payload.data).map(normalizeAnime) : [];
   localStorage.setItem(key, JSON.stringify({ at: Date.now(), data }));
   return data;
 }
@@ -317,33 +380,36 @@ export async function getRandomAnimeList(limit = 8) {
 }
 
 export async function getSeasonal(force = false) {
-  const key = "seasonal_anime_cache_v2";
+  const key = "seasonal_anime_cache_v3_safe";
   const cached = force ? null : readCache<AnimeSummary[]>(key, liveCacheTime);
-  if (cached) return cached;
-  const payload = await requestJson<{ data?: JikanAnime[] }>("/seasons/now?limit=25");
-  const data = Array.isArray(payload.data) ? payload.data.map(normalizeAnime) : [];
+  if (cached) return filterSafeAnimeSummaries(cached);
+  const payload = await requestJson<{ data?: JikanAnime[] }>("/seasons/now?limit=25&sfw=true");
+  const data = Array.isArray(payload.data) ? filterSafeAnime(payload.data).map(normalizeAnime) : [];
   writeCache(key, data);
   return data;
 }
 
 export async function getUpcomingAnime(force = false) {
-  const key = "upcoming_anime_cache_v2";
+  const key = "upcoming_anime_cache_v3_safe";
   const cached = force ? null : readCache<AnimeSummary[]>(key, liveCacheTime);
-  if (cached) return cached;
-  const payload = await requestJson<{ data?: JikanAnime[] }>("/seasons/upcoming?limit=25");
-  const data = Array.isArray(payload.data) ? payload.data.map(normalizeAnime) : [];
+  if (cached) return filterSafeAnimeSummaries(cached);
+  const payload = await requestJson<{ data?: JikanAnime[] }>("/seasons/upcoming?limit=25&sfw=true");
+  const data = Array.isArray(payload.data) ? filterSafeAnime(payload.data).map(normalizeAnime) : [];
   writeCache(key, data);
   return data;
 }
 
 export async function getRandomAnime() {
-  const payload = await requestJson<{ data: JikanAnime }>("/random/anime");
-  return normalizeAnime(payload.data);
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const payload = await requestJson<{ data: JikanAnime }>("/random/anime");
+    if (isSafeAnime(payload.data)) return normalizeAnime(payload.data);
+  }
+  throw new Error("Could not find a safe random title right now.");
 }
 
 export async function getRecommendations(id: number) {
   const payload = await requestJson<{ data?: { entry: JikanAnime }[] }>(`/anime/${id}/recommendations`);
-  return Array.isArray(payload.data) ? payload.data.slice(0, 8).map((item) => normalizeAnime(item.entry)) : [];
+  return Array.isArray(payload.data) ? payload.data.map((item) => item.entry).filter(isSafeAnime).slice(0, 8).map(normalizeAnime) : [];
 }
 
 export async function getRelations(id: number) {

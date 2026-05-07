@@ -459,7 +459,7 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
             <div className="min-w-0">
               <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Animeboxd</p>
               <h1 className="font-display text-4xl leading-tight sm:text-5xl">Welcome back</h1>
-              <p className="text-sm text-slate-500">{isSupabaseConfigured ? "Sign in and your library follows you." : "Pick up where you left off."}</p>
+              <p className="text-sm text-slate-500">{isSupabaseConfigured ? "Your anime and manga shelf, wherever you log in." : "Pick up where you left off."}</p>
             </div>
             <Film className="h-10 w-10 shrink-0 text-teal-500" />
           </div>
@@ -664,7 +664,7 @@ function ReportIssueModal({ onClose, userId }: { onClose: () => void; userId?: s
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Report</p>
             <h2 className="font-display text-2xl leading-tight sm:text-3xl">Send feedback</h2>
-            <p className="mt-1 text-sm text-slate-500">Tell me what broke, felt off, or could be better.</p>
+            <p className="mt-1 text-sm text-slate-500">Send bugs, ideas, or anything that feels off.</p>
           </div>
           <button className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/70 text-slate-600 transition hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:text-slate-300" onClick={onClose} type="button" aria-label="Close report form">
             <X className="h-5 w-5" />
@@ -705,10 +705,10 @@ function ReportIssueModal({ onClose, userId }: { onClose: () => void; userId?: s
               </Field>
             </div>
             <Field label="Message">
-              <textarea className={clsx(inputClass(), "min-h-36 resize-y")} name="message" minLength={10} required placeholder="Tell me what happened, what device you used, and what you expected to see." />
+              <textarea className={clsx(inputClass(), "min-h-36 resize-y")} name="message" minLength={10} required placeholder="Tell me what happened, what device you were on, and what you expected." />
             </Field>
             <p className="text-xs leading-5 text-slate-500">
-              Reports go to vbuilder at <a className="font-semibold text-teal-600 dark:text-teal-300" href="mailto:vmb4manager@gmail.com">vmb4manager@gmail.com</a> and are saved for follow-up.
+              Reports go to vbuilder at <a className="font-semibold text-teal-600 dark:text-teal-300" href="mailto:vmb4manager@gmail.com">vmb4manager@gmail.com</a> and help shape the next fixes.
             </p>
             {status === "error" && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-100">{error}</p>}
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -1371,21 +1371,21 @@ function SeasonTracker({ trending, seasonal, upcoming, airingToday, updatedAt, l
         <div className="max-w-2xl">
           <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Live Season Tracker</p>
           <h2 className="font-display text-3xl leading-tight sm:text-4xl">A compact pulse check for the season.</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-500">A quick look at what is scoring well, airing today, and coming soon.</p>
+          <p className="mt-2 text-sm leading-6 text-slate-500">What is scoring well, airing today, and coming up next.</p>
         </div>
         <Button className="self-start bg-slate-900 text-white hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300 sm:self-auto" onClick={onRefresh} disabled={loading}>
           <RefreshCcw className="h-4 w-4" /> {loading ? "Updating" : "Refresh"}
         </Button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 min-[460px]:grid-cols-2 xl:grid-cols-4">
         {trackerItems.map(({ label, anime, stat, icon, accent }) => (
-          <button key={`${label}-${anime.mal_id}`} className={clsx("group touch-card relative min-h-[148px] overflow-hidden rounded-2xl border border-slate-200/70 bg-white/75 p-2.5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300 dark:border-slate-800 dark:bg-slate-900/70", `bg-gradient-to-br ${accent}`)} onClick={() => onAdd(anime)}>
+          <button key={`${label}-${anime.mal_id}`} className={clsx("group touch-card relative min-h-[140px] overflow-hidden rounded-2xl border border-slate-200/70 bg-white/75 p-2.5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300 dark:border-slate-800 dark:bg-slate-900/70", `bg-gradient-to-br ${accent}`)} onClick={() => onAdd(anime)}>
             <div className="absolute right-2 top-2 h-20 w-20 rounded-full bg-white/40 blur-2xl dark:bg-teal-400/10" />
             <div className="relative grid grid-cols-[56px_minmax(0,1fr)] gap-2.5">
               <img src={anime.image_url} alt="" className="h-20 w-14 rounded-xl object-cover shadow-md" />
               <div className="min-w-0">
-                <div className="inline-flex max-w-full items-center gap-1 rounded-full bg-white/75 px-2 py-1 text-[9px] font-black uppercase tracking-[0.08em] text-slate-700 dark:bg-slate-950/70 dark:text-slate-200">
+                <div className="inline-flex max-w-full items-center gap-1 truncate rounded-full bg-white/75 px-2 py-1 text-[9px] font-black uppercase tracking-[0.08em] text-slate-700 dark:bg-slate-950/70 dark:text-slate-200">
                   {icon} {label}
                 </div>
                 <p className="mt-1.5 line-clamp-2 text-sm font-black text-slate-950 dark:text-white">{anime.title}</p>
@@ -1807,8 +1807,8 @@ function MyStuffPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-display text-3xl leading-tight">My Anime</h2>
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
-          <Button className="bg-rose-600 hover:bg-rose-700" onClick={onClearHistory}>Clear history</Button>
-          <Button className="bg-slate-900 hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300" onClick={onBack}>Back home</Button>
+          <Button className="bg-rose-600 px-2 hover:bg-rose-700 sm:px-4" onClick={onClearHistory}>Clear history</Button>
+          <Button className="bg-slate-900 px-2 hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300 sm:px-4" onClick={onBack}>Back home</Button>
         </div>
       </div>
       <Card className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
@@ -1891,8 +1891,8 @@ function MyMangaPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-display text-3xl leading-tight">My Manga</h2>
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
-          <Button className="bg-rose-600 hover:bg-rose-700" onClick={onClearHistory}>Clear history</Button>
-          <Button className="bg-slate-900 hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300" onClick={onBack}>Back home</Button>
+          <Button className="bg-rose-600 px-2 hover:bg-rose-700 sm:px-4" onClick={onClearHistory}>Clear history</Button>
+          <Button className="bg-slate-900 px-2 hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300 sm:px-4" onClick={onBack}>Back home</Button>
         </div>
       </div>
       <Card className="grid gap-4 border border-teal-200/70 bg-teal-50/40 dark:border-teal-900/60 dark:bg-slate-950/70 lg:grid-cols-[1.2fr_0.8fr]">
@@ -2193,12 +2193,12 @@ function ProfilePage({ data, memberSince, onBack, onSaveProfile, onDeleteAccount
     <div className="mx-auto grid max-w-6xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-display text-3xl leading-tight">Profile</h2>
-        <Button onClick={onBack}>Back home</Button>
+        <Button className="w-full sm:w-fit" onClick={onBack}>Back home</Button>
       </div>
 
       <Card className="grid gap-5 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-start">
         <div className="grid gap-4">
-          <button className="flex w-full items-center gap-4 rounded-2xl p-2 text-left transition hover:bg-white/60 dark:hover:bg-slate-900/60" onClick={() => setEditOpen((prev) => !prev)} type="button" aria-expanded={editOpen}>
+          <button className="grid w-full grid-cols-[64px_minmax(0,1fr)] gap-4 rounded-2xl p-2 text-left transition hover:bg-white/60 dark:hover:bg-slate-900/60 sm:flex sm:items-center" onClick={() => setEditOpen((prev) => !prev)} type="button" aria-expanded={editOpen}>
             <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-teal-50 text-4xl shadow-sm dark:bg-teal-950/50">{avatar || data.settings.avatar}</div>
             <div className="min-w-0">
               <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Member profile</p>
@@ -2257,7 +2257,7 @@ function ProfilePage({ data, memberSince, onBack, onSaveProfile, onDeleteAccount
             </label>
             {status === "error" && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-100">{error}</p>}
             {status === "saved" && <p className="rounded-xl bg-teal-50 p-3 text-sm font-semibold text-teal-800 dark:bg-teal-950/40 dark:text-teal-100">Profile saved.</p>}
-            <Button onClick={saveProfile} disabled={status === "saving"}>{status === "saving" ? "Saving..." : "Save profile"}</Button>
+            <Button className="w-full sm:w-fit" onClick={saveProfile} disabled={status === "saving"}>{status === "saving" ? "Saving..." : "Save profile"}</Button>
           </div>}
           <p className="rounded-2xl bg-white/60 p-4 text-sm leading-6 text-slate-600 dark:bg-slate-900/60 dark:text-slate-300">
             {bio || "Keeping track of anime, manga, ratings, and favorites."}
@@ -2298,7 +2298,7 @@ function ProfilePage({ data, memberSince, onBack, onSaveProfile, onDeleteAccount
             <h3 className="font-display text-2xl">Delete account</h3>
             <p className="text-sm text-slate-600 dark:text-slate-300">This removes your account and saved AnimeBoxD data. This cannot be undone.</p>
           </div>
-          <Button className="bg-rose-600 hover:bg-rose-700" onClick={onDeleteAccount}>Delete account</Button>
+          <Button className="w-full bg-rose-600 hover:bg-rose-700 sm:w-fit" onClick={onDeleteAccount}>Delete account</Button>
         </div>
       </Card>
     </div>
@@ -2360,8 +2360,8 @@ function DashboardPage({ data, onClearHistory, onBack }: { data: AppData; onClea
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-display text-3xl leading-tight">Dashboard</h2>
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
-          <Button className="bg-rose-600 hover:bg-rose-700" onClick={onClearHistory}>Clear history</Button>
-          <Button className="bg-slate-900 hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300" onClick={onBack}>Back home</Button>
+          <Button className="bg-rose-600 px-2 hover:bg-rose-700 sm:px-4" onClick={onClearHistory}>Clear history</Button>
+          <Button className="bg-slate-900 px-2 hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300 sm:px-4" onClick={onBack}>Back home</Button>
         </div>
       </div>
       <Card className="grid gap-4">

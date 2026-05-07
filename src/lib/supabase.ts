@@ -1,5 +1,5 @@
 import { createClient, type User } from "@supabase/supabase-js";
-import { defaultData, normalizeAppData } from "./storage";
+import { createDefaultData, normalizeAppData } from "./storage";
 import type { AdminDashboardData, AppData } from "../types/anime";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
@@ -223,8 +223,14 @@ export async function logActivityEvent(userId: string, eventType: string, metada
 
 export async function ensureCloudData(userId: string, username: string) {
   const client = assertSupabase();
-  const existing = await loadCloudData(userId);
-  if (existing !== defaultData) return;
+  const { data: existing, error: existingError } = await client
+    .from("user_app_data")
+    .select("user_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (existingError) throw existingError;
+  if (existing) return;
+  const defaultData = createDefaultData();
   const starter: AppData = {
     ...defaultData,
     settings: {

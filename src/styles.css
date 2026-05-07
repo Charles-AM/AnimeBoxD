@@ -53,6 +53,11 @@ canvas {
   max-width: 100%;
 }
 
+.recharts-wrapper,
+.recharts-surface {
+  max-width: 100%;
+}
+
 img {
   height: auto;
 }
@@ -334,6 +339,14 @@ select {
     letter-spacing: 0;
   }
 
+  .hero-banner {
+    background-position: 64% center;
+  }
+
+  .hero-title {
+    font-size: clamp(2.6rem, 16vw, 4rem);
+  }
+
   .glass-card {
     border-radius: 1rem;
     padding: 1rem;
@@ -345,6 +358,7 @@ select {
 
   .button-ghost {
     min-height: 2.5rem;
+    padding-inline: 0.75rem;
   }
 }
 

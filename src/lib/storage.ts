@@ -32,13 +32,31 @@ export const defaultData: AppData = {
   settings: defaultSettings
 };
 
-export function normalizeAppData(data?: Partial<AppData> | null): AppData {
-  if (!data) return defaultData;
+export function createDefaultData(): AppData {
   return {
-    ...defaultData,
+    library: [],
+    mangaLibrary: [],
+    reviews: [],
+    lists: defaultLists.map((list) => ({ ...list, animeIds: [...list.animeIds] })),
+    diary: [],
+    settings: {
+      ...defaultSettings,
+      favoriteAnimeIds: [],
+      favoriteAnimeCatalog: [],
+      favoriteMangaIds: [],
+      favoriteMangaCatalog: []
+    }
+  };
+}
+
+export function normalizeAppData(data?: Partial<AppData> | null): AppData {
+  const base = createDefaultData();
+  if (!data) return base;
+  return {
+    ...base,
     ...data,
-    settings: { ...defaultSettings, ...data.settings },
-    lists: data.lists?.length ? data.lists : defaultLists,
+    settings: { ...base.settings, ...data.settings },
+    lists: data.lists?.length ? data.lists : base.lists,
     library: data.library || [],
     mangaLibrary: data.mangaLibrary || [],
     reviews: data.reviews || [],
@@ -63,14 +81,14 @@ export function setActiveUser(userId: string) {
 }
 
 export function loadData(userId?: string): AppData {
-  if (!userId) return defaultData;
+  if (!userId) return createDefaultData();
   const raw = localStorage.getItem(dataKey(userId));
-  if (!raw) return defaultData;
+  if (!raw) return createDefaultData();
   try {
     const parsed = JSON.parse(raw) as Partial<AppData>;
     return normalizeAppData(parsed);
   } catch {
-    return defaultData;
+    return createDefaultData();
   }
 }
 

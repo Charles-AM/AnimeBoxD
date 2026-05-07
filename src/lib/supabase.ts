@@ -272,7 +272,7 @@ export async function createReport(payload: { userId?: string; name?: string; em
 
 export async function loadAdminDashboard(): Promise<AdminDashboardData> {
   const client = assertSupabase();
-  const [profiles, reports, activity, notifications] = await Promise.all([
+  const [profiles, reports, activity, notifications, userData] = await Promise.all([
     client
       .from("profiles")
       .select("id, email, username, avatar, bio, is_public, is_admin, created_at, last_seen")
@@ -292,14 +292,38 @@ export async function loadAdminDashboard(): Promise<AdminDashboardData> {
       .from("admin_notifications")
       .select("id, kind, title, body, is_read, created_at")
       .order("created_at", { ascending: false })
-      .limit(50)
+      .limit(50),
+    client
+      .from("user_app_data")
+      .select("user_id, data")
+      .limit(100)
   ]);
 
-  const firstError = profiles.error || reports.error || activity.error || notifications.error;
+  const firstError = profiles.error || reports.error || activity.error || notifications.error || userData.error;
   if (firstError) throw firstError;
+  const userDataById = new Map((userData.data || []).map((row: { user_id: string; data: Partial<AppData> }) => [row.user_id, row.data]));
+  const reportsByUser = new Map<string, number>();
+  (reports.data || []).forEach((report: { user_id?: string | null }) => {
+    if (!report.user_id) return;
+    reportsByUser.set(report.user_id, (reportsByUser.get(report.user_id) || 0) + 1);
+  });
+  const latestActivityByUser = new Map<string, string>();
+  (activity.data || []).forEach((event: { user_id?: string | null; created_at: string }) => {
+    if (!event.user_id || latestActivityByUser.has(event.user_id)) return;
+    latestActivityByUser.set(event.user_id, event.created_at);
+  });
 
   return {
-    profiles: profiles.data || [],
+    profiles: (profiles.data || []).map((profile) => {
+      const data = userDataById.get(profile.id);
+      return {
+        ...profile,
+        anime_count: Array.isArray(data?.library) ? data.library.length : 0,
+        manga_count: Array.isArray(data?.mangaLibrary) ? data.mangaLibrary.length : 0,
+        report_count: reportsByUser.get(profile.id) || 0,
+        latest_activity: latestActivityByUser.get(profile.id)
+      };
+    }),
     reports: reports.data || [],
     activity: activity.data || [],
     notifications: notifications.data || []

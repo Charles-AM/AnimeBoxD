@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
+import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   BookMarked,
   BookOpen,
@@ -2137,6 +2138,12 @@ function formatDate(value?: string) {
   return date.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
 }
 
+function formatShortDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
 function ProfilePage({ data, memberSince, onBack, onSaveProfile, onDeleteAccount }: { data: AppData; memberSince?: string; onBack: () => void; onSaveProfile: (settings: Pick<Settings, "username" | "avatar" | "bio" | "isPublic">) => void | Promise<void>; onDeleteAccount: () => void | Promise<void> }) {
   const [username, setUsername] = useState(data.settings.username || "");
   const [avatar, setAvatar] = useState(data.settings.avatar || "✨");
@@ -2483,6 +2490,7 @@ function DashboardPage({ data, onClearHistory, onBack }: { data: AppData; onClea
 
 function AdminPage({ onBack }: { onBack: () => void }) {
   const [dashboard, setDashboard] = useState<AdminDashboardData | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -2510,6 +2518,32 @@ function AdminPage({ onBack }: { onBack: () => void }) {
   const activeThisWeek = profiles.filter((profile) => profile.last_seen && new Date(profile.last_seen).getTime() >= weekAgo).length;
   const openReports = reports.filter((report) => report.status !== "closed").length;
   const unread = notifications.filter((note) => !note.is_read).length;
+  const selectedUser = profiles.find((profile) => profile.id === selectedUserId) || null;
+  const selectedUserReports = selectedUser ? reports.filter((report) => report.user_id === selectedUser.id) : [];
+  const selectedUserActivity = selectedUser ? activity.filter((event) => event.user_id === selectedUser.id).slice(0, 8) : [];
+  const buildSeries = (items: { created_at?: string }[], days = 14) => {
+    const now = new Date();
+    const rows = Array.from({ length: days }).map((_, index) => {
+      const date = new Date(now);
+      date.setDate(now.getDate() - (days - 1 - index));
+      const key = date.toISOString().slice(0, 10);
+      return { key, date: formatShortDate(key), count: 0 };
+    });
+    const byKey = new Map(rows.map((row) => [row.key, row]));
+    items.forEach((item) => {
+      if (!item.created_at) return;
+      const key = new Date(item.created_at).toISOString().slice(0, 10);
+      const row = byKey.get(key);
+      if (row) row.count += 1;
+    });
+    return rows;
+  };
+  const signupSeries = buildSeries(profiles);
+  const activitySeries = buildSeries(activity);
+  const reportCategoryData = Object.entries(reports.reduce<Record<string, number>>((acc, report) => {
+    acc[report.category] = (acc[report.category] || 0) + 1;
+    return acc;
+  }, {})).map(([category, count]) => ({ category, count }));
 
   return (
     <div className="mx-auto grid max-w-6xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
@@ -2533,18 +2567,72 @@ function AdminPage({ onBack }: { onBack: () => void }) {
         <Card><p className="text-sm font-semibold text-slate-500">Notifications</p><p className="mt-1 text-4xl font-black">{unread}</p><p className="text-xs text-slate-500">Unread owner notes</p></Card>
       </div>
 
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="grid gap-3 lg:col-span-2">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Growth</p>
+            <h3 className="font-display text-2xl">Signups by day</h3>
+          </div>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={signupSeries}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                <YAxis allowDecimals={false} width={28} />
+                <Tooltip />
+                <Line type="monotone" dataKey="count" stroke="#14b8a6" strokeWidth={3} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+        <Card className="grid gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Reports</p>
+            <h3 className="font-display text-2xl">Categories</h3>
+          </div>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={reportCategoryData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="category" tick={{ fontSize: 10 }} />
+                <YAxis allowDecimals={false} width={28} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#14b8a6" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+        <Card className="grid gap-3 lg:col-span-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Pulse</p>
+            <h3 className="font-display text-2xl">Activity by day</h3>
+          </div>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={activitySeries}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                <YAxis allowDecimals={false} width={28} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#0f766e" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      </div>
+
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="grid gap-3">
           <h3 className="font-display text-2xl">Recent users</h3>
           {profiles.slice(0, 8).map((profile) => (
-            <div key={profile.id} className="grid grid-cols-[44px_minmax(0,1fr)] gap-3 rounded-2xl border border-slate-200/70 bg-white/70 p-3 dark:border-slate-800 dark:bg-slate-900/70">
+            <button key={profile.id} className={clsx("grid grid-cols-[44px_minmax(0,1fr)] gap-3 rounded-2xl border p-3 text-left transition hover:border-teal-400", selectedUserId === profile.id ? "border-teal-400 bg-teal-50/70 dark:bg-teal-950/30" : "border-slate-200/70 bg-white/70 dark:border-slate-800 dark:bg-slate-900/70")} onClick={() => setSelectedUserId(profile.id)} type="button">
               <div className="grid h-11 w-11 place-items-center rounded-xl bg-teal-50 text-2xl dark:bg-teal-950/40">{profile.avatar || "✨"}</div>
               <div className="min-w-0">
                 <p className="truncate font-bold text-slate-900 dark:text-white">{profile.username} {profile.is_admin ? "(admin)" : ""}</p>
                 <p className="truncate text-xs text-slate-500">{profile.email || "No email saved"}</p>
                 <p className="text-xs text-slate-500">Joined {formatDate(profile.created_at)} • Last seen {formatDate(profile.last_seen)}</p>
               </div>
-            </div>
+            </button>
           ))}
           {!profiles.length && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No users loaded yet.</p>}
         </Card>
@@ -2588,6 +2676,50 @@ function AdminPage({ onBack }: { onBack: () => void }) {
           {!notifications.length && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No notifications yet.</p>}
         </Card>
       </div>
+
+      {selectedUser && (
+        <Card className="grid gap-4 border-teal-200/70 dark:border-teal-900/50">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-teal-50 text-3xl dark:bg-teal-950/40">{selectedUser.avatar || "✨"}</div>
+              <div className="min-w-0">
+                <p className="text-xs uppercase tracking-[0.3em] text-teal-500">User detail</p>
+                <h3 className="break-words font-display text-3xl leading-tight">{selectedUser.username}</h3>
+                <p className="break-all text-sm text-slate-500">{selectedUser.email || "No email saved"}</p>
+              </div>
+            </div>
+            <button className="button-ghost self-start" onClick={() => setSelectedUserId("")} type="button">Close</button>
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-center text-sm font-semibold sm:grid-cols-4">
+            <span className="rounded-2xl bg-slate-100 p-3 dark:bg-slate-900"><strong className="block text-2xl text-slate-950 dark:text-white">{selectedUser.anime_count || 0}</strong>Anime</span>
+            <span className="rounded-2xl bg-slate-100 p-3 dark:bg-slate-900"><strong className="block text-2xl text-slate-950 dark:text-white">{selectedUser.manga_count || 0}</strong>Manga</span>
+            <span className="rounded-2xl bg-slate-100 p-3 dark:bg-slate-900"><strong className="block text-2xl text-slate-950 dark:text-white">{selectedUser.report_count || 0}</strong>Reports</span>
+            <span className="rounded-2xl bg-slate-100 p-3 dark:bg-slate-900"><strong className="block text-2xl text-slate-950 dark:text-white">{selectedUser.is_public ? "Public" : "Private"}</strong>Profile</span>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-2">
+              <h4 className="font-display text-xl">Recent actions</h4>
+              {selectedUserActivity.map((event) => (
+                <div key={event.id} className="rounded-xl bg-white/70 p-3 text-sm dark:bg-slate-900/70">
+                  <p className="font-bold capitalize">{event.event_type.replace(/_/g, " ")}</p>
+                  <p className="text-xs text-slate-500">{formatDate(event.created_at)}</p>
+                </div>
+              ))}
+              {!selectedUserActivity.length && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No tracked activity yet.</p>}
+            </div>
+            <div className="grid gap-2">
+              <h4 className="font-display text-xl">Reports from this user</h4>
+              {selectedUserReports.map((report) => (
+                <div key={report.id} className="rounded-xl bg-white/70 p-3 text-sm dark:bg-slate-900/70">
+                  <p className="font-bold">{report.category} • {report.priority}</p>
+                  <p className="line-clamp-3 text-slate-600 dark:text-slate-300">{report.message}</p>
+                </div>
+              ))}
+              {!selectedUserReports.length && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No reports from this user.</p>}
+            </div>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

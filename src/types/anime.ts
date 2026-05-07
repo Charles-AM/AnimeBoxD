@@ -157,6 +157,10 @@ export interface AdminProfileSummary {
   is_admin: boolean;
   created_at?: string;
   last_seen?: string;
+  anime_count?: number;
+  manga_count?: number;
+  report_count?: number;
+  latest_activity?: string;
 }
 
 export interface AdminReportSummary {

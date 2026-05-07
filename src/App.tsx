@@ -28,6 +28,7 @@ import { getAiringToday, getAnime, getAnimeCharacters, getAnimeStaff, getAnimeTh
 import { loadData, saveData, setActiveUser } from "./lib/storage";
 import { completeAuthSessionFromUrl, createReport, deleteCloudAccount, getCurrentSession, isSupabaseConfigured, loadAdminDashboard, loadCloudData, loadProfile, logActivityEvent, markProfileSeen, resendSignupConfirmation, saveCloudData, sendPasswordResetEmail, signInWithEmail, signOutCloud, signUpWithEmail, updateCloudPassword, upsertProfile, userToProfileFallback } from "./lib/supabase";
 import type { AdminDashboardData, AnimeDetail, AnimeSummary, AppData, LibraryEntry, LibraryStatus, MangaDetail, MangaEntry, MangaStatus, MangaSummary, Settings, ThemeMode } from "./types/anime";
+import { CookieBanner } from "./CookieBanner";
 
 type UserAccount = { id: string; name: string; avatar: string; passcode: string; email?: string; isCloud?: boolean; isAdmin?: boolean; memberSince?: string };
 
@@ -3052,6 +3053,7 @@ function App() {
       />
       {saveError && <div className="mx-auto mt-3 max-w-6xl px-3 text-sm text-rose-600 dark:text-rose-200 sm:px-4">{saveError}</div>}
       {reportOpen && <ReportIssueModal userId={userId} onClose={() => setReportOpen(false)} />}
+      <CookieBanner onConsent={() => {}} />
       {confirmAction === "logout" && (
         <ConfirmModal title="Sign out?" message="Your latest changes are saved to your account before you leave." confirmLabel="Sign out" tone="neutral" onCancel={() => setConfirmAction(null)} onConfirm={handleLogout} />
       )}

@@ -1,0 +1,19 @@
+{
+  "name": "AnimeBoxD",
+  "short_name": "AnimeBoxD",
+  "description": "A personal anime and manga diary for ratings, notes, favorites, and live anime updates.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f172a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="AnimeBoxD icon">
+  <rect width="512" height="512" rx="112" fill="#0f172a"/>
+  <circle cx="256" cy="256" r="158" fill="#2dd4bf"/>
+  <circle cx="256" cy="256" r="106" fill="#f8fafc"/>
+  <path d="M142 263c40-70 188-70 228 0-40 70-188 70-228 0Z" fill="#0f172a"/>
+  <circle cx="256" cy="263" r="54" fill="#2dd4bf"/>
+  <circle cx="276" cy="242" r="16" fill="#f8fafc"/>
+  <path d="M150 382h212c18 0 32-14 32-32v-16H118v16c0 18 14 32 32 32Z" fill="#f8fafc"/>
+</svg>

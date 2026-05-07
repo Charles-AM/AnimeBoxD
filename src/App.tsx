@@ -718,6 +718,42 @@ function ReportIssueModal({ onClose, userId }: { onClose: () => void; userId?: s
   );
 }
 
+function ConfirmModal({ title, message, confirmLabel, tone = "danger", requiresText, onCancel, onConfirm }: { title: string; message: string; confirmLabel: string; tone?: "danger" | "neutral"; requiresText?: string; onCancel: () => void; onConfirm: () => void | Promise<void> }) {
+  const [typed, setTyped] = useState("");
+  const [busy, setBusy] = useState(false);
+  const canConfirm = !requiresText || typed.trim() === requiresText;
+
+  const confirm = async () => {
+    if (!canConfirm) return;
+    setBusy(true);
+    try {
+      await onConfirm();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 px-3 py-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl border border-white/60 bg-white p-4 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:p-5">
+        <h2 className="font-display text-3xl leading-tight">{title}</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{message}</p>
+        {requiresText && (
+          <Field label={`Type ${requiresText} to continue`}>
+            <input className={inputClass()} value={typed} onChange={(event) => setTyped(event.target.value)} autoFocus />
+          </Field>
+        )}
+        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button className="button-ghost" onClick={onCancel} disabled={busy} type="button">Cancel</button>
+          <Button className={tone === "danger" ? "bg-rose-600 hover:bg-rose-700" : ""} onClick={confirm} disabled={!canConfirm || busy}>
+            {busy ? "Working..." : confirmLabel}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ShareSiteButton() {
   const [copied, setCopied] = useState(false);
 
@@ -2451,6 +2487,7 @@ function App() {
   const [selectedAnime, setSelectedAnime] = useState<AnimeSummary | null>(null);
   const [selectedManga, setSelectedManga] = useState<MangaSummary | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<null | "logout" | "delete-account" | "clear-all" | "clear-anime" | "clear-manga">(null);
   useTheme(data.settings);
 
   useEffect(() => {
@@ -2575,7 +2612,6 @@ function App() {
   };
 
   const handleLogout = async () => {
-    if (!confirm("Are you sure you want to sign out?")) return;
     if (isSupabaseConfigured) {
       try {
         await signOutCloud();
@@ -2589,11 +2625,10 @@ function App() {
     setMemberSince("");
     setData(loadData());
     setPage("home");
+    setConfirmAction(null);
   };
 
   const handleDeleteAccount = async () => {
-    const confirmation = prompt("Type DELETE to permanently remove this account.");
-    if (confirmation !== "DELETE") return;
     setSaveError("");
     try {
       if (isSupabaseConfigured) {
@@ -2605,6 +2640,7 @@ function App() {
       setMemberSince("");
       setData(loadData());
       setPage("home");
+      setConfirmAction(null);
     } catch (err) {
       setSaveError(friendlyAuthError(err, "Could not delete the account right now."));
     }
@@ -2626,18 +2662,18 @@ function App() {
   };
 
   const clearHistory = () => {
-    if (!confirm("Clear all anime and manga history for this account?")) return;
     setData((prev) => ({ ...prev, library: [], mangaLibrary: [] }));
+    setConfirmAction(null);
   };
 
   const clearAnimeHistory = () => {
-    if (!confirm("Clear all anime history for this account?")) return;
     setData((prev) => ({ ...prev, library: [] }));
+    setConfirmAction(null);
   };
 
   const clearMangaHistory = () => {
-    if (!confirm("Clear all manga history for this account?")) return;
     setData((prev) => ({ ...prev, mangaLibrary: [] }));
+    setConfirmAction(null);
   };
 
   if (authLoading) {
@@ -2660,7 +2696,7 @@ function App() {
         user={{ name: data.settings.username, avatar: data.settings.avatar }}
         theme={data.settings.theme}
         onThemeChange={(value) => updateData({ settings: { ...data.settings, theme: value } })}
-        onLogout={handleLogout}
+        onLogout={() => setConfirmAction("logout")}
         onHome={() => setPage("home")}
         onMyStuff={() => setPage("stuff")}
         onMyManga={() => setPage("manga")}
@@ -2672,12 +2708,27 @@ function App() {
       />
       {saveError && <div className="mx-auto mt-3 max-w-6xl px-3 text-sm text-rose-600 dark:text-rose-200 sm:px-4">{saveError}</div>}
       {reportOpen && <ReportIssueModal userId={userId} onClose={() => setReportOpen(false)} />}
+      {confirmAction === "logout" && (
+        <ConfirmModal title="Sign out?" message="Your latest changes are saved to your account before you leave." confirmLabel="Sign out" tone="neutral" onCancel={() => setConfirmAction(null)} onConfirm={handleLogout} />
+      )}
+      {confirmAction === "delete-account" && (
+        <ConfirmModal title="Delete account" message="This permanently removes your account and saved AnimeBoxD data. This cannot be undone." confirmLabel="Delete account" requiresText="DELETE" onCancel={() => setConfirmAction(null)} onConfirm={handleDeleteAccount} />
+      )}
+      {confirmAction === "clear-all" && (
+        <ConfirmModal title="Clear all history?" message="This removes your anime and manga history from this account." confirmLabel="Clear history" onCancel={() => setConfirmAction(null)} onConfirm={clearHistory} />
+      )}
+      {confirmAction === "clear-anime" && (
+        <ConfirmModal title="Clear anime history?" message="This removes every anime entry from this account." confirmLabel="Clear anime" onCancel={() => setConfirmAction(null)} onConfirm={clearAnimeHistory} />
+      )}
+      {confirmAction === "clear-manga" && (
+        <ConfirmModal title="Clear manga history?" message="This removes every manga entry from this account." confirmLabel="Clear manga" onCancel={() => setConfirmAction(null)} onConfirm={clearMangaHistory} />
+      )}
       {page === "home" && <HomePage addAnime={startAddFlow} />}
       {page === "explore" && <ExplorePage onAddAnime={startAddFlow} onAddManga={startAddMangaFlow} onBack={() => setPage("home")} />}
-      {page === "stuff" && <MyStuffPage data={data} onSelect={startAddFlow} updateEntry={updateEntry} removeEntry={removeEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={clearAnimeHistory} />}
-      {page === "manga" && <MyMangaPage data={data} onSelect={startAddMangaFlow} updateEntry={updateMangaEntry} removeEntry={removeMangaEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={clearMangaHistory} />}
-      {page === "dashboard" && <DashboardPage data={data} onClearHistory={clearHistory} onBack={() => setPage("home")} />}
-      {page === "profile" && <ProfilePage data={data} memberSince={memberSince} onBack={() => setPage("home")} onSaveProfile={handleSaveProfile} onDeleteAccount={handleDeleteAccount} />}
+      {page === "stuff" && <MyStuffPage data={data} onSelect={startAddFlow} updateEntry={updateEntry} removeEntry={removeEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={() => setConfirmAction("clear-anime")} />}
+      {page === "manga" && <MyMangaPage data={data} onSelect={startAddMangaFlow} updateEntry={updateMangaEntry} removeEntry={removeMangaEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={() => setConfirmAction("clear-manga")} />}
+      {page === "dashboard" && <DashboardPage data={data} onClearHistory={() => setConfirmAction("clear-all")} onBack={() => setPage("home")} />}
+      {page === "profile" && <ProfilePage data={data} memberSince={memberSince} onBack={() => setPage("home")} onSaveProfile={handleSaveProfile} onDeleteAccount={() => setConfirmAction("delete-account")} />}
       {page === "add" && selectedAnime && (
         <AddEntryPage
           anime={selectedAnime}

@@ -74,6 +74,7 @@ const mangaSections: { key: MangaStatus; title: string; icon: React.ReactElement
 const SITE_URL = "https://animeboxd.app/";
 const CREDIT_TEXT = "AnimeBoxD is an independent fan project. Anime and manga titles, artwork, synopses, trademarks, studios, publishers, streaming names, and source metadata belong to their respective owners. Discovery data is provided through Jikan and MyAnimeList references; AnimeBoxD does not claim ownership of third-party content.";
 const avatarOptions = ["✨", "🎴", "🍥", "🌀", "🌙", "🔥", "⚔️", "🛡️", "🧡", "💫", "🌸", "🐉", "👑", "🎧", "📚", "🦊", "👾", "⭐"];
+const inactivityTimeoutMs = 30 * 60 * 1000;
 
 function getAuthHashType() {
   if (typeof window === "undefined") return "";
@@ -245,7 +246,7 @@ function useTheme(settings: Settings) {
   }, [settings.theme]);
 }
 
-function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: AppData }) => void | Promise<void> }) {
+function AuthPage({ initialNotice, onLogin }: { initialNotice?: string; onLogin: (payload: { user: UserAccount; data: AppData }) => void | Promise<void> }) {
   const [mode, setMode] = useState<AuthMode>("signup");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -257,6 +258,10 @@ function AuthPage({ onLogin }: { onLogin: (payload: { user: UserAccount; data: A
   const [resending, setResending] = useState(false);
   const [resetMode, setResetMode] = useState(false);
   const [resetSending, setResetSending] = useState(false);
+
+  useEffect(() => {
+    if (initialNotice) setNotice(initialNotice);
+  }, [initialNotice]);
 
   useEffect(() => {
     if (isSupabaseConfigured) return;
@@ -2748,6 +2753,7 @@ function App() {
   const [selectedAnime, setSelectedAnime] = useState<AnimeSummary | null>(null);
   const [selectedManga, setSelectedManga] = useState<MangaSummary | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
+  const [authNotice, setAuthNotice] = useState("");
   const [confirmAction, setConfirmAction] = useState<null | "logout" | "delete-account" | "clear-all" | "clear-anime" | "clear-manga">(null);
   useTheme(data.settings);
 
@@ -2873,6 +2879,7 @@ function App() {
   };
 
   const handleLogin = ({ user, data: nextData }: { user: UserAccount; data: AppData }) => {
+    setAuthNotice("");
     setCloudSaveReady(!user.isCloud);
     setActiveUser(user.id);
     setUserId(user.id);
@@ -2883,7 +2890,7 @@ function App() {
     if (user.isCloud) window.setTimeout(() => setCloudSaveReady(true), 0);
   };
 
-  const handleLogout = async () => {
+  const handleLogout = async (notice = "") => {
     if (isSupabaseConfigured) {
       try {
         await signOutCloud();
@@ -2899,7 +2906,29 @@ function App() {
     setData(loadData());
     setPage("home");
     setConfirmAction(null);
+    setReportOpen(false);
+    setAuthNotice(notice);
   };
+
+  useEffect(() => {
+    if (!userId) return;
+    let timeoutId = window.setTimeout(() => undefined, inactivityTimeoutMs);
+    const resetTimer = () => {
+      window.clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(() => {
+        handleLogout("You were signed out after being inactive. Sign in again to continue.");
+      }, inactivityTimeoutMs);
+    };
+    const activityEvents = ["pointerdown", "keydown", "touchstart", "scroll"] as const;
+    activityEvents.forEach((eventName) => window.addEventListener(eventName, resetTimer, { passive: true }));
+    document.addEventListener("visibilitychange", resetTimer);
+    resetTimer();
+    return () => {
+      window.clearTimeout(timeoutId);
+      activityEvents.forEach((eventName) => window.removeEventListener(eventName, resetTimer));
+      document.removeEventListener("visibilitychange", resetTimer);
+    };
+  }, [userId]);
 
   const handleDeleteAccount = async () => {
     setSaveError("");
@@ -2966,7 +2995,7 @@ function App() {
     );
   }
 
-  if (!userId) return <AuthPage onLogin={handleLogin} />;
+  if (!userId) return <AuthPage initialNotice={authNotice} onLogin={handleLogin} />;
 
   return (
     <div className="page-shell min-h-screen text-slate-900 dark:text-slate-100">

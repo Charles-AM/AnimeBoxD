@@ -3234,8 +3234,8 @@ function App() {
           />
         )}
         {page === "explore" && <ExplorePage onAddAnime={startAddFlow} onAddManga={startAddMangaFlow} onBack={() => setPage("home")} />}
-        {page === "stuff" && <MyStuffPage data={data} onSelect={startAddFlow} updateEntry={guestSave} removeEntry={guestSave} updateData={noop} onBack={() => setPage("home")} onClearHistory={noop} />}
-        {page === "manga" && <MyMangaPage data={data} onSelect={startAddMangaFlow} updateEntry={guestSave} removeEntry={guestSave} updateData={noop} onBack={() => setPage("home")} onClearHistory={noop} />}
+        {page === "stuff" && <MyStuffPage data={data} onSelect={startAddFlow} updateEntry={guestSave} removeEntry={guestSave} updateData={guestSave} onBack={() => setPage("home")} onClearHistory={noop} />}
+        {page === "manga" && <MyMangaPage data={data} onSelect={startAddMangaFlow} updateEntry={guestSave} removeEntry={guestSave} updateData={guestSave} onBack={() => setPage("home")} onClearHistory={noop} />}
         {page === "add" && selectedAnime && (
           <AddEntryPage
             anime={selectedAnime}

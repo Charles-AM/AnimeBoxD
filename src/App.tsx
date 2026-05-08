@@ -26,7 +26,7 @@ import {
 import { fixedAnime } from "./lib/fixedAnime";
 import { getAiringToday, getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, getSeasonal, getTopAiring, getUpcomingAnime, searchAnime, searchManga } from "./lib/jikan";
 import { loadData, saveData, setActiveUser } from "./lib/storage";
-import { completeAuthSessionFromUrl, createReport, deleteCloudAccount, getCurrentSession, isSupabaseConfigured, loadAdminDashboard, loadCloudData, loadProfile, logActivityEvent, markProfileSeen, resendSignupConfirmation, saveCloudData, sendPasswordResetEmail, signInWithEmail, signOutCloud, signUpWithEmail, updateCloudPassword, upsertProfile, userToProfileFallback } from "./lib/supabase";
+import { completeAuthSessionFromUrl, createReport, deleteCloudAccount, getCurrentSession, isSupabaseConfigured, loadAdminDashboard, loadCloudData, loadProfile, logActivityEvent, logPageView, markProfileSeen, resendSignupConfirmation, saveCloudData, sendPasswordResetEmail, signInWithEmail, signOutCloud, signUpWithEmail, updateCloudPassword, upsertProfile, userToProfileFallback } from "./lib/supabase";
 import type { AdminDashboardData, AnimeDetail, AnimeSummary, AppData, LibraryEntry, LibraryStatus, MangaDetail, MangaEntry, MangaStatus, MangaSummary, Settings, ThemeMode } from "./types/anime";
 import { CookieBanner } from "./CookieBanner";
 
@@ -2641,6 +2641,14 @@ function AdminPage({ onBack }: { onBack: () => void }) {
   const selectedUser = profiles.find((profile) => profile.id === selectedUserId) || null;
   const selectedUserReports = selectedUser ? reports.filter((report) => report.user_id === selectedUser.id) : [];
   const selectedUserActivity = selectedUser ? activity.filter((event) => event.user_id === selectedUser.id).slice(0, 8) : [];
+  const pageViews = dashboard?.pageViews || [];
+  const uniqueSessions = new Set(pageViews.map((v) => v.session_id)).size;
+  const anonViews = pageViews.filter((v) => !v.user_id).length;
+  const signedInViews = pageViews.filter((v) => v.user_id).length;
+  const pageViewsByPage = Object.entries(pageViews.reduce<Record<string, number>>((acc, v) => {
+    acc[v.page] = (acc[v.page] || 0) + 1;
+    return acc;
+  }, {})).map(([page, count]) => ({ page, count })).sort((a, b) => b.count - a.count);
   const buildSeries = (items: { created_at?: string }[], days = 14) => {
     const now = new Date();
     const rows = Array.from({ length: days }).map((_, index) => {
@@ -2660,6 +2668,7 @@ function AdminPage({ onBack }: { onBack: () => void }) {
   };
   const signupSeries = buildSeries(profiles);
   const activitySeries = buildSeries(activity);
+  const pageViewSeries = buildSeries(pageViews, 30);
   const reportCategoryData = Object.entries(reports.reduce<Record<string, number>>((acc, report) => {
     acc[report.category] = (acc[report.category] || 0) + 1;
     return acc;
@@ -2685,6 +2694,12 @@ function AdminPage({ onBack }: { onBack: () => void }) {
         <Card><p className="text-sm font-semibold text-slate-500">Reports</p><p className="mt-1 text-4xl font-black">{reports.length}</p><p className="text-xs text-slate-500">{openReports} open</p></Card>
         <Card><p className="text-sm font-semibold text-slate-500">Activity</p><p className="mt-1 text-4xl font-black">{activity.length}</p><p className="text-xs text-slate-500">Latest tracked events</p></Card>
         <Card><p className="text-sm font-semibold text-slate-500">Notifications</p><p className="mt-1 text-4xl font-black">{unread}</p><p className="text-xs text-slate-500">Unread owner notes</p></Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 min-[520px]:grid-cols-3">
+        <Card><p className="text-sm font-semibold text-slate-500">Page views <span className="text-[10px] font-normal">(30 days)</span></p><p className="mt-1 text-4xl font-black">{pageViews.length}</p><p className="text-xs text-slate-500">{uniqueSessions} unique sessions</p></Card>
+        <Card><p className="text-sm font-semibold text-slate-500">Anonymous visitors</p><p className="mt-1 text-4xl font-black">{anonViews}</p><p className="text-xs text-slate-500">Browsed without signing in</p></Card>
+        <Card><p className="text-sm font-semibold text-slate-500">Signed-in views</p><p className="mt-1 text-4xl font-black">{signedInViews}</p><p className="text-xs text-slate-500">Views from logged-in users</p></Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -2737,6 +2752,38 @@ function AdminPage({ onBack }: { onBack: () => void }) {
                 <Bar dataKey="count" fill="#0f766e" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+          </div>
+        </Card>
+        <Card className="grid gap-3 lg:col-span-2">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Reach</p>
+            <h3 className="font-display text-2xl">Visitor page views <span className="text-base font-normal text-slate-400">(30 days)</span></h3>
+          </div>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={pageViewSeries}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                <YAxis allowDecimals={false} width={28} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#6366f1" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+        <Card className="grid gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Reach</p>
+            <h3 className="font-display text-2xl">Top pages</h3>
+          </div>
+          <div className="grid gap-2">
+            {pageViewsByPage.length === 0 && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No page view data yet.</p>}
+            {pageViewsByPage.slice(0, 8).map(({ page, count }) => (
+              <div key={page} className="flex items-center gap-3 rounded-xl border border-slate-200/70 bg-white/70 px-3 py-2 dark:border-slate-800 dark:bg-slate-900/70">
+                <span className="min-w-0 flex-1 truncate font-semibold capitalize text-slate-700 dark:text-slate-200">{page}</span>
+                <span className="shrink-0 rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-bold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200">{count}</span>
+              </div>
+            ))}
           </div>
         </Card>
       </div>
@@ -2860,6 +2907,11 @@ function App() {
   const [confirmAction, setConfirmAction] = useState<null | "logout" | "delete-account" | "clear-all" | "clear-anime" | "clear-manga">(null);
   const lastActivityAtRef = useRef(Date.now());
   useTheme(data.settings);
+
+  // Track every page navigation as a page view
+  useEffect(() => {
+    logPageView(page, userId || null);
+  }, [page, userId]);
 
   useEffect(() => {
     if (!isSupabaseConfigured || userId) {

@@ -1,6 +1,36 @@
 import { createClient, type User } from "@supabase/supabase-js";
 import { createDefaultData, normalizeAppData } from "./storage";
-import type { AdminDashboardData, AppData } from "../types/anime";
+import type { AdminDashboardData, AdminPageView, AppData } from "../types/anime";
+
+const SESSION_KEY = "animeboxd_session_id";
+
+export function getOrCreateSessionId(): string {
+  try {
+    let id = sessionStorage.getItem(SESSION_KEY);
+    if (!id) {
+      id = crypto.randomUUID();
+      sessionStorage.setItem(SESSION_KEY, id);
+    }
+    return id;
+  } catch {
+    return "unknown";
+  }
+}
+
+export async function logPageView(page: string, userId?: string | null) {
+  if (!supabase) return;
+  try {
+    const sessionId = getOrCreateSessionId();
+    await supabase.from("page_views").insert({
+      session_id: sessionId,
+      user_id: userId || null,
+      page,
+      referrer: typeof document !== "undefined" ? (document.referrer || null) : null
+    });
+  } catch {
+    // Silent fail — never break the app over analytics
+  }
+}
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
@@ -278,7 +308,8 @@ export async function createReport(payload: { userId?: string; name?: string; em
 
 export async function loadAdminDashboard(): Promise<AdminDashboardData> {
   const client = assertSupabase();
-  const [profiles, reports, activity, notifications, userData] = await Promise.all([
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const [profiles, reports, activity, notifications, userData, pageViews] = await Promise.all([
     client
       .from("profiles")
       .select("id, email, username, avatar, bio, is_public, is_admin, created_at, last_seen")
@@ -302,7 +333,13 @@ export async function loadAdminDashboard(): Promise<AdminDashboardData> {
     client
       .from("user_app_data")
       .select("user_id, data")
-      .limit(100)
+      .limit(100),
+    client
+      .from("page_views")
+      .select("id, session_id, user_id, page, referrer, created_at")
+      .gte("created_at", thirtyDaysAgo)
+      .order("created_at", { ascending: false })
+      .limit(2000)
   ]);
 
   const firstError = profiles.error || reports.error || activity.error || notifications.error || userData.error;
@@ -332,7 +369,8 @@ export async function loadAdminDashboard(): Promise<AdminDashboardData> {
     }),
     reports: reports.data || [],
     activity: activity.data || [],
-    notifications: notifications.data || []
+    notifications: notifications.data || [],
+    pageViews: (pageViews.data || []) as AdminPageView[]
   } as AdminDashboardData;
 }
 

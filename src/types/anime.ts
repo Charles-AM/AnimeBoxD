@@ -192,9 +192,19 @@ export interface AdminNotification {
   created_at: string;
 }
 
+export interface AdminPageView {
+  id: string;
+  session_id: string;
+  user_id?: string | null;
+  page: string;
+  referrer?: string | null;
+  created_at: string;
+}
+
 export interface AdminDashboardData {
   profiles: AdminProfileSummary[];
   reports: AdminReportSummary[];
   activity: AdminActivityEvent[];
   notifications: AdminNotification[];
+  pageViews: AdminPageView[];
 }

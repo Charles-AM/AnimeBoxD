@@ -555,12 +555,13 @@ function AuthPage({ initialNotice, onBrowse, onLogin }: { initialNotice?: string
             )}
           </div>
         </Card>
-        <div className="mt-4 pb-2 text-center">
-          <nav className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm">
+        <div className="mt-4 border-t border-slate-200/60 pt-4 pb-2 text-center dark:border-slate-800">
+          <nav className="flex flex-wrap justify-center gap-x-4 gap-y-2">
             {[{ label: "About", href: "/about.html" }, { label: "Contact", href: "/contact.html" }, { label: "Privacy", href: "/privacy.html" }, { label: "Terms", href: "/terms.html" }].map((link) => (
-              <a key={link.href} className="font-semibold text-slate-500 transition hover:text-teal-600 dark:text-slate-400 dark:hover:text-teal-300" href={link.href}>{link.label}</a>
+              <a key={link.href} className="text-sm font-semibold text-slate-500 transition hover:text-teal-600 dark:text-slate-400 dark:hover:text-teal-300" href={link.href}>{link.label}</a>
             ))}
           </nav>
+          <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">© {new Date().getFullYear()} AnimeBoxD · Fan project</p>
         </div>
       </div>
     </div>
@@ -915,20 +916,19 @@ function SiteFooter() {
     { label: "Terms", href: "/terms.html" }
   ];
   return (
-    <footer className="mx-auto grid max-w-6xl gap-3 px-0 pb-1 pt-1 text-sm text-slate-500">
-      <div className="grid gap-3">
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <ShareSiteButton />
-          <nav className="flex flex-wrap gap-x-3 gap-y-2">
-            {links.map((link) => (
-              <a key={link.href} className="font-semibold text-slate-600 transition hover:text-teal-600 dark:text-slate-300 dark:hover:text-teal-300" href={link.href}>
-                {link.label}
-              </a>
-            ))}
-          </nav>
-        </div>
+    <footer className="w-full border-t border-slate-200/70 pt-5 pb-4 text-center dark:border-slate-800">
+      <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-4">
+        <ShareSiteButton />
+        <nav className="flex flex-wrap justify-center gap-x-4 gap-y-2">
+          {links.map((link) => (
+            <a key={link.href} className="text-sm font-semibold text-slate-600 transition hover:text-teal-600 dark:text-slate-300 dark:hover:text-teal-300" href={link.href}>
+              {link.label}
+            </a>
+          ))}
+        </nav>
       </div>
-      <p className="max-w-4xl text-[11px] leading-5 text-slate-500 dark:text-slate-400 sm:text-xs">{CREDIT_TEXT}</p>
+      <p className="mx-auto mt-3 max-w-xl px-4 text-[11px] leading-5 text-slate-400 dark:text-slate-500 sm:text-xs">{CREDIT_TEXT}</p>
+      <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">© {new Date().getFullYear()} AnimeBoxD · Fan project</p>
     </footer>
   );
 }

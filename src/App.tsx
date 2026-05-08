@@ -11,6 +11,8 @@ import {
   Heart,
   LogOut,
   Mail,
+  Monitor,
+  Moon,
   PlayCircle,
   Plus,
   RefreshCcw,
@@ -19,6 +21,7 @@ import {
   Share2,
   Sparkles,
   Star,
+  Sun,
   Trash2,
   Trophy,
   X
@@ -599,9 +602,7 @@ function Header({ user, theme, isAdmin, onThemeChange, onLogout, onHome, onMyStu
             <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4" /><span className="hidden sm:inline text-xs sm:text-sm font-semibold">Report</span>
           </button>
           </>); })()}
-          <select className={clsx(inputClass(), "w-20 shrink-0 text-xs sm:w-24 sm:text-sm")} value={theme} onChange={(event) => onThemeChange(event.target.value as ThemeMode)}>
-            {["Dark", "Light", "System"].map((item) => <option key={item}>{item}</option>)}
-          </select>
+          {(() => { const themeOrder: ThemeMode[] = ["Dark", "Light", "System"]; const nextTheme = themeOrder[(themeOrder.indexOf(theme) + 1) % themeOrder.length]; const ThemeIcon = theme === "Dark" ? Moon : theme === "Light" ? Sun : Monitor; return (<button className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-slate-200/70 bg-white/80 px-2 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300 sm:gap-1.5 sm:px-2.5 sm:py-2 sm:text-sm" onClick={() => onThemeChange(nextTheme)} title={`Switch to ${nextTheme} mode`} type="button" aria-label={`Switch to ${nextTheme} mode`}><ThemeIcon className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" /><span className="hidden sm:inline">{theme}</span></button>); })()}
           <button className={clsx("inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-sm font-semibold shadow-sm transition hover:-translate-y-0.5 sm:px-3", activePage === "profile" ? "border-teal-400 bg-teal-50 text-teal-900 dark:bg-teal-400 dark:text-slate-950" : "border-slate-200/70 bg-white/90 text-slate-700 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-200")} onClick={onProfile} type="button">
             <span className="grid h-7 w-7 place-items-center rounded-full bg-teal-100 text-base dark:bg-slate-950/60">{user.avatar}</span>
             <span className="grid min-w-0 text-left leading-tight">
@@ -664,9 +665,7 @@ function PublicHeader({ theme, activePage, onThemeChange, onHome, onExplore, onM
             <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline text-xs sm:text-sm font-semibold">Report</span>
           </button>
-          <select className={clsx(inputClass(), "w-20 shrink-0 text-xs sm:w-24 sm:text-sm")} value={theme} onChange={(event) => onThemeChange(event.target.value as ThemeMode)}>
-            {["Dark", "Light", "System"].map((item) => <option key={item}>{item}</option>)}
-          </select>
+          {(() => { const themeOrder: ThemeMode[] = ["Dark", "Light", "System"]; const nextTheme = themeOrder[(themeOrder.indexOf(theme) + 1) % themeOrder.length]; const ThemeIcon = theme === "Dark" ? Moon : theme === "Light" ? Sun : Monitor; return (<button className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-slate-200/70 bg-white/80 px-2 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300 sm:gap-1.5 sm:px-2.5 sm:py-2 sm:text-sm" onClick={() => onThemeChange(nextTheme)} title={`Switch to ${nextTheme} mode`} type="button" aria-label={`Switch to ${nextTheme} mode`}><ThemeIcon className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" /><span className="hidden sm:inline">{theme}</span></button>); })()}
           <Button className="hidden shrink-0 px-3 text-sm lg:inline-flex" onClick={onAuth}>Sign in</Button>
         </div>
       </div>

@@ -11,7 +11,7 @@ export const defaultLists: CustomList[] = [
 ];
 
 export const defaultSettings: Settings = {
-  theme: "System",
+  theme: "Dark",
   episodeLength: 24,
   username: "You",
   bio: "Building a better anime memory palace.",

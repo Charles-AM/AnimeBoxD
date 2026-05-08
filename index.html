@@ -1,9 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0f172a" />
+    <meta name="color-scheme" content="dark light" />
     <meta name="description" content="AnimeBoxD is a personal anime and manga diary for tracking what you watch, what you read, favorites, notes, ratings, and live anime updates." />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://animeboxd.app/" />
@@ -21,6 +22,21 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <title>AnimeBoxD - Anime and Manga Diary</title>
+    <!-- Apply saved theme instantly before React mounts to prevent flash of wrong theme -->
+    <script>
+      (function () {
+        try {
+          var raw = localStorage.getItem("animeboxd_data_v1");
+          var theme = raw ? (JSON.parse(raw).settings || {}).theme : null;
+          if (!theme) theme = "Dark";
+          var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          var dark = theme === "Dark" || (theme === "System" && prefersDark);
+          document.documentElement.classList.toggle("dark", dark);
+        } catch (e) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

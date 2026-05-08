@@ -555,8 +555,12 @@ function AuthPage({ initialNotice, onBrowse, onLogin }: { initialNotice?: string
             )}
           </div>
         </Card>
-        <div className="mt-4 rounded-2xl border border-white/60 bg-white/55 p-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/45">
-          <SiteFooter />
+        <div className="mt-4 pb-2 text-center">
+          <nav className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm">
+            {[{ label: "About", href: "/about.html" }, { label: "Contact", href: "/contact.html" }, { label: "Privacy", href: "/privacy.html" }, { label: "Terms", href: "/terms.html" }].map((link) => (
+              <a key={link.href} className="font-semibold text-slate-500 transition hover:text-teal-600 dark:text-slate-400 dark:hover:text-teal-300" href={link.href}>{link.label}</a>
+            ))}
+          </nav>
         </div>
       </div>
     </div>
@@ -629,7 +633,7 @@ function Header({ user, theme, isAdmin, onThemeChange, onLogout, onHome, onMyStu
   );
 }
 
-function PublicHeader({ theme, activePage, onThemeChange, onHome, onExplore, onReportIssue, onAuth }: { theme: ThemeMode; activePage: AppPage; onThemeChange: (value: ThemeMode) => void; onHome: () => void; onExplore: () => void; onReportIssue: () => void; onAuth: () => void }) {
+function PublicHeader({ theme, activePage, onThemeChange, onHome, onExplore, onReportIssue, onAuth, onRequireSignIn }: { theme: ThemeMode; activePage: AppPage; onThemeChange: (value: ThemeMode) => void; onHome: () => void; onExplore: () => void; onReportIssue: () => void; onAuth: () => void; onRequireSignIn: (msg: string) => void }) {
   return (
     <header className="sticky top-0 z-20 border-b border-white/60 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
       <div className="mx-auto flex max-w-6xl flex-col gap-2 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3 lg:flex-row lg:items-center lg:justify-between">
@@ -649,6 +653,30 @@ function PublicHeader({ theme, activePage, onThemeChange, onHome, onExplore, onR
           </button>
           <button className={clsx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-2.5 py-2 text-sm font-semibold transition sm:gap-2 sm:px-3", activePage === "explore" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onExplore}>
             <Search className="h-4 w-4" /> Explore
+          </button>
+          <button
+            className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-slate-200/70 bg-white/80 px-2.5 py-2 text-sm font-semibold text-slate-500 transition hover:-translate-y-0.5 hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400 sm:gap-2 sm:px-3"
+            onClick={() => onRequireSignIn("Sign in or create a free account to track your anime.")}
+            title="Sign in to access My Anime"
+            type="button"
+          >
+            <Plus className="h-4 w-4" /> My Anime
+          </button>
+          <button
+            className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-slate-200/70 bg-white/80 px-2.5 py-2 text-sm font-semibold text-slate-500 transition hover:-translate-y-0.5 hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400 sm:gap-2 sm:px-3"
+            onClick={() => onRequireSignIn("Sign in or create a free account to track your manga.")}
+            title="Sign in to access My Manga"
+            type="button"
+          >
+            <BookOpen className="h-4 w-4" /> My Manga
+          </button>
+          <button
+            className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-slate-200/70 bg-white/80 px-2.5 py-2 text-sm font-semibold text-slate-500 transition hover:-translate-y-0.5 hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400 sm:gap-2 sm:px-3"
+            onClick={() => onRequireSignIn("Sign in or create a free account to view your dashboard.")}
+            title="Sign in to access Dashboard"
+            type="button"
+          >
+            Dashboard
           </button>
           <button
             className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200/70 bg-white/80 px-2.5 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200 sm:gap-2 sm:px-3"
@@ -3128,6 +3156,10 @@ function App() {
             setAuthNotice("Sign in or create an account when you are ready to save your library.");
             setPage("auth");
           }}
+          onRequireSignIn={(msg) => {
+            setAuthNotice(msg);
+            setPage("auth");
+          }}
         />
         {reportOpen && <ReportIssueModal onClose={() => setReportOpen(false)} />}
         {page === "explore" ? (
@@ -3135,10 +3167,8 @@ function App() {
         ) : (
           <HomePage addAnime={startAddFlow} />
         )}
-        <div className="mx-auto max-w-6xl px-3 pb-6 sm:px-4">
-          <div className="rounded-2xl border border-white/60 bg-white/55 p-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/45">
-            <SiteFooter />
-          </div>
+        <div className="mx-auto max-w-6xl px-3 pb-6 pt-2 sm:px-4">
+          <SiteFooter />
         </div>
         <CookieBanner onConsent={() => {}} />
       </div>
@@ -3216,6 +3246,9 @@ function App() {
           }}
         />
       )}
+      <div className="mx-auto max-w-6xl px-3 pb-6 pt-2 sm:px-4">
+        <SiteFooter />
+      </div>
     </div>
   );
 }

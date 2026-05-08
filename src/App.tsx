@@ -634,7 +634,7 @@ function Header({ user, theme, isAdmin, onThemeChange, onLogout, onHome, onMyStu
   );
 }
 
-function PublicHeader({ theme, activePage, onThemeChange, onHome, onExplore, onReportIssue, onAuth, onRequireSignIn }: { theme: ThemeMode; activePage: AppPage; onThemeChange: (value: ThemeMode) => void; onHome: () => void; onExplore: () => void; onReportIssue: () => void; onAuth: () => void; onRequireSignIn: (msg: string) => void }) {
+function PublicHeader({ theme, activePage, onThemeChange, onHome, onExplore, onMyStuff, onMyManga, onReportIssue, onAuth, onRequireSignIn }: { theme: ThemeMode; activePage: AppPage; onThemeChange: (value: ThemeMode) => void; onHome: () => void; onExplore: () => void; onMyStuff: () => void; onMyManga: () => void; onReportIssue: () => void; onAuth: () => void; onRequireSignIn: (msg: string) => void }) {
   return (
     <header className="sticky top-0 z-20 border-b border-white/60 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
       <div className="mx-auto flex max-w-6xl flex-col gap-2 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3 lg:flex-row lg:items-center lg:justify-between">
@@ -656,24 +656,22 @@ function PublicHeader({ theme, activePage, onThemeChange, onHome, onExplore, onR
             <Search className="h-4 w-4" /> Explore
           </button>
           <button
-            className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-slate-200/70 bg-white/80 px-2.5 py-2 text-sm font-semibold text-slate-500 transition hover:-translate-y-0.5 hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400 sm:gap-2 sm:px-3"
-            onClick={() => onRequireSignIn("Sign in or create a free account to track your anime.")}
-            title="Sign in to access My Anime"
+            className={clsx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-2.5 py-2 text-sm font-semibold transition sm:gap-2 sm:px-3", activePage === "stuff" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")}
+            onClick={onMyStuff}
             type="button"
           >
             <Plus className="h-4 w-4" /> My Anime
           </button>
           <button
-            className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-slate-200/70 bg-white/80 px-2.5 py-2 text-sm font-semibold text-slate-500 transition hover:-translate-y-0.5 hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400 sm:gap-2 sm:px-3"
-            onClick={() => onRequireSignIn("Sign in or create a free account to track your manga.")}
-            title="Sign in to access My Manga"
+            className={clsx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-2.5 py-2 text-sm font-semibold transition sm:gap-2 sm:px-3", activePage === "manga" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")}
+            onClick={onMyManga}
             type="button"
           >
             <BookOpen className="h-4 w-4" /> My Manga
           </button>
           <button
             className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-slate-200/70 bg-white/80 px-2.5 py-2 text-sm font-semibold text-slate-500 transition hover:-translate-y-0.5 hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400 sm:gap-2 sm:px-3"
-            onClick={() => onRequireSignIn("Sign in or create a free account to view your dashboard.")}
+            onClick={() => onRequireSignIn("Sign in or create a free account to view your personal dashboard.")}
             title="Sign in to access Dashboard"
             type="button"
           >
@@ -905,6 +903,40 @@ function ShareSiteButton() {
     >
       <Share2 className="h-4 w-4" /> <span>{copied ? "Copied" : "Share"}</span>
     </button>
+  );
+}
+
+function GuestSaveModal({ onSignUp, onClose }: { onSignUp: () => void; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 px-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl border border-white/60 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-950">
+        <div className="text-center">
+          <p className="text-4xl">🎌</p>
+          <h2 className="mt-3 font-display text-3xl leading-tight">Save your library</h2>
+          <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+            You're one step away! Create a free account to save this to your anime diary, track your progress, and build your personal library.
+          </p>
+        </div>
+        <div className="mt-5 grid gap-2">
+          <Button
+            className="w-full justify-center bg-teal-500 text-white hover:bg-teal-400"
+            onClick={onSignUp}
+          >
+            <Sparkles className="h-4 w-4" /> Create a free account
+          </Button>
+          <button
+            className="w-full rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
+            onClick={onClose}
+            type="button"
+          >
+            Keep browsing for now
+          </button>
+        </div>
+        <p className="mt-4 text-center text-xs text-slate-400 dark:text-slate-500">
+          Free forever · No credit card needed · Your data stays private
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -2904,6 +2936,7 @@ function App() {
   const [selectedManga, setSelectedManga] = useState<MangaSummary | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [authNotice, setAuthNotice] = useState("");
+  const [guestPrompt, setGuestPrompt] = useState(false);
   const [confirmAction, setConfirmAction] = useState<null | "logout" | "delete-account" | "clear-all" | "clear-anime" | "clear-manga">(null);
   const lastActivityAtRef = useRef(Date.now());
   useTheme(data.settings);
@@ -3014,19 +3047,11 @@ function App() {
   };
 
   const startAddFlow = (anime: AnimeSummary) => {
-    if (!userId) {
-      requireSignIn("Sign in or create an account to save anime to your diary.");
-      return;
-    }
     setSelectedAnime(anime);
     setPage("add");
   };
 
   const startAddMangaFlow = (manga: MangaSummary) => {
-    if (!userId) {
-      requireSignIn("Sign in or create an account to save manga to your shelf.");
-      return;
-    }
     setSelectedManga(manga);
     setPage("add-manga");
   };
@@ -3195,6 +3220,8 @@ function App() {
   }
 
   if (!userId) {
+    const guestSave = () => setGuestPrompt(true);
+    const noop = () => {};
     return (
       <div className="page-shell min-h-screen text-slate-900 dark:text-slate-100">
         <PublicHeader
@@ -3203,6 +3230,8 @@ function App() {
           onThemeChange={(value) => updateData({ settings: { ...data.settings, theme: value } })}
           onHome={() => setPage("home")}
           onExplore={() => setPage("explore")}
+          onMyStuff={() => setPage("stuff")}
+          onMyManga={() => setPage("manga")}
           onReportIssue={() => setReportOpen(true)}
           onAuth={() => {
             setAuthNotice("Sign in or create an account when you are ready to save your library.");
@@ -3214,9 +3243,34 @@ function App() {
           }}
         />
         {reportOpen && <ReportIssueModal onClose={() => setReportOpen(false)} />}
-        {page === "explore" ? (
-          <ExplorePage onAddAnime={startAddFlow} onAddManga={startAddMangaFlow} onBack={() => setPage("home")} />
-        ) : (
+        {guestPrompt && (
+          <GuestSaveModal
+            onSignUp={() => {
+              setGuestPrompt(false);
+              setAuthNotice("Create a free account to save your anime and manga library.");
+              setPage("auth");
+            }}
+            onClose={() => setGuestPrompt(false)}
+          />
+        )}
+        {page === "explore" && <ExplorePage onAddAnime={startAddFlow} onAddManga={startAddMangaFlow} onBack={() => setPage("home")} />}
+        {page === "stuff" && <MyStuffPage data={data} onSelect={startAddFlow} updateEntry={guestSave} removeEntry={guestSave} updateData={noop} onBack={() => setPage("home")} onClearHistory={noop} />}
+        {page === "manga" && <MyMangaPage data={data} onSelect={startAddMangaFlow} updateEntry={guestSave} removeEntry={guestSave} updateData={noop} onBack={() => setPage("home")} onClearHistory={noop} />}
+        {page === "add" && selectedAnime && (
+          <AddEntryPage
+            anime={selectedAnime}
+            onSave={guestSave}
+            onCancel={() => { setSelectedAnime(null); setPage("stuff"); }}
+          />
+        )}
+        {page === "add-manga" && selectedManga && (
+          <AddMangaPage
+            manga={selectedManga}
+            onSave={guestSave}
+            onCancel={() => { setSelectedManga(null); setPage("manga"); }}
+          />
+        )}
+        {page !== "explore" && page !== "stuff" && page !== "manga" && page !== "add" && page !== "add-manga" && (
           <HomePage addAnime={startAddFlow} />
         )}
         <div className="mx-auto max-w-6xl px-3 pb-6 pt-2 sm:px-4">

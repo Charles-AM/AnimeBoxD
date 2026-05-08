@@ -587,35 +587,19 @@ function Header({ user, theme, isAdmin, onThemeChange, onLogout, onHome, onMyStu
             </button>
           </div>
         </div>
-        <div className="scrollbar-soft -mx-1 flex w-[calc(100%+0.5rem)] max-w-[calc(100%+0.5rem)] touch-pan-x items-center gap-1.5 overflow-x-auto overscroll-x-contain px-1 pb-1 sm:gap-2 lg:mx-0 lg:w-auto lg:max-w-none lg:overflow-visible lg:px-0 lg:pb-0">
-          <button className={clsx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-2.5 py-2 text-sm font-semibold transition sm:gap-2 sm:px-3", activePage === "home" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onHome}>
-            Home
+        <div className="scrollbar-soft -mx-1 flex w-[calc(100%+0.5rem)] max-w-[calc(100%+0.5rem)] touch-pan-x items-center gap-1 overflow-x-auto overscroll-x-contain px-1 pb-1 sm:gap-1.5 lg:mx-0 lg:w-auto lg:max-w-none lg:overflow-visible lg:px-0 lg:pb-0">
+          {(() => { const nb = (active: boolean) => clsx("inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-xl border px-2 py-1.5 text-xs font-semibold transition sm:gap-1.5 sm:px-2.5 sm:py-2 sm:text-sm", active ? "border-teal-400 bg-teal-50 text-teal-900 dark:bg-teal-950/50 dark:text-teal-100" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200"); return (<>
+          <button className={nb(activePage === "home")} onClick={onHome}>Home</button>
+          <button className={nb(activePage === "explore")} onClick={onExplore}><Search className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Explore</button>
+          <button className={nb(activePage === "stuff")} onClick={onMyStuff}><Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /><span className="hidden sm:inline">My Anime</span><span className="sm:hidden">Anime</span></button>
+          <button className={nb(activePage === "manga")} onClick={onMyManga}><BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" /><span className="hidden sm:inline">My Manga</span><span className="sm:hidden">Manga</span></button>
+          <button className={nb(activePage === "dashboard")} onClick={onDashboard}><span className="hidden sm:inline">Dashboard</span><span className="sm:hidden">Dash</span></button>
+          {isAdmin && <button className={nb(activePage === "admin")} onClick={onAdmin}>Admin</button>}
+          <button className="inline-flex shrink-0 items-center justify-center rounded-xl border border-slate-200/70 bg-white/80 p-1.5 text-slate-600 transition hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300 sm:gap-1.5 sm:px-2.5 sm:py-2" onClick={onReportIssue} title="Report issue" type="button">
+            <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4" /><span className="hidden sm:inline text-xs sm:text-sm font-semibold">Report</span>
           </button>
-          <button className={clsx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-2.5 py-2 text-sm font-semibold transition sm:gap-2 sm:px-3", activePage === "explore" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onExplore}>
-            <Search className="h-4 w-4" /> Explore
-          </button>
-          <button className={clsx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-2.5 py-2 text-sm font-semibold transition sm:gap-2 sm:px-3", activePage === "stuff" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onMyStuff}>
-            <Plus className="h-4 w-4" /> My Anime
-          </button>
-          <button className={clsx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-2.5 py-2 text-sm font-semibold transition sm:gap-2 sm:px-3", activePage === "manga" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onMyManga}>
-            <BookOpen className="h-4 w-4" /> My Manga
-          </button>
-          <button className={clsx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-2.5 py-2 text-sm font-semibold transition sm:gap-2 sm:px-3", activePage === "dashboard" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onDashboard}>
-            Dashboard
-          </button>
-          {isAdmin && (
-            <button className={clsx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-2.5 py-2 text-sm font-semibold transition sm:gap-2 sm:px-3", activePage === "admin" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onAdmin}>
-              Admin
-            </button>
-          )}
-          <button
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200/70 bg-white/80 px-2.5 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200 sm:gap-2 sm:px-3"
-            onClick={onReportIssue}
-            type="button"
-          >
-            <Mail className="h-4 w-4" /> <span className="hidden sm:inline">Report issue</span><span className="sm:hidden">Report</span>
-          </button>
-          <select className={clsx(inputClass(), "!w-28 shrink-0")} value={theme} onChange={(event) => onThemeChange(event.target.value as ThemeMode)}>
+          </>); })()}
+          <select className={clsx(inputClass(), "w-20 shrink-0 text-xs sm:w-24 sm:text-sm")} value={theme} onChange={(event) => onThemeChange(event.target.value as ThemeMode)}>
             {["Dark", "Light", "System"].map((item) => <option key={item}>{item}</option>)}
           </select>
           <button className={clsx("inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-sm font-semibold shadow-sm transition hover:-translate-y-0.5 sm:px-3", activePage === "profile" ? "border-teal-400 bg-teal-50 text-teal-900 dark:bg-teal-400 dark:text-slate-950" : "border-slate-200/70 bg-white/90 text-slate-700 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-200")} onClick={onProfile} type="button">
@@ -635,59 +619,55 @@ function Header({ user, theme, isAdmin, onThemeChange, onLogout, onHome, onMyStu
 }
 
 function PublicHeader({ theme, activePage, onThemeChange, onHome, onExplore, onMyStuff, onMyManga, onReportIssue, onAuth, onRequireSignIn }: { theme: ThemeMode; activePage: AppPage; onThemeChange: (value: ThemeMode) => void; onHome: () => void; onExplore: () => void; onMyStuff: () => void; onMyManga: () => void; onReportIssue: () => void; onAuth: () => void; onRequireSignIn: (msg: string) => void }) {
+  const navBtn = (active: boolean) => clsx("inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-xl border px-2 py-1.5 text-xs font-semibold transition sm:gap-1.5 sm:px-2.5 sm:py-2 sm:text-sm", active ? "border-teal-400 bg-teal-50 text-teal-900 dark:bg-teal-950/50 dark:text-teal-100" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200");
   return (
     <header className="sticky top-0 z-20 border-b border-white/60 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
-      <div className="mx-auto flex max-w-6xl flex-col gap-2 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="mx-auto flex max-w-6xl flex-col gap-1.5 px-3 py-2 sm:gap-2 sm:px-4 sm:py-2.5 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center justify-between gap-3">
           <button className="flex min-w-0 items-center gap-2" onClick={onHome}>
-            <Film className="h-7 w-7 text-teal-500" />
+            <Film className="h-6 w-6 shrink-0 text-teal-500 sm:h-7 sm:w-7" />
             <div className="min-w-0">
-              <p className="truncate font-display text-xl leading-none sm:text-2xl">Animeboxd</p>
-              <p className="text-[11px] text-slate-500 sm:text-xs">Browse now. Save after sign in.</p>
+              <p className="truncate font-display text-lg leading-none sm:text-2xl">Animeboxd</p>
+              <p className="hidden text-[11px] text-slate-500 sm:block sm:text-xs">Browse now. Save after sign in.</p>
             </div>
           </button>
-          <Button className="shrink-0 px-3 lg:hidden" onClick={onAuth}>Sign in</Button>
+          <Button className="shrink-0 px-3 text-xs sm:text-sm lg:hidden" onClick={onAuth}>Sign in</Button>
         </div>
-        <div className="scrollbar-soft -mx-1 flex w-[calc(100%+0.5rem)] max-w-[calc(100%+0.5rem)] touch-pan-x items-center gap-1.5 overflow-x-auto overscroll-x-contain px-1 pb-1 sm:gap-2 lg:mx-0 lg:w-auto lg:max-w-none lg:overflow-visible lg:px-0 lg:pb-0">
-          <button className={clsx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-2.5 py-2 text-sm font-semibold transition sm:gap-2 sm:px-3", activePage === "home" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onHome}>
-            Home
+        <div className="scrollbar-soft -mx-1 flex w-[calc(100%+0.5rem)] max-w-[calc(100%+0.5rem)] touch-pan-x items-center gap-1 overflow-x-auto overscroll-x-contain px-1 pb-1 sm:gap-1.5 lg:mx-0 lg:w-auto lg:max-w-none lg:overflow-visible lg:px-0 lg:pb-0">
+          <button className={navBtn(activePage === "home")} onClick={onHome}>Home</button>
+          <button className={navBtn(activePage === "explore")} onClick={onExplore}>
+            <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Explore
           </button>
-          <button className={clsx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-2.5 py-2 text-sm font-semibold transition sm:gap-2 sm:px-3", activePage === "explore" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onExplore}>
-            <Search className="h-4 w-4" /> Explore
+          <button className={navBtn(activePage === "stuff")} onClick={onMyStuff} type="button">
+            <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline sm:inline">My Anime</span>
+            <span className="xs:hidden sm:hidden">Anime</span>
           </button>
-          <button
-            className={clsx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-2.5 py-2 text-sm font-semibold transition sm:gap-2 sm:px-3", activePage === "stuff" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")}
-            onClick={onMyStuff}
-            type="button"
-          >
-            <Plus className="h-4 w-4" /> My Anime
-          </button>
-          <button
-            className={clsx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-2.5 py-2 text-sm font-semibold transition sm:gap-2 sm:px-3", activePage === "manga" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")}
-            onClick={onMyManga}
-            type="button"
-          >
-            <BookOpen className="h-4 w-4" /> My Manga
+          <button className={navBtn(activePage === "manga")} onClick={onMyManga} type="button">
+            <BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline sm:inline">My Manga</span>
+            <span className="xs:hidden sm:hidden">Manga</span>
           </button>
           <button
-            className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-slate-200/70 bg-white/80 px-2.5 py-2 text-sm font-semibold text-slate-500 transition hover:-translate-y-0.5 hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400 sm:gap-2 sm:px-3"
+            className="hidden shrink-0 items-center gap-1 whitespace-nowrap rounded-xl border border-slate-200/70 bg-white/80 px-2 py-1.5 text-xs font-semibold text-slate-500 transition hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400 sm:inline-flex sm:gap-1.5 sm:px-2.5 sm:py-2 sm:text-sm"
             onClick={() => onRequireSignIn("Sign in or create a free account to view your personal dashboard.")}
-            title="Sign in to access Dashboard"
             type="button"
           >
             Dashboard
           </button>
           <button
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200/70 bg-white/80 px-2.5 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200 sm:gap-2 sm:px-3"
+            className="inline-flex shrink-0 items-center justify-center rounded-xl border border-slate-200/70 bg-white/80 p-1.5 text-slate-600 transition hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300 sm:gap-1.5 sm:px-2.5 sm:py-2"
             onClick={onReportIssue}
+            title="Report issue"
             type="button"
           >
-            <Mail className="h-4 w-4" /> <span className="hidden sm:inline">Report issue</span><span className="sm:hidden">Report</span>
+            <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline text-xs sm:text-sm font-semibold">Report</span>
           </button>
-          <select className={clsx(inputClass(), "!w-28 shrink-0")} value={theme} onChange={(event) => onThemeChange(event.target.value as ThemeMode)}>
+          <select className={clsx(inputClass(), "w-20 shrink-0 text-xs sm:w-24 sm:text-sm")} value={theme} onChange={(event) => onThemeChange(event.target.value as ThemeMode)}>
             {["Dark", "Light", "System"].map((item) => <option key={item}>{item}</option>)}
           </select>
-          <Button className="hidden shrink-0 px-3 lg:inline-flex" onClick={onAuth}>Sign in</Button>
+          <Button className="hidden shrink-0 px-3 text-sm lg:inline-flex" onClick={onAuth}>Sign in</Button>
         </div>
       </div>
     </header>
@@ -933,7 +913,7 @@ function GuestSaveModal({ onSignUp, onClose }: { onSignUp: () => void; onClose: 
           </button>
         </div>
         <p className="mt-4 text-center text-xs text-slate-400 dark:text-slate-500">
-          Free forever · No credit card needed · Your data stays private
+          Free · No credit card needed · Your data stays private
         </p>
       </div>
     </div>

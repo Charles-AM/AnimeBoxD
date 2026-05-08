@@ -33,7 +33,7 @@ import { CookieBanner } from "./CookieBanner";
 type UserAccount = { id: string; name: string; avatar: string; passcode: string; email?: string; isCloud?: boolean; isAdmin?: boolean; memberSince?: string };
 
 type AuthMode = "signin" | "signup";
-type AppPage = "home" | "stuff" | "manga" | "add" | "add-manga" | "dashboard" | "explore" | "profile" | "admin";
+type AppPage = "home" | "stuff" | "manga" | "add" | "add-manga" | "dashboard" | "explore" | "profile" | "admin" | "auth";
 
 type Section = { key: LibraryStatus; title: string; icon: React.ReactElement };
 
@@ -76,10 +76,27 @@ const SITE_URL = "https://animeboxd.app/";
 const CREDIT_TEXT = "AnimeBoxD is an independent fan project. Anime and manga titles, artwork, synopses, trademarks, studios, publishers, streaming names, and source metadata belong to their respective owners. Discovery data is provided through Jikan and MyAnimeList references; AnimeBoxD does not claim ownership of third-party content.";
 const avatarOptions = ["✨", "🎴", "🍥", "🌀", "🌙", "🔥", "⚔️", "🛡️", "🧡", "💫", "🌸", "🐉", "👑", "🎧", "📚", "🦊", "👾", "⭐"];
 const inactivityTimeoutMs = 30 * 60 * 1000;
+const REPORT_RATE_KEY = "animeboxd_last_report_at";
+const REPORT_COOLDOWN_MS = 60 * 60 * 1000;
 
 function getAuthHashType() {
   if (typeof window === "undefined") return "";
   return new URLSearchParams(window.location.hash.replace(/^#/, "")).get("type") || "";
+}
+
+function hasAuthCallbackParams() {
+  if (typeof window === "undefined") return false;
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const queryParams = new URLSearchParams(window.location.search);
+  return Boolean(
+    hashParams.get("access_token") ||
+    hashParams.get("refresh_token") ||
+    hashParams.get("type") ||
+    queryParams.get("code") ||
+    queryParams.get("type") ||
+    queryParams.get("error") ||
+    queryParams.get("error_description")
+  );
 }
 
 function friendlyAuthError(error: unknown, fallback = "Something went wrong. Please try again.") {
@@ -247,7 +264,7 @@ function useTheme(settings: Settings) {
   }, [settings.theme]);
 }
 
-function AuthPage({ initialNotice, onLogin }: { initialNotice?: string; onLogin: (payload: { user: UserAccount; data: AppData }) => void | Promise<void> }) {
+function AuthPage({ initialNotice, onBrowse, onLogin }: { initialNotice?: string; onBrowse?: () => void; onLogin: (payload: { user: UserAccount; data: AppData }) => void | Promise<void> }) {
   const [mode, setMode] = useState<AuthMode>("signup");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -531,6 +548,11 @@ function AuthPage({ initialNotice, onLogin }: { initialNotice?: string; onLogin:
               </button>
             )}
             {!isSupabaseConfigured && !resetMode && <button className="button-ghost" onClick={loginDemo}>Use demo user</button>}
+            {onBrowse && !resetMode && (
+              <button className="button-ghost" onClick={onBrowse} type="button">
+                Continue browsing
+              </button>
+            )}
           </div>
         </Card>
         <div className="mt-4 rounded-2xl border border-white/60 bg-white/55 p-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/45">
@@ -607,8 +629,43 @@ function Header({ user, theme, isAdmin, onThemeChange, onLogout, onHome, onMyStu
   );
 }
 
-const REPORT_RATE_KEY = "animeboxd_last_report_at";
-const REPORT_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
+function PublicHeader({ theme, activePage, onThemeChange, onHome, onExplore, onReportIssue, onAuth }: { theme: ThemeMode; activePage: AppPage; onThemeChange: (value: ThemeMode) => void; onHome: () => void; onExplore: () => void; onReportIssue: () => void; onAuth: () => void }) {
+  return (
+    <header className="sticky top-0 z-20 border-b border-white/60 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
+      <div className="mx-auto flex max-w-6xl flex-col gap-2 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center justify-between gap-3">
+          <button className="flex min-w-0 items-center gap-2" onClick={onHome}>
+            <Film className="h-7 w-7 text-teal-500" />
+            <div className="min-w-0">
+              <p className="truncate font-display text-xl leading-none sm:text-2xl">Animeboxd</p>
+              <p className="text-[11px] text-slate-500 sm:text-xs">Browse now. Save after sign in.</p>
+            </div>
+          </button>
+          <Button className="shrink-0 px-3 lg:hidden" onClick={onAuth}>Sign in</Button>
+        </div>
+        <div className="scrollbar-soft -mx-1 flex w-[calc(100%+0.5rem)] max-w-[calc(100%+0.5rem)] touch-pan-x items-center gap-1.5 overflow-x-auto overscroll-x-contain px-1 pb-1 sm:gap-2 lg:mx-0 lg:w-auto lg:max-w-none lg:overflow-visible lg:px-0 lg:pb-0">
+          <button className={clsx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-2.5 py-2 text-sm font-semibold transition sm:gap-2 sm:px-3", activePage === "home" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onHome}>
+            Home
+          </button>
+          <button className={clsx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-2.5 py-2 text-sm font-semibold transition sm:gap-2 sm:px-3", activePage === "explore" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200")} onClick={onExplore}>
+            <Search className="h-4 w-4" /> Explore
+          </button>
+          <button
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200/70 bg-white/80 px-2.5 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200 sm:gap-2 sm:px-3"
+            onClick={onReportIssue}
+            type="button"
+          >
+            <Mail className="h-4 w-4" /> <span className="hidden sm:inline">Report issue</span><span className="sm:hidden">Report</span>
+          </button>
+          <select className={clsx(inputClass(), "!w-28 shrink-0")} value={theme} onChange={(event) => onThemeChange(event.target.value as ThemeMode)}>
+            {["Dark", "Light", "System"].map((item) => <option key={item}>{item}</option>)}
+          </select>
+          <Button className="hidden shrink-0 px-3 lg:inline-flex" onClick={onAuth}>Sign in</Button>
+        </div>
+      </div>
+    </header>
+  );
+}
 
 function getReportCooldownRemaining() {
   const last = Number(localStorage.getItem(REPORT_RATE_KEY) || 0);
@@ -625,7 +682,6 @@ function ReportIssueModal({ onClose, userId }: { onClose: () => void; userId?: s
     const form = event.currentTarget;
     const formData = new FormData(form);
     if (String(formData.get("website") || "").trim()) return;
-
     const cooldown = getReportCooldownRemaining();
     if (cooldown > 0) {
       const mins = Math.ceil(cooldown / 60000);
@@ -633,7 +689,6 @@ function ReportIssueModal({ onClose, userId }: { onClose: () => void; userId?: s
       setError(`You already sent a report recently. Please wait ${mins} minute${mins === 1 ? "" : "s"} before sending another.`);
       return;
     }
-
     setStatus("sending");
     setError("");
 
@@ -2871,12 +2926,27 @@ function App() {
     logEvent("manga_saved", { mal_id: entry.mal_id, title: entry.title, status: entry.status, rating: entry.rating });
   };
 
+  const requireSignIn = (notice: string) => {
+    setAuthNotice(notice);
+    setSelectedAnime(null);
+    setSelectedManga(null);
+    setPage("auth");
+  };
+
   const startAddFlow = (anime: AnimeSummary) => {
+    if (!userId) {
+      requireSignIn("Sign in or create an account to save anime to your diary.");
+      return;
+    }
     setSelectedAnime(anime);
     setPage("add");
   };
 
   const startAddMangaFlow = (manga: MangaSummary) => {
+    if (!userId) {
+      requireSignIn("Sign in or create an account to save manga to your shelf.");
+      return;
+    }
     setSelectedManga(manga);
     setPage("add-manga");
   };
@@ -3031,7 +3101,49 @@ function App() {
     );
   }
 
-  if (!userId) return <AuthPage initialNotice={authNotice} onLogin={handleLogin} />;
+  if (!userId && (page === "auth" || hasAuthCallbackParams())) {
+    return (
+      <AuthPage
+        initialNotice={authNotice}
+        onBrowse={() => {
+          setAuthNotice("");
+          setPage("home");
+        }}
+        onLogin={handleLogin}
+      />
+    );
+  }
+
+  if (!userId) {
+    return (
+      <div className="page-shell min-h-screen text-slate-900 dark:text-slate-100">
+        <PublicHeader
+          theme={data.settings.theme}
+          activePage={page}
+          onThemeChange={(value) => updateData({ settings: { ...data.settings, theme: value } })}
+          onHome={() => setPage("home")}
+          onExplore={() => setPage("explore")}
+          onReportIssue={() => setReportOpen(true)}
+          onAuth={() => {
+            setAuthNotice("Sign in or create an account when you are ready to save your library.");
+            setPage("auth");
+          }}
+        />
+        {reportOpen && <ReportIssueModal onClose={() => setReportOpen(false)} />}
+        {page === "explore" ? (
+          <ExplorePage onAddAnime={startAddFlow} onAddManga={startAddMangaFlow} onBack={() => setPage("home")} />
+        ) : (
+          <HomePage addAnime={startAddFlow} />
+        )}
+        <div className="mx-auto max-w-6xl px-3 pb-6 sm:px-4">
+          <div className="rounded-2xl border border-white/60 bg-white/55 p-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/45">
+            <SiteFooter />
+          </div>
+        </div>
+        <CookieBanner onConsent={() => {}} />
+      </div>
+    );
+  }
 
   return (
     <div className="page-shell min-h-screen text-slate-900 dark:text-slate-100">

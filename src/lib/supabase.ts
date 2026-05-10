@@ -156,6 +156,7 @@ export async function signUpWithEmail(email: string, password: string, username:
       created_at: data.user.created_at
     });
     await ensureCloudData(data.user.id, username);
+    await logActivityEvent(data.user.id, "sign_up", { username, method: "email" }).catch(() => undefined);
   }
   return data;
 }

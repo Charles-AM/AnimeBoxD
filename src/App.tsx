@@ -2622,19 +2622,25 @@ function DashboardPage({ data, onClearHistory, onBack }: { data: AppData; onClea
 // Maps activity event_type keys to a friendly label and emoji
 function friendlyEvent(eventType: string): { label: string; icon: string } {
   const map: Record<string, { label: string; icon: string }> = {
-    sign_in:        { label: "Signed in",           icon: "🔑" },
-    sign_up:        { label: "Created account",     icon: "🎉" },
-    sign_out:       { label: "Signed out",          icon: "👋" },
-    add_anime:      { label: "Added anime",         icon: "📺" },
-    update_anime:   { label: "Updated anime entry", icon: "✏️" },
-    remove_anime:   { label: "Removed anime",       icon: "🗑️" },
-    add_manga:      { label: "Added manga",         icon: "📖" },
-    update_manga:   { label: "Updated manga entry", icon: "✏️" },
-    remove_manga:   { label: "Removed manga",       icon: "🗑️" },
-    update_profile: { label: "Updated profile",     icon: "👤" },
-    delete_account: { label: "Deleted account",     icon: "⛔" },
-    save_review:    { label: "Wrote a review",      icon: "⭐" },
-    save_diary:     { label: "Added diary entry",   icon: "📔" },
+    // auth
+    sign_in:          { label: "Signed in",            icon: "🔑" },
+    sign_up:          { label: "Joined AnimeBoxD",      icon: "🎉" },
+    sign_out:         { label: "Signed out",            icon: "👋" },
+    delete_account:   { label: "Deleted account",       icon: "⛔" },
+    // anime — actual event names used by the app
+    anime_saved:      { label: "Saved anime entry",     icon: "📺" },
+    anime_updated:    { label: "Updated anime entry",   icon: "✏️" },
+    anime_removed:    { label: "Removed anime",         icon: "🗑️" },
+    // manga
+    manga_saved:      { label: "Saved manga entry",     icon: "📖" },
+    manga_updated:    { label: "Updated manga entry",   icon: "✏️" },
+    manga_removed:    { label: "Removed manga",         icon: "🗑️" },
+    // profile / settings
+    profile_updated:  { label: "Updated profile",       icon: "👤" },
+    history_cleared:  { label: "Cleared history",       icon: "🧹" },
+    // reviews / diary
+    review_saved:     { label: "Wrote a review",        icon: "⭐" },
+    diary_saved:      { label: "Added diary entry",     icon: "📔" },
   };
   return map[eventType] ?? { label: eventType.replace(/_/g, " "), icon: "📌" };
 }
@@ -2899,8 +2905,10 @@ function AdminPage({ onBack }: { onBack: () => void }) {
                       <button className="truncate text-xs font-semibold text-teal-600 dark:text-teal-400 hover:underline" onClick={() => setSelectedUserId(actor.id)} type="button">
                         {actor.avatar} {actor.username}
                       </button>
+                    ) : event.user_id ? (
+                      <span className="text-xs text-slate-400" title={event.user_id}>User {event.user_id.slice(0, 8)}…</span>
                     ) : (
-                      <span className="text-xs text-slate-400">Unknown user</span>
+                      <span className="text-xs text-slate-400">Guest / anonymous</span>
                     )}
                     <span className="text-xs text-slate-400">{formatDate(event.created_at)}</span>
                   </div>

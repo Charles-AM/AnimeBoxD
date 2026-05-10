@@ -2619,9 +2619,31 @@ function DashboardPage({ data, onClearHistory, onBack }: { data: AppData; onClea
   );
 }
 
+// Maps activity event_type keys to a friendly label and emoji
+function friendlyEvent(eventType: string): { label: string; icon: string } {
+  const map: Record<string, { label: string; icon: string }> = {
+    sign_in:        { label: "Signed in",           icon: "🔑" },
+    sign_up:        { label: "Created account",     icon: "🎉" },
+    sign_out:       { label: "Signed out",          icon: "👋" },
+    add_anime:      { label: "Added anime",         icon: "📺" },
+    update_anime:   { label: "Updated anime entry", icon: "✏️" },
+    remove_anime:   { label: "Removed anime",       icon: "🗑️" },
+    add_manga:      { label: "Added manga",         icon: "📖" },
+    update_manga:   { label: "Updated manga entry", icon: "✏️" },
+    remove_manga:   { label: "Removed manga",       icon: "🗑️" },
+    update_profile: { label: "Updated profile",     icon: "👤" },
+    delete_account: { label: "Deleted account",     icon: "⛔" },
+    save_review:    { label: "Wrote a review",      icon: "⭐" },
+    save_diary:     { label: "Added diary entry",   icon: "📔" },
+  };
+  return map[eventType] ?? { label: eventType.replace(/_/g, " "), icon: "📌" };
+}
+
 function AdminPage({ onBack }: { onBack: () => void }) {
   const [dashboard, setDashboard] = useState<AdminDashboardData | null>(null);
   const [selectedUserId, setSelectedUserId] = useState("");
+  const [userSearch, setUserSearch] = useState("");
+  const [showAllUsers, setShowAllUsers] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -2645,13 +2667,23 @@ function AdminPage({ onBack }: { onBack: () => void }) {
   const reports = dashboard?.reports || [];
   const activity = dashboard?.activity || [];
   const notifications = dashboard?.notifications || [];
+
+  // Quick-lookup: userId → profile
+  const userById = new Map(profiles.map((p) => [p.id, p]));
+
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const activeThisWeek = profiles.filter((profile) => profile.last_seen && new Date(profile.last_seen).getTime() >= weekAgo).length;
-  const openReports = reports.filter((report) => report.status !== "closed").length;
-  const unread = notifications.filter((note) => !note.is_read).length;
-  const selectedUser = profiles.find((profile) => profile.id === selectedUserId) || null;
-  const selectedUserReports = selectedUser ? reports.filter((report) => report.user_id === selectedUser.id) : [];
-  const selectedUserActivity = selectedUser ? activity.filter((event) => event.user_id === selectedUser.id).slice(0, 8) : [];
+  const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const activeThisWeek = profiles.filter((p) => p.last_seen && new Date(p.last_seen).getTime() >= weekAgo).length;
+  const newThisMonth = profiles.filter((p) => p.created_at && new Date(p.created_at).getTime() >= monthAgo).length;
+  const totalAnime = profiles.reduce((sum, p) => sum + (p.anime_count || 0), 0);
+  const totalManga = profiles.reduce((sum, p) => sum + (p.manga_count || 0), 0);
+  const openReports = reports.filter((r) => r.status !== "closed").length;
+  const unread = notifications.filter((n) => !n.is_read).length;
+
+  const selectedUser = profiles.find((p) => p.id === selectedUserId) || null;
+  const selectedUserReports = selectedUser ? reports.filter((r) => r.user_id === selectedUser.id) : [];
+  const selectedUserActivity = selectedUser ? activity.filter((e) => e.user_id === selectedUser.id).slice(0, 10) : [];
+
   const pageViews = dashboard?.pageViews || [];
   const uniqueSessions = new Set(pageViews.map((v) => v.session_id)).size;
   const anonViews = pageViews.filter((v) => !v.user_id).length;
@@ -2660,6 +2692,7 @@ function AdminPage({ onBack }: { onBack: () => void }) {
     acc[v.page] = (acc[v.page] || 0) + 1;
     return acc;
   }, {})).map(([page, count]) => ({ page, count })).sort((a, b) => b.count - a.count);
+
   const buildSeries = (items: { created_at?: string }[], days = 14) => {
     const now = new Date();
     const rows = Array.from({ length: days }).map((_, index) => {
@@ -2685,6 +2718,11 @@ function AdminPage({ onBack }: { onBack: () => void }) {
     return acc;
   }, {})).map(([category, count]) => ({ category, count }));
 
+  const filteredProfiles = userSearch.trim()
+    ? profiles.filter((p) => p.username.toLowerCase().includes(userSearch.toLowerCase()) || (p.email || "").toLowerCase().includes(userSearch.toLowerCase()))
+    : profiles;
+  const visibleProfiles = showAllUsers ? filteredProfiles : filteredProfiles.slice(0, 8);
+
   return (
     <div className="mx-auto grid max-w-6xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -2700,13 +2738,31 @@ function AdminPage({ onBack }: { onBack: () => void }) {
 
       {error && <p className="rounded-2xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-100">{error}</p>}
 
-      <div className="grid grid-cols-1 gap-3 min-[520px]:grid-cols-2 lg:grid-cols-4">
-        <Card><p className="text-sm font-semibold text-slate-500">Users</p><p className="mt-1 text-4xl font-black">{profiles.length}</p><p className="text-xs text-slate-500">{activeThisWeek} active this week</p></Card>
-        <Card><p className="text-sm font-semibold text-slate-500">Reports</p><p className="mt-1 text-4xl font-black">{reports.length}</p><p className="text-xs text-slate-500">{openReports} open</p></Card>
-        <Card><p className="text-sm font-semibold text-slate-500">Activity</p><p className="mt-1 text-4xl font-black">{activity.length}</p><p className="text-xs text-slate-500">Latest tracked events</p></Card>
-        <Card><p className="text-sm font-semibold text-slate-500">Notifications</p><p className="mt-1 text-4xl font-black">{unread}</p><p className="text-xs text-slate-500">Unread owner notes</p></Card>
+      {/* Primary stats */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Card className="border-teal-200/60 dark:border-teal-900/40">
+          <p className="text-sm font-semibold text-slate-500">Total signups</p>
+          <p className="mt-1 text-4xl font-black text-teal-600 dark:text-teal-400">{profiles.length}</p>
+          <p className="text-xs text-slate-500">+{newThisMonth} this month · {activeThisWeek} active this week</p>
+        </Card>
+        <Card>
+          <p className="text-sm font-semibold text-slate-500">Anime tracked</p>
+          <p className="mt-1 text-4xl font-black">{totalAnime}</p>
+          <p className="text-xs text-slate-500">Across all users</p>
+        </Card>
+        <Card>
+          <p className="text-sm font-semibold text-slate-500">Manga tracked</p>
+          <p className="mt-1 text-4xl font-black">{totalManga}</p>
+          <p className="text-xs text-slate-500">Across all users</p>
+        </Card>
+        <Card>
+          <p className="text-sm font-semibold text-slate-500">Reports</p>
+          <p className="mt-1 text-4xl font-black">{reports.length}</p>
+          <p className="text-xs text-slate-500">{openReports} open · {unread} unread notifications</p>
+        </Card>
       </div>
 
+      {/* Reach stats */}
       <div className="grid grid-cols-1 gap-3 min-[520px]:grid-cols-3">
         <Card><p className="text-sm font-semibold text-slate-500">Page views <span className="text-[10px] font-normal">(30 days)</span></p><p className="mt-1 text-4xl font-black">{pageViews.length}</p><p className="text-xs text-slate-500">{uniqueSessions} unique sessions</p></Card>
         <Card><p className="text-sm font-semibold text-slate-500">Anonymous visitors</p><p className="mt-1 text-4xl font-black">{anonViews}</p><p className="text-xs text-slate-500">Browsed without signing in</p></Card>
@@ -2801,18 +2857,58 @@ function AdminPage({ onBack }: { onBack: () => void }) {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="grid gap-3">
-          <h3 className="font-display text-2xl">Recent users</h3>
-          {profiles.slice(0, 8).map((profile) => (
-            <button key={profile.id} className={clsx("grid grid-cols-[44px_minmax(0,1fr)] gap-3 rounded-2xl border p-3 text-left transition hover:border-teal-400", selectedUserId === profile.id ? "border-teal-400 bg-teal-50/70 dark:bg-teal-950/30" : "border-slate-200/70 bg-white/70 dark:border-slate-800 dark:bg-slate-900/70")} onClick={() => setSelectedUserId(profile.id)} type="button">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="font-display text-2xl">Members <span className="text-base font-normal text-slate-400">({filteredProfiles.length})</span></h3>
+          </div>
+          <input
+            className="w-full rounded-xl border border-slate-200/70 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-teal-500 dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-100"
+            placeholder="Search by name or email…"
+            value={userSearch}
+            onChange={(e) => { setUserSearch(e.target.value); setShowAllUsers(true); }}
+          />
+          {visibleProfiles.map((profile) => (
+            <button key={profile.id} className={clsx("grid grid-cols-[44px_minmax(0,1fr)] gap-3 rounded-2xl border p-3 text-left transition hover:border-teal-400", selectedUserId === profile.id ? "border-teal-400 bg-teal-50/70 dark:bg-teal-950/30" : "border-slate-200/70 bg-white/70 dark:border-slate-800 dark:bg-slate-900/70")} onClick={() => setSelectedUserId(profile.id === selectedUserId ? "" : profile.id)} type="button">
               <div className="grid h-11 w-11 place-items-center rounded-xl bg-teal-50 text-2xl dark:bg-teal-950/40">{profile.avatar || "✨"}</div>
               <div className="min-w-0">
-                <p className="truncate font-bold text-slate-900 dark:text-white">{profile.username} {profile.is_admin ? "(admin)" : ""}</p>
+                <p className="truncate font-bold text-slate-900 dark:text-white">{profile.username}{profile.is_admin ? <span className="ml-1.5 rounded-full bg-teal-100 px-1.5 py-0.5 text-[10px] font-bold text-teal-700 dark:bg-teal-950 dark:text-teal-300">admin</span> : null}</p>
                 <p className="truncate text-xs text-slate-500">{profile.email || "No email saved"}</p>
-                <p className="text-xs text-slate-500">Joined {formatDate(profile.created_at)} • Last seen {formatDate(profile.last_seen)}</p>
+                <p className="text-xs text-slate-500">Joined {formatDate(profile.created_at)} · {profile.anime_count || 0} anime · {profile.manga_count || 0} manga</p>
               </div>
             </button>
           ))}
+          {filteredProfiles.length > 8 && (
+            <button className="rounded-xl border border-slate-200/70 py-2 text-sm font-semibold text-slate-500 transition hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:text-slate-400" onClick={() => setShowAllUsers((v) => !v)} type="button">
+              {showAllUsers ? "Show fewer" : `Show all ${filteredProfiles.length} members`}
+            </button>
+          )}
           {!profiles.length && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No users loaded yet.</p>}
+        </Card>
+
+        <Card className="grid gap-3">
+          <h3 className="font-display text-2xl">Live activity</h3>
+          {activity.slice(0, 15).map((event) => {
+            const actor = event.user_id ? userById.get(event.user_id) : null;
+            const { label, icon } = friendlyEvent(event.event_type);
+            return (
+              <div key={event.id} className="flex items-start gap-3 rounded-2xl border border-slate-200/70 bg-white/70 p-3 dark:border-slate-800 dark:bg-slate-900/70">
+                <span className="mt-0.5 shrink-0 text-xl leading-none">{icon}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-bold capitalize text-slate-900 dark:text-white">{label}</p>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    {actor ? (
+                      <button className="truncate text-xs font-semibold text-teal-600 dark:text-teal-400 hover:underline" onClick={() => setSelectedUserId(actor.id)} type="button">
+                        {actor.avatar} {actor.username}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-slate-400">Unknown user</span>
+                    )}
+                    <span className="text-xs text-slate-400">{formatDate(event.created_at)}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {!activity.length && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No activity logged yet.</p>}
         </Card>
 
         <Card className="grid gap-3">
@@ -2825,21 +2921,10 @@ function AdminPage({ onBack }: { onBack: () => void }) {
                 <span className="text-xs text-slate-500">{formatDate(report.created_at)}</span>
               </div>
               <p className="mt-2 line-clamp-3 text-sm text-slate-700 dark:text-slate-200">{report.message}</p>
-              <p className="mt-1 truncate text-xs text-slate-500">{report.name || "Anonymous"} • {report.email || "No email"}</p>
+              <p className="mt-1 truncate text-xs text-slate-500">{report.name || "Anonymous"} · {report.email || "No email"}</p>
             </div>
           ))}
           {!reports.length && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No reports yet.</p>}
-        </Card>
-
-        <Card className="grid gap-3">
-          <h3 className="font-display text-2xl">Live activity</h3>
-          {activity.slice(0, 10).map((event) => (
-            <div key={event.id} className="rounded-2xl border border-slate-200/70 bg-white/70 p-3 dark:border-slate-800 dark:bg-slate-900/70">
-              <p className="font-bold text-slate-900 dark:text-white">{event.event_type.replace(/_/g, " ")}</p>
-              <p className="text-xs text-slate-500">{formatDate(event.created_at)} • {event.user_id || "Unknown user"}</p>
-            </div>
-          ))}
-          {!activity.length && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No activity logged yet.</p>}
         </Card>
 
         <Card className="grid gap-3">

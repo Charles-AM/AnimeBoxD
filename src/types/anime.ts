@@ -206,5 +206,8 @@ export interface AdminDashboardData {
   reports: AdminReportSummary[];
   activity: AdminActivityEvent[];
   notifications: AdminNotification[];
-  pageViews: AdminPageView[];
+  pageViews: AdminPageView[];           // last 30 days detail (for chart)
+  allTimePageViewCount: number;         // total all-time page view count
+  allTimeSessionCount: number;          // total all-time unique session count
+  allTimeSignedInViewCount: number;     // all-time views by logged-in users
 }

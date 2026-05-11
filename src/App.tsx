@@ -2691,9 +2691,10 @@ function AdminPage({ onBack }: { onBack: () => void }) {
   const selectedUserActivity = selectedUser ? activity.filter((e) => e.user_id === selectedUser.id).slice(0, 10) : [];
 
   const pageViews = dashboard?.pageViews || [];
-  const uniqueSessions = new Set(pageViews.map((v) => v.session_id)).size;
-  const anonViews = pageViews.filter((v) => !v.user_id).length;
-  const signedInViews = pageViews.filter((v) => v.user_id).length;
+  const allTimePageViewCount = dashboard?.allTimePageViewCount ?? 0;
+  const allTimeSignedInViewCount = dashboard?.allTimeSignedInViewCount ?? 0;
+  const allTimeAnonViewCount = allTimePageViewCount - allTimeSignedInViewCount;
+  const uniqueSessions30d = new Set(pageViews.map((v) => v.session_id)).size; // 30-day window
   const pageViewsByPage = Object.entries(pageViews.reduce<Record<string, number>>((acc, v) => {
     acc[v.page] = (acc[v.page] || 0) + 1;
     return acc;
@@ -2770,9 +2771,21 @@ function AdminPage({ onBack }: { onBack: () => void }) {
 
       {/* Reach stats */}
       <div className="grid grid-cols-1 gap-3 min-[520px]:grid-cols-3">
-        <Card><p className="text-sm font-semibold text-slate-500">Page views <span className="text-[10px] font-normal">(30 days)</span></p><p className="mt-1 text-4xl font-black">{pageViews.length}</p><p className="text-xs text-slate-500">{uniqueSessions} unique sessions</p></Card>
-        <Card><p className="text-sm font-semibold text-slate-500">Anonymous visitors</p><p className="mt-1 text-4xl font-black">{anonViews}</p><p className="text-xs text-slate-500">Browsed without signing in</p></Card>
-        <Card><p className="text-sm font-semibold text-slate-500">Signed-in views</p><p className="mt-1 text-4xl font-black">{signedInViews}</p><p className="text-xs text-slate-500">Views from logged-in users</p></Card>
+        <Card className="border-indigo-200/60 dark:border-indigo-900/40">
+          <p className="text-sm font-semibold text-slate-500">Total site visits</p>
+          <p className="mt-1 text-4xl font-black text-indigo-600 dark:text-indigo-400">{allTimePageViewCount.toLocaleString()}</p>
+          <p className="text-xs text-slate-500">All time · {uniqueSessions30d} sessions in last 30 days</p>
+        </Card>
+        <Card>
+          <p className="text-sm font-semibold text-slate-500">Guest visits</p>
+          <p className="mt-1 text-4xl font-black">{allTimeAnonViewCount.toLocaleString()}</p>
+          <p className="text-xs text-slate-500">All time · browsed without signing in</p>
+        </Card>
+        <Card>
+          <p className="text-sm font-semibold text-slate-500">Member visits</p>
+          <p className="mt-1 text-4xl font-black">{allTimeSignedInViewCount.toLocaleString()}</p>
+          <p className="text-xs text-slate-500">All time · from logged-in users</p>
+        </Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">

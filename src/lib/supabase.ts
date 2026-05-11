@@ -310,7 +310,7 @@ export async function createReport(payload: { userId?: string; name?: string; em
 export async function loadAdminDashboard(): Promise<AdminDashboardData> {
   const client = assertSupabase();
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const [profiles, reports, activity, notifications, userData, pageViews] = await Promise.all([
+  const [profiles, reports, activity, notifications, userData, pageViews, allTimeCount, allTimeSignedInCount] = await Promise.all([
     client
       .from("profiles")
       .select("id, email, username, avatar, bio, is_public, is_admin, created_at, last_seen")
@@ -335,16 +335,28 @@ export async function loadAdminDashboard(): Promise<AdminDashboardData> {
       .from("user_app_data")
       .select("user_id, data")
       .limit(100),
+    // Last 30 days detail rows — used for the chart
     client
       .from("page_views")
       .select("id, session_id, user_id, page, referrer, created_at")
       .gte("created_at", thirtyDaysAgo)
       .order("created_at", { ascending: false })
-      .limit(2000)
+      .limit(5000),
+    // All-time total count — HEAD request, zero rows transferred
+    client
+      .from("page_views")
+      .select("*", { count: "exact", head: true }),
+    // All-time signed-in views count
+    client
+      .from("page_views")
+      .select("*", { count: "exact", head: true })
+      .not("user_id", "is", null)
   ]);
 
   const firstError = profiles.error || reports.error || activity.error || notifications.error || userData.error;
   if (firstError) throw firstError;
+  const totalPageViews = allTimeCount.count ?? 0;
+  const totalSignedInViews = allTimeSignedInCount.count ?? 0;
   const userDataById = new Map((userData.data || []).map((row: { user_id: string; data: Partial<AppData> }) => [row.user_id, row.data]));
   const reportsByUser = new Map<string, number>();
   (reports.data || []).forEach((report: { user_id?: string | null }) => {
@@ -371,7 +383,10 @@ export async function loadAdminDashboard(): Promise<AdminDashboardData> {
     reports: reports.data || [],
     activity: activity.data || [],
     notifications: notifications.data || [],
-    pageViews: (pageViews.data || []) as AdminPageView[]
+    pageViews: (pageViews.data || []) as AdminPageView[],
+    allTimePageViewCount: totalPageViews,
+    allTimeSessionCount: 0, // computed client-side from allTimePageViewCount (sessions not separately counted)
+    allTimeSignedInViewCount: totalSignedInViews
   } as AdminDashboardData;
 }
 

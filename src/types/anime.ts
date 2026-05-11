@@ -35,6 +35,8 @@ export interface AnimeDetail extends AnimeSummary {
   title_japanese?: string;
 }
 
+export type ComicMediaType = "manga" | "manhwa" | "manhua";
+
 export interface MangaSummary {
   mal_id: number;
   title: string;
@@ -52,6 +54,7 @@ export interface MangaSummary {
   serialization?: string[];
   themes?: string[];
   demographics?: string[];
+  mediaType?: ComicMediaType;
 }
 
 export interface MangaDetail extends MangaSummary {
@@ -86,6 +89,7 @@ export interface MangaEntry extends MangaSummary {
   drop_reason: string;
   tags: string[];
   added_at: string;
+  mediaType?: ComicMediaType;
 }
 
 export interface Review {

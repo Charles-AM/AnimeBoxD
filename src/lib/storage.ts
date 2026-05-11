@@ -20,7 +20,10 @@ export const defaultSettings: Settings = {
   favoriteAnimeIds: [],
   favoriteAnimeCatalog: [],
   favoriteMangaIds: [],
-  favoriteMangaCatalog: []
+  favoriteMangaCatalog: [],
+  streakDays: 0,
+  streakLastDate: "",
+  streakBest: 0
 };
 
 export const defaultData: AppData = {

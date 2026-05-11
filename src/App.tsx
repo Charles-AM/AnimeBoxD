@@ -189,6 +189,48 @@ function normalizeRating(value: number) {
   return Math.min(10, Math.max(0.5, Math.round(value * 2) / 2));
 }
 
+const MOOD_TAGS = [
+  { label: "Cozy",            emoji: "🛋️" },
+  { label: "Hype",            emoji: "⚡" },
+  { label: "Dark",            emoji: "🌑" },
+  { label: "Funny",           emoji: "😂" },
+  { label: "Emotional",       emoji: "💔" },
+  { label: "Mind-bending",    emoji: "🤯" },
+  { label: "Action-packed",   emoji: "🔥" },
+  { label: "Feel-good",       emoji: "🌸" },
+  { label: "Slow burn",       emoji: "🕯️" },
+  { label: "Binge-worthy",    emoji: "📺" },
+  { label: "Thought-provoking", emoji: "💭" },
+  { label: "Chill",           emoji: "😌" },
+];
+
+function MoodPicker({ value, onChange }: { value: string[]; onChange: (moods: string[]) => void }) {
+  const toggle = (label: string) =>
+    onChange(value.includes(label) ? value.filter((m) => m !== label) : [...value, label]);
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {MOOD_TAGS.map(({ label, emoji }) => {
+        const active = value.includes(label);
+        return (
+          <button
+            key={label}
+            type="button"
+            onClick={() => toggle(label)}
+            className={clsx(
+              "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold transition",
+              active
+                ? "border-teal-400 bg-teal-50 text-teal-900 dark:bg-teal-950/60 dark:text-teal-100"
+                : "border-slate-200/70 bg-white/80 text-slate-600 hover:border-teal-300 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300"
+            )}
+          >
+            <span>{emoji}</span> {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function StarRating({ value, onChange }: { value: number; onChange: (value: number) => void }) {
   const rating = normalizeRating(value);
   return (
@@ -199,16 +241,16 @@ function StarRating({ value, onChange }: { value: number; onChange: (value: numb
           const fillWidth = rating >= score ? "100%" : rating >= score - 0.5 ? "50%" : "0%";
           return (
             <span key={score} className="relative h-7 w-7 shrink-0 sm:h-8 sm:w-8">
-              <Star className="absolute inset-0 h-full w-full text-slate-300 dark:text-slate-700" />
+              <Star className="absolute inset-0 h-full w-full fill-yellow-100 text-yellow-300 dark:fill-slate-800 dark:text-yellow-900/60" />
               <span className="absolute inset-0 overflow-hidden" style={{ width: fillWidth }}>
-                <Star className="h-7 w-7 fill-amber-400 text-amber-400 sm:h-8 sm:w-8" />
+                <Star className="h-7 w-7 fill-yellow-400 text-yellow-400 sm:h-8 sm:w-8" />
               </span>
-              <button className="absolute left-0 top-0 h-full w-1/2 rounded-l-md focus:outline-none focus:ring-2 focus:ring-teal-400" onClick={() => onChange(score - 0.5)} type="button" aria-label={`Rate ${score - 0.5} out of 10`} />
-              <button className="absolute right-0 top-0 h-full w-1/2 rounded-r-md focus:outline-none focus:ring-2 focus:ring-teal-400" onClick={() => onChange(score)} type="button" aria-label={`Rate ${score} out of 10`} />
+              <button className="absolute left-0 top-0 h-full w-1/2 rounded-l-md focus:outline-none focus:ring-2 focus:ring-yellow-400" onClick={() => onChange(score - 0.5)} type="button" aria-label={`Rate ${score - 0.5} out of 10`} />
+              <button className="absolute right-0 top-0 h-full w-1/2 rounded-r-md focus:outline-none focus:ring-2 focus:ring-yellow-400" onClick={() => onChange(score)} type="button" aria-label={`Rate ${score} out of 10`} />
             </span>
           );
         })}
-        <span className="ml-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-black text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+        <span className="ml-1 rounded-full bg-yellow-50 px-2.5 py-1 text-xs font-black text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-300">
           {rating ? `${rating}/10` : "No rating"}
         </span>
       </div>
@@ -238,6 +280,7 @@ function mergeAnimeToEntry(anime: AnimeSummary, existing?: LibraryEntry): Librar
     review: existing?.review || "",
     drop_reason: existing?.drop_reason || "",
     tags: existing?.tags || [],
+    moods: existing?.moods || [],
     added_at: existing?.added_at || new Date().toISOString()
   };
 }
@@ -249,13 +292,29 @@ function mergeMangaToEntry(manga: MangaSummary, existing?: MangaEntry): MangaEnt
     rating: existing?.rating || 0,
     chapters_read: existing?.chapters_read || 0,
     volumes_read: existing?.volumes_read || 0,
+    reread_count: existing?.reread_count || 0,
     start_date: existing?.start_date || "",
     end_date: existing?.end_date || "",
     notes: existing?.notes || "",
     review: existing?.review || "",
     drop_reason: existing?.drop_reason || "",
     tags: existing?.tags || [],
+    moods: existing?.moods || [],
     added_at: existing?.added_at || new Date().toISOString()
+  };
+}
+
+function updateStreak(settings: Settings): Settings {
+  const today = new Date().toISOString().slice(0, 10);
+  const last = settings.streakLastDate || "";
+  if (last === today) return settings; // already logged today
+  const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+  const newStreak = last === yesterday ? (settings.streakDays || 0) + 1 : 1;
+  return {
+    ...settings,
+    streakDays: newStreak,
+    streakLastDate: today,
+    streakBest: Math.max(newStreak, settings.streakBest || 0)
   };
 }
 
@@ -571,7 +630,7 @@ function AuthPage({ initialNotice, onBrowse, onLogin }: { initialNotice?: string
   );
 }
 
-function Header({ user, theme, isAdmin, onThemeChange, onLogout, onHome, onMyStuff, onMyManga, onMyManhwa, onMyLightNovel, onDashboard, onExplore, onProfile, onAdmin, onReportIssue, activePage }: { user: { name: string; avatar: string }; theme: ThemeMode; isAdmin: boolean; onThemeChange: (value: ThemeMode) => void; onLogout: () => void; onHome: () => void; onMyStuff: () => void; onMyManga: () => void; onMyManhwa: () => void; onMyLightNovel: () => void; onDashboard: () => void; onExplore: () => void; onProfile: () => void; onAdmin: () => void; onReportIssue: () => void; activePage: AppPage }) {
+function Header({ user, theme, isAdmin, streakDays, onThemeChange, onLogout, onHome, onMyStuff, onMyManga, onMyManhwa, onMyLightNovel, onDashboard, onExplore, onProfile, onAdmin, onReportIssue, activePage }: { user: { name: string; avatar: string }; theme: ThemeMode; isAdmin: boolean; streakDays?: number; onThemeChange: (value: ThemeMode) => void; onLogout: () => void; onHome: () => void; onMyStuff: () => void; onMyManga: () => void; onMyManhwa: () => void; onMyLightNovel: () => void; onDashboard: () => void; onExplore: () => void; onProfile: () => void; onAdmin: () => void; onReportIssue: () => void; activePage: AppPage }) {
   return (
     <header className="sticky top-0 z-20 border-b border-white/60 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
       <div className="mx-auto flex max-w-6xl flex-col gap-2 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3 lg:flex-row lg:items-center lg:justify-between">
@@ -605,6 +664,11 @@ function Header({ user, theme, isAdmin, onThemeChange, onLogout, onHome, onMyStu
           </button>
           </>); })()}
           {(() => { const themeOrder: ThemeMode[] = ["Dark", "Light", "System"]; const nextTheme = themeOrder[(themeOrder.indexOf(theme) + 1) % themeOrder.length]; const ThemeIcon = theme === "Dark" ? Moon : theme === "Light" ? Sun : Monitor; return (<button className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-slate-200/70 bg-white/80 px-2 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300 sm:gap-1.5 sm:px-2.5 sm:py-2 sm:text-sm" onClick={() => onThemeChange(nextTheme)} title={`Switch to ${nextTheme} mode`} type="button" aria-label={`Switch to ${nextTheme} mode`}><ThemeIcon className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" /><span className="hidden sm:inline">{theme}</span></button>); })()}
+          {(streakDays || 0) >= 2 && (
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-orange-300/70 bg-orange-50 px-2 py-1.5 text-xs font-bold text-orange-600 dark:border-orange-800/60 dark:bg-orange-950/30 dark:text-orange-300" title={`${streakDays}-day streak!`}>
+              🔥 {streakDays}
+            </span>
+          )}
           <button className={clsx("inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-sm font-semibold shadow-sm transition hover:-translate-y-0.5 sm:px-3", activePage === "profile" ? "border-teal-400 bg-teal-50 text-teal-900 dark:bg-teal-400 dark:text-slate-950" : "border-slate-200/70 bg-white/90 text-slate-700 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-200")} onClick={onProfile} type="button">
             <span className="grid h-7 w-7 place-items-center rounded-full bg-teal-100 text-base dark:bg-slate-950/60">{user.avatar}</span>
             <span className="grid min-w-0 text-left leading-tight">
@@ -1135,9 +1199,11 @@ function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave
   const [status, setStatus] = useState<LibraryStatus>("Plan to Watch");
   const [rating, setRating] = useState(0);
   const [episodesWatchedInput, setEpisodesWatchedInput] = useState("");
+  const [rewatchCount, setRewatchCount] = useState(0);
   const [review, setReview] = useState("");
   const [notes, setNotes] = useState("");
   const [dropReason, setDropReason] = useState("");
+  const [moods, setMoods] = useState<string[]>([]);
   const changeStatus = (nextStatus: LibraryStatus) => {
     setStatus(nextStatus);
     if (nextStatus === "Completed" && anime.total_episodes > 0) {
@@ -1178,12 +1244,20 @@ function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave
             <FieldGroup label="Rating">
               <StarRating value={rating} onChange={setRating} />
             </FieldGroup>
+            <FieldGroup label="Vibe tags">
+              <MoodPicker value={moods} onChange={setMoods} />
+            </FieldGroup>
             <Field label="Review">
               <textarea className={clsx(inputClass(), "min-h-24")} value={review} onChange={(event) => setReview(event.target.value)} />
             </Field>
             <Field label="Notes">
               <textarea className={clsx(inputClass(), "min-h-20")} value={notes} onChange={(event) => setNotes(event.target.value)} />
             </Field>
+            {status === "Completed" && (
+              <Field label="Rewatch count">
+                <input className={inputClass()} type="number" min={0} max={99} value={rewatchCount} onChange={(e) => setRewatchCount(Math.max(0, Number(e.target.value)))} />
+              </Field>
+            )}
             {status === "Dropped" && (
               <Field label="Why did you drop it?">
                 <textarea className={clsx(inputClass(), "min-h-20")} placeholder="Too slow, not my style, bad pacing..." value={dropReason} onChange={(event) => setDropReason(event.target.value)} />
@@ -1193,7 +1267,7 @@ function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave
               <Button className="bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => {
                 const entry = mergeAnimeToEntry(anime);
                 const episodesWatched = status === "Completed" && anime.total_episodes > 0 ? anime.total_episodes : episodesWatchedInput.trim() ? Number(episodesWatchedInput) : 0;
-                onSave(applyAnimeStatus({ ...entry, status, rating, episodes_watched: episodesWatched, review, notes, drop_reason: dropReason }, status));
+                onSave(applyAnimeStatus({ ...entry, status, rating, episodes_watched: episodesWatched, rewatch_count: rewatchCount, review, notes, drop_reason: dropReason, moods }, status));
               }}>Save</Button>
               <button className="button-ghost" onClick={onCancel}>Cancel</button>
             </div>
@@ -1207,9 +1281,11 @@ function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave
 function AddMangaPage({ manga, onSave, onCancel }: { manga: MangaSummary; onSave: (entry: MangaEntry) => void; onCancel: () => void }) {
   const [status, setStatus] = useState<MangaStatus>("Plan to Read");
   const [rating, setRating] = useState(0);
+  const [rereadCount, setRereadCount] = useState(0);
   const [review, setReview] = useState("");
   const [notes, setNotes] = useState("");
   const [dropReason, setDropReason] = useState("");
+  const [moods, setMoods] = useState<string[]>([]);
   const changeStatus = (nextStatus: MangaStatus) => setStatus(nextStatus);
 
   return (
@@ -1235,6 +1311,12 @@ function AddMangaPage({ manga, onSave, onCancel }: { manga: MangaSummary; onSave
             <FieldGroup label="Rating">
               <StarRating value={rating} onChange={setRating} />
             </FieldGroup>
+            <FieldGroup label="Vibe tags">
+              <MoodPicker value={moods} onChange={setMoods} />
+            </FieldGroup>
+            <Field label="Re-read count">
+              <input className={inputClass()} type="number" min={0} max={99} value={rereadCount} onChange={(e) => setRereadCount(Math.max(0, Number(e.target.value)))} />
+            </Field>
             <Field label="Review">
               <textarea className={clsx(inputClass(), "min-h-24")} value={review} onChange={(event) => setReview(event.target.value)} />
             </Field>
@@ -1249,7 +1331,7 @@ function AddMangaPage({ manga, onSave, onCancel }: { manga: MangaSummary; onSave
             <div className="flex items-center gap-2">
               <Button className="bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => {
                 const entry = mergeMangaToEntry(manga);
-                onSave(applyMangaStatus({ ...entry, status, rating, review, notes, drop_reason: dropReason }, status));
+                onSave(applyMangaStatus({ ...entry, status, rating, reread_count: rereadCount, review, notes, drop_reason: dropReason, moods }, status));
               }}>Save</Button>
               <button className="button-ghost" onClick={onCancel}>Cancel</button>
             </div>
@@ -1286,6 +1368,11 @@ function LibraryCard({ entry, onUpdate, onRemove }: { entry: LibraryEntry; onUpd
           <div className="h-2 rounded-full bg-teal-500" style={{ width: `${progress}%` }} />
         </div>
       </div>
+      {!expanded && (draft.moods || []).length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {(draft.moods || []).map((mood) => <span key={mood} className="rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-semibold text-teal-700 dark:bg-teal-950/40 dark:text-teal-300">{mood}</span>)}
+        </div>
+      )}
       {draft.status === "Dropped" && draft.drop_reason && (
         <p className="rounded-xl bg-rose-50 p-2 text-xs text-rose-700 dark:bg-rose-950/30 dark:text-rose-200">Dropped: {draft.drop_reason}</p>
       )}
@@ -1304,6 +1391,12 @@ function LibraryCard({ entry, onUpdate, onRemove }: { entry: LibraryEntry; onUpd
           <FieldGroup label="Rating">
             <StarRating value={draft.rating} onChange={(rating) => setDraft({ ...draft, rating })} />
           </FieldGroup>
+          <FieldGroup label="Vibe tags">
+            <MoodPicker value={draft.moods || []} onChange={(moods) => setDraft({ ...draft, moods })} />
+          </FieldGroup>
+          <Field label="Rewatch count">
+            <input className={inputClass()} type="number" min={0} max={99} value={draft.rewatch_count || 0} onChange={(e) => setDraft({ ...draft, rewatch_count: Math.max(0, Number(e.target.value)) })} />
+          </Field>
           <Field label="Review">
             <textarea className={clsx(inputClass(), "min-h-24")} value={draft.review} onChange={(event) => setDraft({ ...draft, review: event.target.value })} />
           </Field>
@@ -1318,6 +1411,7 @@ function LibraryCard({ entry, onUpdate, onRemove }: { entry: LibraryEntry; onUpd
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
               <span>Added {new Date(entry.added_at).toLocaleDateString()}</span>
+              {(draft.rewatch_count || 0) > 0 && <span className="flex items-center gap-1 text-teal-600"><RefreshCcw className="h-3 w-3" />{draft.rewatch_count}×</span>}
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button className="bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => { onUpdate(applyAnimeStatus({ ...draft }, draft.status)); setExpanded(false); }}>Save</Button>
@@ -1354,6 +1448,11 @@ function MangaCard({ entry, onUpdate, onRemove }: { entry: MangaEntry; onUpdate:
           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </button>
       </div>
+      {!expanded && (draft.moods || []).length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {(draft.moods || []).map((mood) => <span key={mood} className="rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-semibold text-teal-700 dark:bg-teal-950/40 dark:text-teal-300">{mood}</span>)}
+        </div>
+      )}
       {draft.status === "Dropped" && draft.drop_reason && (
         <p className="rounded-xl bg-rose-50 p-2 text-xs text-rose-700 dark:bg-rose-950/30 dark:text-rose-200">Dropped: {draft.drop_reason}</p>
       )}
@@ -1369,6 +1468,12 @@ function MangaCard({ entry, onUpdate, onRemove }: { entry: MangaEntry; onUpdate:
           <FieldGroup label="Rating">
             <StarRating value={draft.rating} onChange={(rating) => setDraft({ ...draft, rating })} />
           </FieldGroup>
+          <FieldGroup label="Vibe tags">
+            <MoodPicker value={draft.moods || []} onChange={(moods) => setDraft({ ...draft, moods })} />
+          </FieldGroup>
+          <Field label="Re-read count">
+            <input className={inputClass()} type="number" min={0} max={99} value={draft.reread_count || 0} onChange={(e) => setDraft({ ...draft, reread_count: Math.max(0, Number(e.target.value)) })} />
+          </Field>
           <Field label="Review">
             <textarea className={clsx(inputClass(), "min-h-24")} value={draft.review} onChange={(event) => setDraft({ ...draft, review: event.target.value })} />
           </Field>
@@ -1383,6 +1488,7 @@ function MangaCard({ entry, onUpdate, onRemove }: { entry: MangaEntry; onUpdate:
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
               <span>Added {new Date(entry.added_at).toLocaleDateString()}</span>
+              {(draft.reread_count || 0) > 0 && <span className="flex items-center gap-1 text-teal-600"><RefreshCcw className="h-3 w-3" />{draft.reread_count}×</span>}
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button className="bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => { onUpdate(applyMangaStatus({ ...draft }, draft.status)); setExpanded(false); }}>Save</Button>
@@ -2892,7 +2998,7 @@ function ProfilePage({ data, memberSince, onBack, onSaveProfile, onDeleteAccount
   );
 }
 
-function DashboardPage({ data, onClearHistory, onBack }: { data: AppData; onClearHistory: () => void; onBack: () => void }) {
+function DashboardPage({ data, onClearHistory, onBack }: { data: AppData; onClearHistory: () => void; onBack: () => void; }) {
   const counts = {
     total: data.library.length,
     watching: data.library.filter((entry) => entry.status === "Watching").length,
@@ -2957,7 +3063,7 @@ function DashboardPage({ data, onClearHistory, onBack }: { data: AppData; onClea
           <h3 className="font-display text-3xl leading-tight sm:text-4xl">Your watch life, simplified.</h3>
           <p className="max-w-2xl text-sm text-slate-500">A clean snapshot of what you have saved and finished.</p>
         </div>
-        <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 lg:grid-cols-5">
           <div className="rounded-2xl border border-teal-200/70 bg-teal-50/60 p-4 dark:border-teal-900/60 dark:bg-teal-950/20">
             <p className="text-sm font-semibold text-slate-500">Total saved</p>
             <p className="mt-1 text-3xl font-black sm:text-4xl">{totalEntries}</p>
@@ -2977,6 +3083,11 @@ function DashboardPage({ data, onClearHistory, onBack }: { data: AppData; onClea
             <p className="text-sm font-semibold text-slate-500">Average rating</p>
             <p className="mt-1 text-3xl font-black sm:text-4xl">{combinedAverage}</p>
             <p className="text-xs text-slate-500">Anime {averageRating} • Manga {mangaAverage}</p>
+          </div>
+          <div className={clsx("rounded-2xl border p-4", (data.settings.streakDays || 0) >= 2 ? "border-orange-300/70 bg-orange-50/60 dark:border-orange-800/60 dark:bg-orange-950/20" : "border-teal-200/70 bg-white/70 dark:border-teal-900/50 dark:bg-slate-950/70")}>
+            <p className="text-sm font-semibold text-slate-500">Streak</p>
+            <p className="mt-1 text-3xl font-black sm:text-4xl">{(data.settings.streakDays || 0) >= 2 ? `🔥 ${data.settings.streakDays}` : data.settings.streakDays || 0}</p>
+            <p className="text-xs text-slate-500">Best: {data.settings.streakBest || 0} days</p>
           </div>
         </div>
       </Card>
@@ -3566,7 +3677,7 @@ function App() {
     setData((prev) => {
       const exists = prev.library.find((item) => item.mal_id === entry.mal_id);
       const library = exists ? prev.library.map((item) => item.mal_id === entry.mal_id ? entry : item) : [entry, ...prev.library];
-      return { ...prev, library };
+      return { ...prev, library, settings: updateStreak(prev.settings) };
     });
     logEvent("anime_saved", { mal_id: entry.mal_id, title: entry.title, status: entry.status, rating: entry.rating });
   };
@@ -3575,7 +3686,7 @@ function App() {
     setData((prev) => {
       const exists = prev.mangaLibrary.find((item) => item.mal_id === entry.mal_id);
       const mangaLibrary = exists ? prev.mangaLibrary.map((item) => item.mal_id === entry.mal_id ? entry : item) : [entry, ...prev.mangaLibrary];
-      return { ...prev, mangaLibrary };
+      return { ...prev, mangaLibrary, settings: updateStreak(prev.settings) };
     });
     logEvent("manga_saved", { mal_id: entry.mal_id, title: entry.title, status: entry.status, rating: entry.rating });
   };
@@ -3598,12 +3709,12 @@ function App() {
   };
 
   const updateEntry = (entry: LibraryEntry) => {
-    setData((prev) => ({ ...prev, library: prev.library.map((item) => item.mal_id === entry.mal_id ? entry : item) }));
+    setData((prev) => ({ ...prev, library: prev.library.map((item) => item.mal_id === entry.mal_id ? entry : item), settings: updateStreak(prev.settings) }));
     logEvent("anime_updated", { mal_id: entry.mal_id, title: entry.title, status: entry.status, rating: entry.rating });
   };
 
   const updateMangaEntry = (entry: MangaEntry) => {
-    setData((prev) => ({ ...prev, mangaLibrary: prev.mangaLibrary.map((item) => item.mal_id === entry.mal_id ? entry : item) }));
+    setData((prev) => ({ ...prev, mangaLibrary: prev.mangaLibrary.map((item) => item.mal_id === entry.mal_id ? entry : item), settings: updateStreak(prev.settings) }));
     logEvent("manga_updated", { mal_id: entry.mal_id, title: entry.title, status: entry.status, rating: entry.rating });
   };
 
@@ -3844,6 +3955,7 @@ function App() {
         user={{ name: data.settings.username, avatar: data.settings.avatar }}
         theme={data.settings.theme}
         isAdmin={isAdmin}
+        streakDays={data.settings.streakDays}
         onThemeChange={(value) => updateData({ settings: { ...data.settings, theme: value } })}
         onLogout={() => setConfirmAction("logout")}
         onHome={() => setPage("home")}

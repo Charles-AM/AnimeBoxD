@@ -74,6 +74,7 @@ export interface LibraryEntry extends AnimeSummary {
   review: string;
   drop_reason: string;
   tags: string[];
+  moods: string[];
   added_at: string;
 }
 
@@ -82,12 +83,14 @@ export interface MangaEntry extends MangaSummary {
   rating: number;
   chapters_read: number;
   volumes_read: number;
+  reread_count: number;
   start_date: string;
   end_date: string;
   notes: string;
   review: string;
   drop_reason: string;
   tags: string[];
+  moods: string[];
   added_at: string;
   mediaType?: ComicMediaType;
 }
@@ -140,6 +143,9 @@ export interface Settings {
   favoriteAnimeCatalog: AnimeSummary[];
   favoriteMangaIds: number[];
   favoriteMangaCatalog: MangaSummary[];
+  streakDays: number;
+  streakLastDate: string;
+  streakBest: number;
 }
 
 export interface AppData {

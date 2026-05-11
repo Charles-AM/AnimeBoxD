@@ -100,7 +100,6 @@ export function normalizeAnimeDetail(item: JikanAnime): AnimeDetail {
 
 function jikanTypeToMediaType(type?: string): import("../types/anime").ComicMediaType {
   if (type?.toLowerCase() === "manhwa") return "manhwa";
-  if (type?.toLowerCase() === "manhua") return "manhua";
   return "manga";
 }
 
@@ -298,20 +297,6 @@ export async function searchManhwa(query: string): Promise<MangaSummary[]> {
   return data;
 }
 
-export async function searchManhua(query: string): Promise<MangaSummary[]> {
-  const normalizedQuery = normalizeQuery(query);
-  if (isBlockedQuery(normalizedQuery)) return [];
-  const key = `search_manhua_cache_v1_${normalizedQuery}`;
-  const cached = readCache<MangaSummary[]>(key, hour);
-  if (cached) return filterSafeMangaSummaries(cached);
-  await throttleSearch("manga");
-  const payload = await requestJson<{ data?: JikanManga[] }>(`/manga?q=${encodeURIComponent(query)}&type=manhua&limit=25&sfw=true`);
-  const items = Array.isArray(payload.data) ? filterSafeManga(sanitizeItems(payload.data)) : [];
-  const data = items.slice(0, 12).map(normalizeManga);
-  writeCache(key, data);
-  return data;
-}
-
 export async function getTopManhwa(limit = 12): Promise<MangaSummary[]> {
   const key = `top_manhwa_cache_v1_${limit}`;
   const cached = readCache<MangaSummary[]>(key, hour);
@@ -322,15 +307,6 @@ export async function getTopManhwa(limit = 12): Promise<MangaSummary[]> {
   return data;
 }
 
-export async function getTopManhua(limit = 12): Promise<MangaSummary[]> {
-  const key = `top_manhua_cache_v1_${limit}`;
-  const cached = readCache<MangaSummary[]>(key, hour);
-  if (cached) return filterSafeMangaSummaries(cached);
-  const payload = await requestJson<{ data?: JikanManga[] }>(`/top/manga?type=manhua&limit=${limit}&sfw=true`);
-  const data = Array.isArray(payload.data) ? filterSafeManga(payload.data).map(normalizeManga) : [];
-  writeCache(key, data);
-  return data;
-}
 
 export async function searchManga(query: string): Promise<MangaSummary[]> {
   const normalizedQuery = normalizeQuery(query);

@@ -485,7 +485,7 @@ function AuthPage({ initialNotice, onBrowse, onLogin }: { initialNotice?: string
             <div className="min-w-0">
               <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Animeboxd</p>
               <h1 className="font-display text-4xl leading-tight sm:text-5xl">Welcome back</h1>
-              <p className="text-sm text-slate-500">{isSupabaseConfigured ? "Your anime and manga shelf, wherever you log in." : "Pick up where you left off."}</p>
+              <p className="text-sm text-slate-500">{isSupabaseConfigured ? "Your anime, manga and manhwa shelf, wherever you log in." : "Pick up where you left off."}</p>
             </div>
             <Film className="h-10 w-10 shrink-0 text-teal-500" />
           </div>
@@ -595,7 +595,7 @@ function Header({ user, theme, isAdmin, onThemeChange, onLogout, onHome, onMyStu
           <button className={nb(activePage === "home")} onClick={onHome}>Home</button>
           <button className={nb(activePage === "explore")} onClick={onExplore}><Search className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Explore</button>
           <button className={nb(activePage === "stuff")} onClick={onMyStuff}><Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /><span className="hidden sm:inline">My Anime</span><span className="sm:hidden">Anime</span></button>
-          <button className={nb(activePage === "manga")} onClick={onMyManga}><BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" /><span className="hidden sm:inline">My Manga</span><span className="sm:hidden">Manga</span></button>
+          <button className={nb(activePage === "manga")} onClick={onMyManga}><BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" /><span className="hidden sm:inline">My Comics</span><span className="sm:hidden">Comics</span></button>
           <button className={nb(activePage === "dashboard")} onClick={onDashboard}><span className="hidden sm:inline">Dashboard</span><span className="sm:hidden">Dash</span></button>
           {isAdmin && <button className={nb(activePage === "admin")} onClick={onAdmin}>Admin</button>}
           <button className="inline-flex shrink-0 items-center justify-center rounded-xl border border-slate-200/70 bg-white/80 p-1.5 text-slate-600 transition hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300 sm:gap-1.5 sm:px-2.5 sm:py-2" onClick={onReportIssue} title="Report issue" type="button">
@@ -1048,7 +1048,7 @@ function SearchMangaPanel({ onSelect }: { onSelect: (manga: MangaSummary) => voi
                 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold capitalize text-slate-600 dark:bg-slate-800 dark:text-slate-300">{manga.mediaType ?? "manga"}</span>
               </div>
               <p className="mt-1 line-clamp-2 text-sm font-semibold text-slate-900 dark:text-white">{manga.title}</p>
-              <Button className="mt-3 w-full bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => onSelect(manga)}><Plus className="h-4 w-4" /> Add</Button>
+              <Button className="mt-3 w-full bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => onSelect(manga)}><Plus className="h-4 w-4" /> Add to shelf</Button>
             </div>
           ))}
         </div>
@@ -1207,7 +1207,7 @@ function AddMangaPage({ manga, onSave, onCancel }: { manga: MangaSummary; onSave
       <Card className="grid gap-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Add to manga shelf</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Add to your shelf</p>
             <h2 className="break-words font-display text-3xl leading-tight sm:text-4xl">{manga.title}</h2>
           </div>
           <button className="button-ghost self-start sm:self-auto" onClick={onCancel}>Back</button>
@@ -1972,7 +1972,7 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
           )}
         </Card>
       </div>
-      {/* Trending rails for manhwa / manhua when no search is active */}
+      {/* Trending rail for manhwa when no search is active */}
       {mode === "manhwa" && !selectedId && !query && (
         <div className="grid gap-5">
           {comicsLoading ? (
@@ -2128,8 +2128,8 @@ function MyMangaPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
       <Card className="grid gap-4 border border-teal-200/70 bg-teal-50/40 dark:border-teal-900/60 dark:bg-slate-950/70 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="grid gap-2">
           <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Comics shelf</p>
-          <h3 className="break-words font-display text-3xl leading-tight sm:text-4xl">{data.settings.username}'s bookshelf</h3>
-          <p className="text-sm text-slate-600 dark:text-slate-300">Manga and manhwa — all in one place.</p>
+          <h3 className="break-words font-display text-3xl leading-tight sm:text-4xl">{data.settings.username}'s shelf</h3>
+          <p className="text-sm text-slate-600 dark:text-slate-300">Manga and manhwa — tracked together.</p>
           <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-700">
             <span className="rounded-xl bg-white/70 px-3 py-1 dark:bg-slate-900">Total {counts.total}</span>
             <span className="rounded-xl bg-white/70 px-3 py-1 dark:bg-slate-900">Reading {counts.reading}</span>
@@ -2138,7 +2138,7 @@ function MyMangaPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
         </div>
         <div className="grid gap-2">
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Recent entries</p>
-          {recent.length === 0 && <p className="text-sm text-slate-500">No manga yet. Add a series when one sticks.</p>}
+          {recent.length === 0 && <p className="text-sm text-slate-500">No entries yet. Add manga or manhwa when one sticks.</p>}
           {recent.map((entry) => (
             <div key={entry.mal_id} className="flex items-center gap-3">
               <img src={entry.image_url} alt="" className="h-12 w-9 rounded-md object-cover" />
@@ -2150,7 +2150,7 @@ function MyMangaPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
           ))}
         </div>
       </Card>
-      <MangaHighlights data={data} updateData={updateData} typeFilter={typeFilter} />
+      <MangaHighlights data={data} updateData={updateData} />
       <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-6">
         <Card className="text-sm"><p className="text-slate-500">Total</p><p className="text-2xl font-black">{counts.total}</p></Card>
         <Card className="text-sm"><p className="text-slate-500">Reading</p><p className="text-2xl font-black">{counts.reading}</p></Card>
@@ -2270,61 +2270,54 @@ function ProfileHighlights({ data, updateData }: { data: AppData; updateData: (p
   );
 }
 
-function MangaHighlights({ data, updateData, typeFilter = "all" }: { data: AppData; updateData: (patch: Partial<AppData>) => void; typeFilter?: ComicMediaType | "all" }) {
+function MangaHighlights({ data, updateData }: { data: AppData; updateData: (patch: Partial<AppData>) => void }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<MangaSummary[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState("");
 
-  // Reset picker when the tab changes
-  useEffect(() => { setOpen(false); setQuery(""); setSearchResults([]); }, [typeFilter]);
-
+  // Unified catalog: manga + manhwa from library and saved favorites
   const selectedIds = data.settings.favoriteMangaIds || [];
   const favoriteCatalog = data.settings.favoriteMangaCatalog || [];
-  const allCatalog = allKnownManga(data.mangaLibrary, favoriteCatalog);
-
-  // Scope catalog to the active tab
-  const catalog = typeFilter === "all" ? allCatalog : allCatalog.filter((m) => (m.mediaType ?? "manga") === typeFilter);
-  const scopedResults = typeFilter === "all" ? searchResults : searchResults.filter((m) => (m.mediaType ?? "manga") === typeFilter);
-  const searchableCatalog = allKnownManga(
-    typeFilter === "all" ? data.mangaLibrary : data.mangaLibrary.filter((e) => (e.mediaType ?? "manga") === typeFilter),
-    [...favoriteCatalog, ...scopedResults]
+  const catalog = allKnownManga(data.mangaLibrary, favoriteCatalog);
+  const searchableCatalog = allKnownManga(data.mangaLibrary, [...favoriteCatalog, ...searchResults]);
+  const catalogIds = new Set(catalog.map((m) => m.mal_id));
+  const validSelectedIds = selectedIds.filter((id) => catalogIds.has(id));
+  const selected = validSelectedIds.map((id) => catalog.find((m) => m.mal_id === id)).filter(Boolean) as MangaSummary[];
+  const visibleCatalog = searchableCatalog.filter((m) =>
+    !query.trim() || m.title.toLowerCase().includes(query.toLowerCase()) || m.genres.some((g) => g.toLowerCase().includes(query.toLowerCase()))
   );
-  const catalogIds = new Set(catalog.map((manga) => manga.mal_id));
-  const validSelectedIds = selectedIds.filter((mangaId) => catalogIds.has(mangaId));
-  const selected = validSelectedIds.map((mangaId) => catalog.find((manga) => manga.mal_id === mangaId)).filter(Boolean) as MangaSummary[];
-  const visibleCatalog = searchableCatalog.filter((manga) => !query.trim() || manga.title.toLowerCase().includes(query.toLowerCase()) || manga.genres.some((genre) => genre.toLowerCase().includes(query.toLowerCase())));
-
-  const label = typeFilter === "manhwa" ? "Manhwa" : "Manga";
-  const searchFn = typeFilter === "manhwa" ? searchManhwa : searchManga;
 
   useEffect(() => {
     if (!open || query.trim().length < 2) { setSearchResults([]); setSearchError(""); setSearchLoading(false); return; }
     const timer = window.setTimeout(() => {
       setSearchLoading(true);
-      searchFn(query)
+      // searchManga returns all comic types from MAL (manga + manhwa)
+      searchManga(query)
         .then((items) => { setSearchResults(items); setSearchError(""); })
         .catch((err: Error) => setSearchError(err.message))
         .finally(() => setSearchLoading(false));
     }, 500);
     return () => clearTimeout(timer);
-  }, [open, query, typeFilter]);
+  }, [open, query]);
 
   const toggleFavorite = (manga: MangaSummary) => {
-    const allIds = data.settings.favoriteMangaIds || [];
-    const nextIds = allIds.includes(manga.mal_id) ? allIds.filter((id) => id !== manga.mal_id) : [...allIds, manga.mal_id];
-    const shouldStoreManga = !data.mangaLibrary.some((item) => item.mal_id === manga.mal_id);
-    const nextCatalog = shouldStoreManga && !favoriteCatalog.some((item) => item.mal_id === manga.mal_id) ? [...favoriteCatalog, manga] : favoriteCatalog;
+    const nextIds = validSelectedIds.includes(manga.mal_id)
+      ? validSelectedIds.filter((id) => id !== manga.mal_id)
+      : [...validSelectedIds, manga.mal_id];
+    const shouldStore = !data.mangaLibrary.some((item) => item.mal_id === manga.mal_id);
+    const nextCatalog = shouldStore && !favoriteCatalog.some((item) => item.mal_id === manga.mal_id)
+      ? [...favoriteCatalog, manga] : favoriteCatalog;
     updateData({ settings: { ...data.settings, favoriteMangaIds: nextIds, favoriteMangaCatalog: nextCatalog } });
   };
 
   return (
     <Card className="grid gap-4">
       <div>
-        <p className="text-xs uppercase tracking-[0.3em] text-teal-500">{label} highlights</p>
-        <h3 className="font-display text-3xl">Favorite {label.toLowerCase()} shelf</h3>
-        <p className="text-sm text-slate-500">Pin the {label.toLowerCase()} you keep coming back to.</p>
+        <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Comics highlights</p>
+        <h3 className="font-display text-3xl">Favourite comics shelf</h3>
+        <p className="text-sm text-slate-500">Pin your favourite manga and manhwa — all in one shelf.</p>
       </div>
       {selected.length > 0 ? (
         <div className="grid gap-3 min-[520px]:grid-cols-2 lg:grid-cols-4">
@@ -2332,23 +2325,24 @@ function MangaHighlights({ data, updateData, typeFilter = "all" }: { data: AppDa
             <div key={manga.mal_id} className="grid grid-cols-[56px_minmax(0,1fr)] gap-3 rounded-xl border border-teal-200 bg-teal-50/70 p-2 dark:border-teal-900 dark:bg-teal-950/20">
               <img src={manga.image_url} alt="" className="h-20 w-14 rounded-lg object-cover" />
               <div>
-                <p className="line-clamp-2 text-sm font-semibold text-slate-900 dark:text-white">{manga.title}</p>
-                <p className="text-xs text-slate-500">{manga.year || "Unknown"} • {(manga.genres || []).slice(0, 2).join(", ")}</p>
+                {manga.mediaType === "manhwa" && <span className="rounded-full bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">🇰🇷 Manhwa</span>}
+                <p className="mt-0.5 line-clamp-2 text-sm font-semibold text-slate-900 dark:text-white">{manga.title}</p>
+                <p className="text-xs text-slate-500">{manga.year || "Unknown"} · {(manga.genres || []).slice(0, 2).join(", ")}</p>
               </div>
             </div>
           ))}
         </div>
       ) : (
-        <p className="rounded-xl bg-teal-50 p-3 text-sm text-slate-500 dark:bg-teal-950/30">No {label.toLowerCase()} highlights yet.</p>
+        <p className="rounded-xl bg-teal-50 p-3 text-sm text-slate-500 dark:bg-teal-950/30">No favourites pinned yet. Add manga or manhwa below.</p>
       )}
-      <button className="inline-flex items-center justify-between rounded-xl border border-teal-200/70 bg-white/70 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-teal-900/50 dark:bg-slate-950/70 dark:text-slate-200" onClick={() => setOpen((prev) => !prev)}>
-        <span>{open ? `Hide ${label.toLowerCase()} picker` : `Choose favorite ${label.toLowerCase()}`}</span>
+      <button className="inline-flex items-center justify-between rounded-xl border border-teal-200/70 bg-white/70 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-teal-900/50 dark:bg-slate-950/70 dark:text-slate-200" onClick={() => setOpen((v) => !v)}>
+        <span>{open ? "Hide picker" : "Choose favourites"}</span>
         {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
       </button>
       {open && (
         <div className="grid gap-3">
-          <input className={inputClass()} placeholder={`Search ${label.toLowerCase()} favorites`} value={query} onChange={(event) => setQuery(event.target.value)} />
-          {searchLoading && <p className="rounded-xl bg-teal-50 p-3 text-sm text-slate-500 dark:bg-teal-950/30">Searching manga...</p>}
+          <input className={inputClass()} placeholder="Search manga or manhwa…" value={query} onChange={(e) => setQuery(e.target.value)} />
+          {searchLoading && <p className="rounded-xl bg-teal-50 p-3 text-sm text-slate-500 dark:bg-teal-950/30">Searching…</p>}
           {searchError && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{searchError}</p>}
           <div className="scrollbar-soft grid max-h-[70vh] gap-2 overflow-auto pr-1 md:max-h-96 md:grid-cols-2 xl:grid-cols-3">
             {visibleCatalog.map((manga) => (
@@ -2356,8 +2350,9 @@ function MangaHighlights({ data, updateData, typeFilter = "all" }: { data: AppDa
                 <input type="checkbox" checked={validSelectedIds.includes(manga.mal_id)} onChange={() => toggleFavorite(manga)} />
                 <img src={manga.image_url} alt="" className="h-14 w-10 rounded-md object-cover" />
                 <span>
+                  {manga.mediaType === "manhwa" && <span className="mr-1 rounded-full bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">🇰🇷</span>}
                   <span className="line-clamp-1">{manga.title}</span>
-                  <span className="block text-xs font-normal text-slate-500">{manga.year || "Unknown"} • {(manga.genres || []).slice(0, 2).join(", ")}</span>
+                  <span className="block text-xs font-normal text-slate-500">{manga.year || "Unknown"} · {(manga.genres || []).slice(0, 2).join(", ")}</span>
                 </span>
               </label>
             ))}

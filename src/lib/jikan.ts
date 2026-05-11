@@ -99,7 +99,9 @@ export function normalizeAnimeDetail(item: JikanAnime): AnimeDetail {
 }
 
 function jikanTypeToMediaType(type?: string): import("../types/anime").ComicMediaType {
-  if (type?.toLowerCase() === "manhwa") return "manhwa";
+  const t = type?.toLowerCase();
+  if (t === "manhwa") return "manhwa";
+  if (t === "light novel" || t === "lightnovel" || t === "light_novel") return "light-novel";
   return "manga";
 }
 
@@ -307,6 +309,30 @@ export async function getTopManhwa(limit = 12): Promise<MangaSummary[]> {
   return data;
 }
 
+
+export async function searchLightNovels(query: string): Promise<MangaSummary[]> {
+  const normalizedQuery = normalizeQuery(query);
+  if (isBlockedQuery(normalizedQuery)) return [];
+  const key = `search_ln_cache_v1_${normalizedQuery}`;
+  const cached = readCache<MangaSummary[]>(key, hour);
+  if (cached) return filterSafeMangaSummaries(cached);
+  await throttleSearch("manga");
+  const payload = await requestJson<{ data?: JikanManga[] }>(`/manga?q=${encodeURIComponent(query)}&type=light_novel&limit=25&sfw=true`);
+  const items = Array.isArray(payload.data) ? filterSafeManga(sanitizeItems(payload.data)) : [];
+  const data = items.slice(0, 12).map(normalizeManga);
+  writeCache(key, data);
+  return data;
+}
+
+export async function getTopLightNovels(limit = 12): Promise<MangaSummary[]> {
+  const key = `top_ln_cache_v1_${limit}`;
+  const cached = readCache<MangaSummary[]>(key, hour);
+  if (cached) return filterSafeMangaSummaries(cached);
+  const payload = await requestJson<{ data?: JikanManga[] }>(`/top/manga?type=lightnovel&limit=${limit}&sfw=true`);
+  const data = Array.isArray(payload.data) ? filterSafeManga(payload.data).map(normalizeManga) : [];
+  writeCache(key, data);
+  return data;
+}
 
 export async function searchManga(query: string): Promise<MangaSummary[]> {
   const normalizedQuery = normalizeQuery(query);

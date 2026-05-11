@@ -27,7 +27,7 @@ import {
   X
 } from "lucide-react";
 import { fixedAnime } from "./lib/fixedAnime";
-import { getAiringToday, getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, getSeasonal, getTopAiring, getTopManhwa, getUpcomingAnime, searchAnime, searchManga, searchManhwa } from "./lib/jikan";
+import { getAiringToday, getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, getSeasonal, getTopAiring, getTopLightNovels, getTopManhwa, getUpcomingAnime, searchAnime, searchLightNovels, searchManga, searchManhwa } from "./lib/jikan";
 import { loadData, saveData, setActiveUser } from "./lib/storage";
 import { completeAuthSessionFromUrl, createReport, deleteCloudAccount, getCurrentSession, isSupabaseConfigured, loadAdminDashboard, loadCloudData, loadProfile, logActivityEvent, logPageView, markProfileSeen, resendSignupConfirmation, saveCloudData, sendPasswordResetEmail, signInWithEmail, signOutCloud, signUpWithEmail, updateCloudPassword, upsertProfile, userToProfileFallback } from "./lib/supabase";
 import type { AdminDashboardData, AnimeDetail, AnimeSummary, AppData, ComicMediaType, LibraryEntry, LibraryStatus, MangaDetail, MangaEntry, MangaStatus, MangaSummary, Settings, ThemeMode } from "./types/anime";
@@ -36,7 +36,7 @@ import { CookieBanner } from "./CookieBanner";
 type UserAccount = { id: string; name: string; avatar: string; passcode: string; email?: string; isCloud?: boolean; isAdmin?: boolean; memberSince?: string };
 
 type AuthMode = "signin" | "signup";
-type AppPage = "home" | "stuff" | "manga" | "manhwa" | "add" | "add-manga" | "dashboard" | "explore" | "profile" | "admin" | "auth";
+type AppPage = "home" | "stuff" | "manga" | "manhwa" | "light-novel" | "add" | "add-manga" | "dashboard" | "explore" | "profile" | "admin" | "auth";
 
 type Section = { key: LibraryStatus; title: string; icon: React.ReactElement };
 
@@ -571,7 +571,7 @@ function AuthPage({ initialNotice, onBrowse, onLogin }: { initialNotice?: string
   );
 }
 
-function Header({ user, theme, isAdmin, onThemeChange, onLogout, onHome, onMyStuff, onMyManga, onMyManhwa, onDashboard, onExplore, onProfile, onAdmin, onReportIssue, activePage }: { user: { name: string; avatar: string }; theme: ThemeMode; isAdmin: boolean; onThemeChange: (value: ThemeMode) => void; onLogout: () => void; onHome: () => void; onMyStuff: () => void; onMyManga: () => void; onMyManhwa: () => void; onDashboard: () => void; onExplore: () => void; onProfile: () => void; onAdmin: () => void; onReportIssue: () => void; activePage: AppPage }) {
+function Header({ user, theme, isAdmin, onThemeChange, onLogout, onHome, onMyStuff, onMyManga, onMyManhwa, onMyLightNovel, onDashboard, onExplore, onProfile, onAdmin, onReportIssue, activePage }: { user: { name: string; avatar: string }; theme: ThemeMode; isAdmin: boolean; onThemeChange: (value: ThemeMode) => void; onLogout: () => void; onHome: () => void; onMyStuff: () => void; onMyManga: () => void; onMyManhwa: () => void; onMyLightNovel: () => void; onDashboard: () => void; onExplore: () => void; onProfile: () => void; onAdmin: () => void; onReportIssue: () => void; activePage: AppPage }) {
   return (
     <header className="sticky top-0 z-20 border-b border-white/60 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
       <div className="mx-auto flex max-w-6xl flex-col gap-2 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3 lg:flex-row lg:items-center lg:justify-between">
@@ -597,6 +597,7 @@ function Header({ user, theme, isAdmin, onThemeChange, onLogout, onHome, onMyStu
           <button className={nb(activePage === "stuff")} onClick={onMyStuff}><Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /><span className="hidden sm:inline">My Anime</span><span className="sm:hidden">Anime</span></button>
           <button className={nb(activePage === "manga")} onClick={onMyManga}><BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" /><span className="hidden sm:inline">My Manga</span><span className="sm:hidden">Manga</span></button>
           <button className={nb(activePage === "manhwa")} onClick={onMyManhwa}><BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" /><span className="hidden sm:inline">My Manhwa</span><span className="sm:hidden">Manhwa</span></button>
+          <button className={nb(activePage === "light-novel")} onClick={onMyLightNovel}><BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" /><span className="hidden sm:inline">Light Novels</span><span className="sm:hidden">LN</span></button>
           <button className={nb(activePage === "dashboard")} onClick={onDashboard}><span className="hidden sm:inline">Dashboard</span><span className="sm:hidden">Dash</span></button>
           {isAdmin && <button className={nb(activePage === "admin")} onClick={onAdmin}>Admin</button>}
           <button className="inline-flex shrink-0 items-center justify-center rounded-xl border border-slate-200/70 bg-white/80 p-1.5 text-slate-600 transition hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300 sm:gap-1.5 sm:px-2.5 sm:py-2" onClick={onReportIssue} title="Report issue" type="button">
@@ -620,7 +621,7 @@ function Header({ user, theme, isAdmin, onThemeChange, onLogout, onHome, onMyStu
   );
 }
 
-function PublicHeader({ theme, activePage, onThemeChange, onHome, onExplore, onMyStuff, onMyManga, onMyManhwa, onReportIssue, onAuth, onRequireSignIn }: { theme: ThemeMode; activePage: AppPage; onThemeChange: (value: ThemeMode) => void; onHome: () => void; onExplore: () => void; onMyStuff: () => void; onMyManga: () => void; onMyManhwa: () => void; onReportIssue: () => void; onAuth: () => void; onRequireSignIn: (msg: string) => void }) {
+function PublicHeader({ theme, activePage, onThemeChange, onHome, onExplore, onMyStuff, onMyManga, onMyManhwa, onMyLightNovel, onReportIssue, onAuth, onRequireSignIn }: { theme: ThemeMode; activePage: AppPage; onThemeChange: (value: ThemeMode) => void; onHome: () => void; onExplore: () => void; onMyStuff: () => void; onMyManga: () => void; onMyManhwa: () => void; onMyLightNovel: () => void; onReportIssue: () => void; onAuth: () => void; onRequireSignIn: (msg: string) => void }) {
   const navBtn = (active: boolean) => clsx("inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-xl border px-2 py-1.5 text-xs font-semibold transition sm:gap-1.5 sm:px-2.5 sm:py-2 sm:text-sm", active ? "border-teal-400 bg-teal-50 text-teal-900 dark:bg-teal-950/50 dark:text-teal-100" : "border-slate-200/70 bg-white/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200");
   return (
     <header className="sticky top-0 z-20 border-b border-white/60 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
@@ -654,6 +655,11 @@ function PublicHeader({ theme, activePage, onThemeChange, onHome, onExplore, onM
             <BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden xs:inline sm:inline">My Manhwa</span>
             <span className="xs:hidden sm:hidden">Manhwa</span>
+          </button>
+          <button className={navBtn(activePage === "light-novel")} onClick={onMyLightNovel} type="button">
+            <BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline sm:inline">Light Novels</span>
+            <span className="xs:hidden sm:hidden">LN</span>
           </button>
           <button
             className="hidden shrink-0 items-center gap-1 whitespace-nowrap rounded-xl border border-slate-200/70 bg-white/80 px-2 py-1.5 text-xs font-semibold text-slate-500 transition hover:border-teal-400 hover:text-teal-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400 sm:inline-flex sm:gap-1.5 sm:px-2.5 sm:py-2 sm:text-sm"
@@ -1014,12 +1020,12 @@ function SearchMangaPanel({ onSelect, fixedType }: { onSelect: (manga: MangaSumm
     if (query.trim().length < 2) { setResults([]); setError(""); return; }
     const timer = window.setTimeout(() => {
       setLoading(true);
-      const fn = fixedType === "manhwa" ? searchManhwa : searchManga;
+      const fn = fixedType === "manhwa" ? searchManhwa : fixedType === "light-novel" ? searchLightNovels : searchManga;
       fn(query)
         .then((items) => {
-          // When searching manga, filter out manhwa results to keep sections clean
+          // When searching manga, keep only manga (exclude manhwa + light-novel cross-results)
           const filtered = fixedType === "manga"
-            ? items.filter((m) => (m.mediaType ?? "manga") !== "manhwa")
+            ? items.filter((m) => (m.mediaType ?? "manga") === "manga")
             : items;
           setResults(filtered);
           setError("");
@@ -1030,7 +1036,7 @@ function SearchMangaPanel({ onSelect, fixedType }: { onSelect: (manga: MangaSumm
     return () => clearTimeout(timer);
   }, [query, fixedType]);
 
-  const placeholder = fixedType === "manhwa" ? "Search manhwa by title…" : "Search manga by title…";
+  const placeholder = fixedType === "manhwa" ? "Search manhwa by title…" : fixedType === "light-novel" ? "Search light novels by title…" : "Search manga by title…";
 
   return (
     <Card className="grid gap-3">
@@ -1435,12 +1441,20 @@ function AnimeRail({ title, kicker, items, onAdd }: { title: string; kicker: str
   );
 }
 
-function MangaRail({ title, kicker, items, onAdd, loading = false }: { title: string; kicker: string; items: MangaSummary[]; onAdd: (manga: MangaSummary) => void; loading?: boolean }) {
+function MangaRail({ title, kicker, items, onAdd, loading = false, variant = "manhwa" }: { title: string; kicker: string; items: MangaSummary[]; onAdd: (manga: MangaSummary) => void; loading?: boolean; variant?: "manhwa" | "light-novel" }) {
+  const isLN = variant === "light-novel";
+  const accentText   = isLN ? "text-amber-500" : "text-blue-500";
+  const hoverBorder  = isLN ? "hover:border-amber-300" : "hover:border-blue-300";
+  const badgeBg      = isLN ? "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300" : "bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300";
+  const badgeLabel   = isLN ? "📖 light novel" : "🇰🇷 manhwa";
+  const saveBg       = isLN ? "bg-amber-400 hover:bg-amber-300" : "bg-blue-400 hover:bg-blue-300";
+  const emptyMsg     = isLN ? "No trending light novels right now." : "No trending manhwa right now.";
+
   return (
     <section className="grid gap-3">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-blue-500">{kicker}</p>
+          <p className={`text-xs uppercase tracking-[0.25em] ${accentText}`}>{kicker}</p>
           <h2 className="font-display text-2xl leading-tight sm:text-3xl">{title}</h2>
         </div>
       </div>
@@ -1455,14 +1469,14 @@ function MangaRail({ title, kicker, items, onAdd, loading = false }: { title: st
       ) : items.length ? (
         <div className="scrollbar-soft -mx-3 flex gap-3 overflow-x-auto px-3 pb-3 sm:mx-0 sm:px-0">
           {items.slice(0, 12).map((manga) => (
-            <article key={manga.mal_id} className="touch-card grid w-[200px] shrink-0 grid-cols-[64px_minmax(0,1fr)] gap-2.5 rounded-2xl border border-slate-200/70 bg-white/75 p-2.5 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 dark:border-slate-800 dark:bg-slate-950/70 sm:w-[230px] sm:grid-cols-[72px_minmax(0,1fr)] sm:gap-3">
+            <article key={manga.mal_id} className={`touch-card grid w-[200px] shrink-0 grid-cols-[64px_minmax(0,1fr)] gap-2.5 rounded-2xl border border-slate-200/70 bg-white/75 p-2.5 shadow-sm transition hover:-translate-y-0.5 dark:border-slate-800 dark:bg-slate-950/70 sm:w-[230px] sm:grid-cols-[72px_minmax(0,1fr)] sm:gap-3 ${hoverBorder}`}>
               <img src={manga.image_url} alt="" className="h-24 w-16 rounded-xl object-cover sm:h-28 sm:w-[72px]" />
               <div className="min-w-0">
-                <span className="rounded-full bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-600 dark:bg-blue-950/40 dark:text-blue-300">🇰🇷 manhwa</span>
+                <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${badgeBg}`}>{badgeLabel}</span>
                 <p className="mt-1 line-clamp-2 text-xs font-bold leading-snug text-slate-900 dark:text-white sm:text-sm">{manga.title}</p>
                 <p className="mt-0.5 text-[11px] text-slate-500 sm:text-xs">{manga.year || "TBA"} • {manga.score ? `${manga.score}/10` : "—"}</p>
-                <p className="mt-0.5 line-clamp-1 text-[11px] text-slate-400 sm:text-xs">{manga.genres.slice(0, 2).join(", ") || "Manhwa"}</p>
-                <button className="mt-2 inline-flex items-center gap-1 rounded-full bg-blue-400 px-2.5 py-1 text-[11px] font-black text-slate-950 transition hover:bg-blue-300" onClick={() => onAdd(manga)}>
+                <p className="mt-0.5 line-clamp-1 text-[11px] text-slate-400 sm:text-xs">{manga.genres.slice(0, 2).join(", ") || (isLN ? "Light Novel" : "Manhwa")}</p>
+                <button className={`mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-black text-slate-950 transition ${saveBg}`} onClick={() => onAdd(manga)}>
                   <Plus className="h-3 w-3" /> Save
                 </button>
               </div>
@@ -1470,7 +1484,7 @@ function MangaRail({ title, kicker, items, onAdd, loading = false }: { title: st
           ))}
         </div>
       ) : (
-        <Card className="py-4"><p className="text-sm text-slate-500">No trending manhwa right now.</p></Card>
+        <Card className="py-4"><p className="text-sm text-slate-500">{emptyMsg}</p></Card>
       )}
     </section>
   );
@@ -1607,8 +1621,10 @@ function HomePage({ addAnime, addManga }: { addAnime: (anime: AnimeSummary) => v
   const [upcoming, setUpcoming] = useState<AnimeSummary[]>([]);
   const [airingToday, setAiringToday] = useState<AnimeSummary[]>([]);
   const [topManhwa, setTopManhwa] = useState<MangaSummary[]>([]);
+  const [topLightNovels, setTopLightNovels] = useState<MangaSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [manhwaLoading, setManhwaLoading] = useState(true);
+  const [lnLoading, setLnLoading] = useState(true);
   const [error, setError] = useState("");
   const [updatedAt, setUpdatedAt] = useState("");
 
@@ -1656,6 +1672,14 @@ function HomePage({ addAnime, addManga }: { addAnime: (anime: AnimeSummary) => v
       .finally(() => setManhwaLoading(false));
   }, []);
 
+  useEffect(() => {
+    setLnLoading(true);
+    getTopLightNovels(12)
+      .then(setTopLightNovels)
+      .catch(() => {})
+      .finally(() => setLnLoading(false));
+  }, []);
+
   return (
     <div className="mx-auto grid max-w-5xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
       <Card className="hero-banner grid min-h-[140px] content-start justify-items-end gap-1 pt-4 text-right text-white sm:min-h-[190px] sm:pt-6">
@@ -1686,7 +1710,8 @@ function HomePage({ addAnime, addManga }: { addAnime: (anime: AnimeSummary) => v
         </>
       )}
 
-      <MangaRail title="Trending Manhwa" kicker="🇰🇷 Korean comics" items={topManhwa} onAdd={addManga} loading={manhwaLoading} />
+      <MangaRail title="Trending Manhwa" kicker="🇰🇷 Korean comics" items={topManhwa} onAdd={addManga} loading={manhwaLoading} variant="manhwa" />
+      <MangaRail title="Popular Light Novels" kicker="📖 Japanese fiction" items={topLightNovels} onAdd={addManga} loading={lnLoading} variant="light-novel" />
     </div>
   );
 }
@@ -2081,7 +2106,7 @@ function MyStuffPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
 }
 
 function MyMangaPage({ data, onSelect, updateEntry, removeEntry, updateData, onBack, onClearHistory }: { data: AppData; onSelect: (manga: MangaSummary) => void; updateEntry: (entry: MangaEntry) => void; removeEntry: (id: number) => void; updateData: (patch: Partial<AppData>) => void; onBack: () => void; onClearHistory: () => void }) {
-  const library = useMemo(() => data.mangaLibrary.filter((e) => (e.mediaType ?? "manga") !== "manhwa"), [data.mangaLibrary]);
+  const library = useMemo(() => data.mangaLibrary.filter((e) => (e.mediaType ?? "manga") === "manga"), [data.mangaLibrary]);
 
   const grouped = useMemo(() => {
     return mangaSections.map((section) => ({ ...section, entries: library.filter((entry) => entry.status === section.key) }));
@@ -2244,6 +2269,88 @@ function MyManhwaPage({ data, onSelect, updateEntry, removeEntry, updateData, on
   );
 }
 
+function MyLightNovelPage({ data, onSelect, updateEntry, removeEntry, updateData, onBack, onClearHistory }: { data: AppData; onSelect: (manga: MangaSummary) => void; updateEntry: (entry: MangaEntry) => void; removeEntry: (id: number) => void; updateData: (patch: Partial<AppData>) => void; onBack: () => void; onClearHistory: () => void }) {
+  const library = useMemo(() => data.mangaLibrary.filter((e) => e.mediaType === "light-novel"), [data.mangaLibrary]);
+
+  const grouped = useMemo(() => {
+    return mangaSections.map((section) => ({ ...section, entries: library.filter((entry) => entry.status === section.key) }));
+  }, [library]);
+
+  const counts = {
+    total: library.length,
+    reading: library.filter((e) => e.status === "Reading").length,
+    completed: library.filter((e) => e.status === "Completed").length,
+    plan: library.filter((e) => e.status === "Plan to Read").length,
+    onHold: library.filter((e) => e.status === "On Hold").length,
+    dropped: library.filter((e) => e.status === "Dropped").length,
+  };
+
+  const recent = [...library].sort((a, b) => new Date(b.added_at).getTime() - new Date(a.added_at).getTime()).slice(0, 4);
+
+  return (
+    <div className="mx-auto grid max-w-6xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="font-display text-3xl leading-tight">📖 Light Novels</h2>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+          <Button className="bg-rose-600 px-2 hover:bg-rose-700 sm:px-4" onClick={onClearHistory}>Clear history</Button>
+          <Button className="bg-slate-900 px-2 hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300 sm:px-4" onClick={onBack}>Back home</Button>
+        </div>
+      </div>
+
+      <Card className="grid gap-4 border border-amber-200/70 bg-amber-50/40 dark:border-amber-900/60 dark:bg-slate-950/70 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="grid gap-2">
+          <p className="text-xs uppercase tracking-[0.3em] text-amber-500">Light Novel shelf</p>
+          <h3 className="break-words font-display text-3xl leading-tight sm:text-4xl">{data.settings.username}'s novels</h3>
+          <p className="text-sm text-slate-600 dark:text-slate-300">Japanese light novels — tracked here.</p>
+          <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-700">
+            <span className="rounded-xl bg-white/70 px-3 py-1 dark:bg-slate-900">Total {counts.total}</span>
+            <span className="rounded-xl bg-white/70 px-3 py-1 dark:bg-slate-900">Reading {counts.reading}</span>
+            <span className="rounded-xl bg-white/70 px-3 py-1 dark:bg-slate-900">Completed {counts.completed}</span>
+          </div>
+        </div>
+        <div className="grid gap-2">
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Recent entries</p>
+          {recent.length === 0 && <p className="text-sm text-slate-500">No entries yet. Search and add light novels below.</p>}
+          {recent.map((entry) => (
+            <div key={entry.mal_id} className="flex items-center gap-3">
+              <img src={entry.image_url} alt="" className="h-12 w-9 rounded-md object-cover" />
+              <div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">{entry.title}</p>
+                <p className="text-xs text-slate-500">{mangaStatusLabels[entry.status]} • {new Date(entry.added_at).toLocaleDateString()}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+      <LightNovelHighlights data={data} updateData={updateData} />
+      <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-6">
+        <Card className="text-sm"><p className="text-slate-500">Total</p><p className="text-2xl font-black">{counts.total}</p></Card>
+        <Card className="text-sm"><p className="text-slate-500">Reading</p><p className="text-2xl font-black">{counts.reading}</p></Card>
+        <Card className="text-sm"><p className="text-slate-500">Completed</p><p className="text-2xl font-black">{counts.completed}</p></Card>
+        <Card className="text-sm"><p className="text-slate-500">Planned</p><p className="text-2xl font-black">{counts.plan}</p></Card>
+        <Card className="text-sm"><p className="text-slate-500">On hold</p><p className="text-2xl font-black">{counts.onHold}</p></Card>
+        <Card className="text-sm"><p className="text-slate-500">Dropped</p><p className="text-2xl font-black">{counts.dropped}</p></Card>
+      </div>
+      <SearchMangaPanel onSelect={onSelect} fixedType="light-novel" />
+      <div className="grid gap-6">
+        {grouped.map((section) => (
+          <Section key={section.key} title={section.title} icon={section.icon}>
+            {section.entries.length === 0 ? (
+              <Card className="text-sm text-slate-500">This shelf is empty for now.</Card>
+            ) : (
+              <div className="grid gap-4 lg:grid-cols-2">
+                {section.entries.map((entry) => (
+                  <MangaCard key={entry.mal_id} entry={entry} onUpdate={updateEntry} onRemove={() => removeEntry(entry.mal_id)} />
+                ))}
+              </div>
+            )}
+          </Section>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ProfileHighlights({ data, updateData }: { data: AppData; updateData: (patch: Partial<AppData>) => void }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -2342,12 +2449,12 @@ function MangaHighlights({ data, updateData }: { data: AppData; updateData: (pat
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState("");
 
-  // Manga-only favorites (filter out manhwa entries)
+  // Manga-only favorites (filter to only manga, exclude manhwa + light-novel)
   const selectedIds = data.settings.favoriteMangaIds || [];
-  const favoriteCatalog = (data.settings.favoriteMangaCatalog || []).filter((m) => (m.mediaType ?? "manga") !== "manhwa");
-  const libraryManga = data.mangaLibrary.filter((e) => (e.mediaType ?? "manga") !== "manhwa");
+  const favoriteCatalog = (data.settings.favoriteMangaCatalog || []).filter((m) => (m.mediaType ?? "manga") === "manga");
+  const libraryManga = data.mangaLibrary.filter((e) => (e.mediaType ?? "manga") === "manga");
   const catalog = allKnownManga(libraryManga, favoriteCatalog);
-  const filteredSearchResults = searchResults.filter((m) => (m.mediaType ?? "manga") !== "manhwa");
+  const filteredSearchResults = searchResults.filter((m) => (m.mediaType ?? "manga") === "manga");
   const searchableCatalog = allKnownManga(libraryManga, [...favoriteCatalog, ...filteredSearchResults]);
   const catalogIds = new Set(catalog.map((m) => m.mal_id));
   const validSelectedIds = selectedIds.filter((id) => catalogIds.has(id));
@@ -2505,6 +2612,97 @@ function ManhwaHighlights({ data, updateData }: { data: AppData; updateData: (pa
           <div className="scrollbar-soft grid max-h-[70vh] gap-2 overflow-auto pr-1 md:max-h-96 md:grid-cols-2 xl:grid-cols-3">
             {visibleCatalog.map((manga) => (
               <label key={manga.mal_id} className="grid grid-cols-[18px_44px_minmax(0,1fr)] items-center gap-2 rounded-xl border border-blue-200/70 bg-white/70 p-2 text-sm font-semibold dark:border-blue-900/50 dark:bg-slate-950/70">
+                <input type="checkbox" checked={validSelectedIds.includes(manga.mal_id)} onChange={() => toggleFavorite(manga)} />
+                <img src={manga.image_url} alt="" className="h-14 w-10 rounded-md object-cover" />
+                <span>
+                  <span className="line-clamp-1">{manga.title}</span>
+                  <span className="block text-xs font-normal text-slate-500">{manga.year || "Unknown"} · {(manga.genres || []).slice(0, 2).join(", ")}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function LightNovelHighlights({ data, updateData }: { data: AppData; updateData: (patch: Partial<AppData>) => void }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<MangaSummary[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState("");
+
+  const selectedIds = data.settings.favoriteMangaIds || [];
+  const favoriteCatalog = (data.settings.favoriteMangaCatalog || []).filter((m) => m.mediaType === "light-novel");
+  const libraryLN = data.mangaLibrary.filter((e) => e.mediaType === "light-novel");
+  const catalog = allKnownManga(libraryLN, favoriteCatalog);
+  const searchableCatalog = allKnownManga(libraryLN, [...favoriteCatalog, ...searchResults]);
+  const catalogIds = new Set(catalog.map((m) => m.mal_id));
+  const validSelectedIds = selectedIds.filter((id) => catalogIds.has(id));
+  const selected = validSelectedIds.map((id) => catalog.find((m) => m.mal_id === id)).filter(Boolean) as MangaSummary[];
+  const visibleCatalog = searchableCatalog.filter((m) =>
+    !query.trim() || m.title.toLowerCase().includes(query.toLowerCase()) || m.genres.some((g) => g.toLowerCase().includes(query.toLowerCase()))
+  );
+
+  useEffect(() => {
+    if (!open || query.trim().length < 2) { setSearchResults([]); setSearchError(""); setSearchLoading(false); return; }
+    const timer = window.setTimeout(() => {
+      setSearchLoading(true);
+      searchLightNovels(query)
+        .then((items) => { setSearchResults(items); setSearchError(""); })
+        .catch((err: Error) => setSearchError(err.message))
+        .finally(() => setSearchLoading(false));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [open, query]);
+
+  const toggleFavorite = (manga: MangaSummary) => {
+    const nextIds = validSelectedIds.includes(manga.mal_id)
+      ? validSelectedIds.filter((id) => id !== manga.mal_id)
+      : [...validSelectedIds, manga.mal_id];
+    const allCatalog = data.settings.favoriteMangaCatalog || [];
+    const shouldStore = !data.mangaLibrary.some((item) => item.mal_id === manga.mal_id);
+    const nextCatalog = shouldStore && !allCatalog.some((item) => item.mal_id === manga.mal_id)
+      ? [...allCatalog, manga] : allCatalog;
+    updateData({ settings: { ...data.settings, favoriteMangaIds: nextIds, favoriteMangaCatalog: nextCatalog } });
+  };
+
+  return (
+    <Card className="grid gap-4">
+      <div>
+        <p className="text-xs uppercase tracking-[0.3em] text-amber-500">LN highlights</p>
+        <h3 className="font-display text-3xl">Favourite light novels</h3>
+        <p className="text-sm text-slate-500">Pin your favourite light novel titles here.</p>
+      </div>
+      {selected.length > 0 ? (
+        <div className="grid gap-3 min-[520px]:grid-cols-2 lg:grid-cols-4">
+          {selected.map((manga) => (
+            <div key={manga.mal_id} className="grid grid-cols-[56px_minmax(0,1fr)] gap-3 rounded-xl border border-amber-200 bg-amber-50/70 p-2 dark:border-amber-900 dark:bg-amber-950/20">
+              <img src={manga.image_url} alt="" className="h-20 w-14 rounded-lg object-cover" />
+              <div>
+                <p className="mt-0.5 line-clamp-2 text-sm font-semibold text-slate-900 dark:text-white">{manga.title}</p>
+                <p className="text-xs text-slate-500">{manga.year || "Unknown"} · {(manga.genres || []).slice(0, 2).join(", ")}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="rounded-xl bg-amber-50 p-3 text-sm text-slate-500 dark:bg-amber-950/30">No favourites pinned yet. Choose light novels below.</p>
+      )}
+      <button className="inline-flex items-center justify-between rounded-xl border border-amber-200/70 bg-white/70 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-amber-900/50 dark:bg-slate-950/70 dark:text-slate-200" onClick={() => setOpen((v) => !v)}>
+        <span>{open ? "Hide picker" : "Choose favourites"}</span>
+        {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+      </button>
+      {open && (
+        <div className="grid gap-3">
+          <input className={inputClass()} placeholder="Search light novels…" value={query} onChange={(e) => setQuery(e.target.value)} />
+          {searchLoading && <p className="rounded-xl bg-amber-50 p-3 text-sm text-slate-500 dark:bg-amber-950/30">Searching…</p>}
+          {searchError && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{searchError}</p>}
+          <div className="scrollbar-soft grid max-h-[70vh] gap-2 overflow-auto pr-1 md:max-h-96 md:grid-cols-2 xl:grid-cols-3">
+            {visibleCatalog.map((manga) => (
+              <label key={manga.mal_id} className="grid grid-cols-[18px_44px_minmax(0,1fr)] items-center gap-2 rounded-xl border border-amber-200/70 bg-white/70 p-2 text-sm font-semibold dark:border-amber-900/50 dark:bg-slate-950/70">
                 <input type="checkbox" checked={validSelectedIds.includes(manga.mal_id)} onChange={() => toggleFavorite(manga)} />
                 <img src={manga.image_url} alt="" className="h-14 w-10 rounded-md object-cover" />
                 <span>
@@ -3280,7 +3478,7 @@ function App() {
   const [reportOpen, setReportOpen] = useState(false);
   const [authNotice, setAuthNotice] = useState("");
   const [guestPrompt, setGuestPrompt] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<null | "logout" | "delete-account" | "clear-all" | "clear-anime" | "clear-manga" | "clear-manhwa">(null);
+  const [confirmAction, setConfirmAction] = useState<null | "logout" | "delete-account" | "clear-all" | "clear-anime" | "clear-manga" | "clear-manhwa" | "clear-light-novel">(null);
   const lastActivityAtRef = useRef(Date.now());
   useTheme(data.settings);
 
@@ -3532,7 +3730,7 @@ function App() {
   };
 
   const clearMangaHistory = () => {
-    setData((prev) => ({ ...prev, mangaLibrary: prev.mangaLibrary.filter((e) => e.mediaType === "manhwa") }));
+    setData((prev) => ({ ...prev, mangaLibrary: prev.mangaLibrary.filter((e) => (e.mediaType ?? "manga") !== "manga") }));
     logEvent("history_cleared", { scope: "manga" });
     setConfirmAction(null);
   };
@@ -3540,6 +3738,12 @@ function App() {
   const clearManhwaHistory = () => {
     setData((prev) => ({ ...prev, mangaLibrary: prev.mangaLibrary.filter((e) => (e.mediaType ?? "manga") !== "manhwa") }));
     logEvent("history_cleared", { scope: "manhwa" });
+    setConfirmAction(null);
+  };
+
+  const clearLightNovelHistory = () => {
+    setData((prev) => ({ ...prev, mangaLibrary: prev.mangaLibrary.filter((e) => e.mediaType !== "light-novel") }));
+    logEvent("history_cleared", { scope: "light-novel" });
     setConfirmAction(null);
   };
 
@@ -3582,6 +3786,7 @@ function App() {
           onMyStuff={() => setPage("stuff")}
           onMyManga={() => setPage("manga")}
           onMyManhwa={() => setPage("manhwa")}
+          onMyLightNovel={() => setPage("light-novel")}
           onReportIssue={() => setReportOpen(true)}
           onAuth={() => {
             setAuthNotice("Sign in or create an account when you are ready to save your library.");
@@ -3607,6 +3812,7 @@ function App() {
         {page === "stuff" && <MyStuffPage data={data} onSelect={startAddFlow} updateEntry={guestSave} removeEntry={guestSave} updateData={guestSave} onBack={() => setPage("home")} onClearHistory={noop} />}
         {page === "manga" && <MyMangaPage data={data} onSelect={startAddMangaFlow} updateEntry={guestSave} removeEntry={guestSave} updateData={guestSave} onBack={() => setPage("home")} onClearHistory={noop} />}
         {page === "manhwa" && <MyManhwaPage data={data} onSelect={startAddMangaFlow} updateEntry={guestSave} removeEntry={guestSave} updateData={guestSave} onBack={() => setPage("home")} onClearHistory={noop} />}
+        {page === "light-novel" && <MyLightNovelPage data={data} onSelect={startAddMangaFlow} updateEntry={guestSave} removeEntry={guestSave} updateData={guestSave} onBack={() => setPage("home")} onClearHistory={noop} />}
         {page === "add" && selectedAnime && (
           <AddEntryPage
             anime={selectedAnime}
@@ -3618,10 +3824,10 @@ function App() {
           <AddMangaPage
             manga={selectedManga}
             onSave={guestSave}
-            onCancel={() => { setSelectedManga(null); setPage(selectedManga.mediaType === "manhwa" ? "manhwa" : "manga"); }}
+            onCancel={() => { setSelectedManga(null); setPage(selectedManga.mediaType === "manhwa" ? "manhwa" : selectedManga.mediaType === "light-novel" ? "light-novel" : "manga"); }}
           />
         )}
-        {page !== "explore" && page !== "stuff" && page !== "manga" && page !== "manhwa" && page !== "add" && page !== "add-manga" && (
+        {page !== "explore" && page !== "stuff" && page !== "manga" && page !== "manhwa" && page !== "light-novel" && page !== "add" && page !== "add-manga" && (
           <HomePage addAnime={startAddFlow} addManga={startAddMangaFlow} />
         )}
         <div className="mx-auto max-w-6xl px-3 pb-6 pt-2 sm:px-4">
@@ -3644,6 +3850,7 @@ function App() {
         onMyStuff={() => setPage("stuff")}
         onMyManga={() => setPage("manga")}
         onMyManhwa={() => setPage("manhwa")}
+        onMyLightNovel={() => setPage("light-novel")}
         onDashboard={() => setPage("dashboard")}
         onExplore={() => setPage("explore")}
         onProfile={() => setPage("profile")}
@@ -3672,11 +3879,15 @@ function App() {
       {confirmAction === "clear-manhwa" && (
         <ConfirmModal title="Clear manhwa history?" message="This removes every manhwa entry from this account." confirmLabel="Clear manhwa" onCancel={() => setConfirmAction(null)} onConfirm={clearManhwaHistory} />
       )}
+      {confirmAction === "clear-light-novel" && (
+        <ConfirmModal title="Clear light novel history?" message="This removes every light novel entry from this account." confirmLabel="Clear light novels" onCancel={() => setConfirmAction(null)} onConfirm={clearLightNovelHistory} />
+      )}
       {page === "home" && <HomePage addAnime={startAddFlow} addManga={startAddMangaFlow} />}
       {page === "explore" && <ExplorePage onAddAnime={startAddFlow} onAddManga={startAddMangaFlow} onBack={() => setPage("home")} />}
       {page === "stuff" && <MyStuffPage data={data} onSelect={startAddFlow} updateEntry={updateEntry} removeEntry={removeEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={() => setConfirmAction("clear-anime")} />}
       {page === "manga" && <MyMangaPage data={data} onSelect={startAddMangaFlow} updateEntry={updateMangaEntry} removeEntry={removeMangaEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={() => setConfirmAction("clear-manga")} />}
       {page === "manhwa" && <MyManhwaPage data={data} onSelect={startAddMangaFlow} updateEntry={updateMangaEntry} removeEntry={removeMangaEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={() => setConfirmAction("clear-manhwa")} />}
+      {page === "light-novel" && <MyLightNovelPage data={data} onSelect={startAddMangaFlow} updateEntry={updateMangaEntry} removeEntry={removeMangaEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={() => setConfirmAction("clear-light-novel")} />}
       {page === "dashboard" && <DashboardPage data={data} onClearHistory={() => setConfirmAction("clear-all")} onBack={() => setPage("home")} />}
       {page === "profile" && <ProfilePage data={data} memberSince={memberSince} onBack={() => setPage("home")} onSaveProfile={handleSaveProfile} onDeleteAccount={() => setConfirmAction("delete-account")} />}
       {page === "admin" && isAdmin && <AdminPage onBack={() => setPage("home")} />}
@@ -3700,11 +3911,11 @@ function App() {
           onSave={(entry) => {
             addMangaEntry(entry);
             setSelectedManga(null);
-            setPage(selectedManga.mediaType === "manhwa" ? "manhwa" : "manga");
+            setPage(selectedManga.mediaType === "manhwa" ? "manhwa" : selectedManga.mediaType === "light-novel" ? "light-novel" : "manga");
           }}
           onCancel={() => {
             setSelectedManga(null);
-            setPage(selectedManga.mediaType === "manhwa" ? "manhwa" : "manga");
+            setPage(selectedManga.mediaType === "manhwa" ? "manhwa" : selectedManga.mediaType === "light-novel" ? "light-novel" : "manga");
           }}
         />
       )}

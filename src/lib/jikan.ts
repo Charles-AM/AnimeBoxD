@@ -313,11 +313,11 @@ export async function getTopManhwa(limit = 12): Promise<MangaSummary[]> {
 export async function searchLightNovels(query: string): Promise<MangaSummary[]> {
   const normalizedQuery = normalizeQuery(query);
   if (isBlockedQuery(normalizedQuery)) return [];
-  const key = `search_ln_cache_v1_${normalizedQuery}`;
+  const key = `search_ln_cache_v2_${normalizedQuery}`;
   const cached = readCache<MangaSummary[]>(key, hour);
   if (cached) return filterSafeMangaSummaries(cached);
   await throttleSearch("manga");
-  const payload = await requestJson<{ data?: JikanManga[] }>(`/manga?q=${encodeURIComponent(query)}&type=light_novel&limit=25&sfw=true`);
+  const payload = await requestJson<{ data?: JikanManga[] }>(`/manga?q=${encodeURIComponent(query)}&type=lightnovel&limit=25&sfw=true`);
   const items = Array.isArray(payload.data) ? filterSafeManga(sanitizeItems(payload.data)) : [];
   const data = items.slice(0, 12).map(normalizeManga);
   writeCache(key, data);

@@ -35,7 +35,7 @@ export interface AnimeDetail extends AnimeSummary {
   title_japanese?: string;
 }
 
-export type ComicMediaType = "manga" | "manhwa" | "manhua";
+export type ComicMediaType = "manga" | "manhwa";
 
 export interface MangaSummary {
   mal_id: number;

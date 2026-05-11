@@ -27,7 +27,7 @@ import {
   X
 } from "lucide-react";
 import { fixedAnime } from "./lib/fixedAnime";
-import { getAiringToday, getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, getSeasonal, getTopAiring, getTopManhwa, getTopManhua, getUpcomingAnime, searchAnime, searchManga, searchManhwa, searchManhua } from "./lib/jikan";
+import { getAiringToday, getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, getSeasonal, getTopAiring, getTopManhwa, getUpcomingAnime, searchAnime, searchManga, searchManhwa } from "./lib/jikan";
 import { loadData, saveData, setActiveUser } from "./lib/storage";
 import { completeAuthSessionFromUrl, createReport, deleteCloudAccount, getCurrentSession, isSupabaseConfigured, loadAdminDashboard, loadCloudData, loadProfile, logActivityEvent, logPageView, markProfileSeen, resendSignupConfirmation, saveCloudData, sendPasswordResetEmail, signInWithEmail, signOutCloud, signUpWithEmail, updateCloudPassword, upsertProfile, userToProfileFallback } from "./lib/supabase";
 import type { AdminDashboardData, AnimeDetail, AnimeSummary, AppData, ComicMediaType, LibraryEntry, LibraryStatus, MangaDetail, MangaEntry, MangaStatus, MangaSummary, Settings, ThemeMode } from "./types/anime";
@@ -996,7 +996,6 @@ const COMIC_TYPES: { key: ComicMediaType | "all"; label: string; flag?: string }
   { key: "all",    label: "All" },
   { key: "manga",  label: "Manga",  flag: "🇯🇵" },
   { key: "manhwa", label: "Manhwa", flag: "🇰🇷" },
-  { key: "manhua", label: "Manhua", flag: "🇨🇳" },
 ];
 
 function SearchMangaPanel({ onSelect }: { onSelect: (manga: MangaSummary) => void }) {
@@ -1010,7 +1009,7 @@ function SearchMangaPanel({ onSelect }: { onSelect: (manga: MangaSummary) => voi
     if (query.trim().length < 2) { setResults([]); setError(""); return; }
     const timer = window.setTimeout(() => {
       setLoading(true);
-      const fn = comicType === "manhwa" ? searchManhwa : comicType === "manhua" ? searchManhua : searchManga;
+      const fn = comicType === "manhwa" ? searchManhwa : searchManga;
       fn(query)
         .then(setResults)
         .catch((err: Error) => setError(err.message))
@@ -1019,7 +1018,7 @@ function SearchMangaPanel({ onSelect }: { onSelect: (manga: MangaSummary) => voi
     return () => clearTimeout(timer);
   }, [query, comicType]);
 
-  const placeholder = comicType === "manhwa" ? "Search manhwa…" : comicType === "manhua" ? "Search manhua…" : "Search manga, manhwa, manhua…";
+  const placeholder = comicType === "manhwa" ? "Search manhwa…" : "Search manga or manhwa…";
 
   return (
     <Card className="grid gap-3">
@@ -1333,8 +1332,8 @@ function MangaCard({ entry, onUpdate, onRemove }: { entry: MangaEntry; onUpdate:
         <div className="grid gap-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <p className="font-semibold text-slate-900 dark:text-white">{entry.title}</p>
-            {entry.mediaType && entry.mediaType !== "manga" && (
-              <span className={clsx("rounded-full px-2 py-0.5 text-[10px] font-bold capitalize", entry.mediaType === "manhwa" ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300" : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300")}>{entry.mediaType === "manhwa" ? "🇰🇷 Manhwa" : "🇨🇳 Manhua"}</span>
+            {entry.mediaType === "manhwa" && (
+              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">🇰🇷 Manhwa</span>
             )}
           </div>
           <p className="text-xs text-slate-500">{mangaStatusLabels[draft.status]} • {draft.rating || "-"}/10</p>
@@ -1642,7 +1641,6 @@ function HomePage({ addAnime }: { addAnime: (anime: AnimeSummary) => void }) {
             <li>🍥 anime</li>
             <li>🍥 manga</li>
             <li>🇰🇷 manhwa</li>
-            <li>🇨🇳 manhua</li>
           </ul>
         </div>
       </Card>
@@ -1666,7 +1664,7 @@ function HomePage({ addAnime }: { addAnime: (anime: AnimeSummary) => void }) {
   );
 }
 
-type ExploreMode = "anime" | "manga" | "manhwa" | "manhua";
+type ExploreMode = "anime" | "manga" | "manhwa";
 type AnimeStaff = { person: { name: string }; positions: string[] };
 type AnimeCharacter = { character: { name: string }; role: string; voice_actors?: { person: { name: string }; language: string }[] };
 
@@ -1674,7 +1672,6 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
   const [mode, setMode] = useState<ExploreMode>("anime");
   const [query, setQuery] = useState("");
   const [topManhwa, setTopManhwa] = useState<MangaSummary[]>([]);
-  const [topManhua, setTopManhua] = useState<MangaSummary[]>([]);
   const [comicsLoading, setComicsLoading] = useState(false);
   const [results, setResults] = useState<(AnimeSummary | MangaSummary)[]>([]);
   const [loading, setLoading] = useState(false);
@@ -1698,7 +1695,7 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
     const timer = window.setTimeout(() => {
       setLoading(true);
       setError("");
-      const request = mode === "anime" ? searchAnime(query) : mode === "manhwa" ? searchManhwa(query) : mode === "manhua" ? searchManhua(query) : searchManga(query);
+      const request = mode === "anime" ? searchAnime(query) : mode === "manhwa" ? searchManhwa(query) : searchManga(query);
       request
         .then(setResults)
         .catch((err: Error) => setError(err.message))
@@ -1718,14 +1715,10 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
     setCast([]);
     setThemes({ openings: [], endings: [] });
     setDetailError("");
-    // Lazy-load top lists when switching to manhwa/manhua
+    // Lazy-load top manhwa list when switching to that mode
     if (mode === "manhwa" && !topManhwa.length) {
       setComicsLoading(true);
       getTopManhwa(12).then(setTopManhwa).catch(() => {}).finally(() => setComicsLoading(false));
-    }
-    if (mode === "manhua" && !topManhua.length) {
-      setComicsLoading(true);
-      getTopManhua(12).then(setTopManhua).catch(() => {}).finally(() => setComicsLoading(false));
     }
   }, [mode]);
 
@@ -1772,7 +1765,7 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
 
   const safeResults = results.filter((item): item is AnimeSummary | MangaSummary => Boolean(item && typeof item.mal_id === "number"));
   const detail = mode === "anime" ? animeDetail : mangaDetail;
-  const isMangaMode = mode === "manga" || mode === "manhwa" || mode === "manhua";
+  const isMangaMode = mode === "manga" || mode === "manhwa";
 
   const clearExploreInput = () => {
     setQuery("");
@@ -1805,9 +1798,9 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
           <Button className="bg-rose-600 hover:bg-rose-700" onClick={onBack}>Back to home</Button>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {(["anime", "manga", "manhwa", "manhua"] as ExploreMode[]).map((m) => (
+          {(["anime", "manga", "manhwa"] as ExploreMode[]).map((m) => (
             <button key={m} className={clsx("rounded-xl border px-3 py-2 text-sm font-semibold capitalize transition", mode === m ? "border-teal-400 bg-teal-50 text-teal-900 dark:bg-teal-950/50 dark:text-teal-100" : "border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300")} onClick={() => setMode(m)}>
-              {m === "manhwa" ? "🇰🇷 Manhwa" : m === "manhua" ? "🇨🇳 Manhua" : m === "manga" ? "🇯🇵 Manga" : "Anime"}
+              {m === "manhwa" ? "🇰🇷 Manhwa" : m === "manga" ? "🇯🇵 Manga" : "Anime"}
             </button>
           ))}
         </div>
@@ -1817,7 +1810,7 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
           <div className="grid gap-2">
             <div className="grid grid-cols-[20px_minmax(0,1fr)] items-center gap-2">
               <Search className="h-5 w-5 text-slate-400" />
-              <input className={clsx(inputClass(), "border-0 bg-transparent px-0 focus:border-0")} placeholder={mode === "anime" ? "Search anime by title" : mode === "manhwa" ? "Search manhwa by title" : mode === "manhua" ? "Search manhua by title" : "Search manga by title"} value={query} onChange={(event) => setQuery(event.target.value)} />
+              <input className={clsx(inputClass(), "border-0 bg-transparent px-0 focus:border-0")} placeholder={mode === "anime" ? "Search anime by title" : mode === "manhwa" ? "Search manhwa by title" : "Search manga by title"} value={query} onChange={(event) => setQuery(event.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
               <button className="button-ghost" type="button" onClick={clearExploreInput}>Clear search</button>
@@ -1989,15 +1982,6 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
           )}
         </div>
       )}
-      {mode === "manhua" && !selectedId && !query && (
-        <div className="grid gap-5">
-          {comicsLoading ? (
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-40 animate-pulse rounded-2xl bg-white/70 dark:bg-slate-900/70" />)}</div>
-          ) : (
-            <MangaRail title="Trending Manhua" kicker="🇨🇳 Chinese comics" items={topManhua} onAdd={onAddManga} />
-          )}
-        </div>
-      )}
     </div>
   );
 }
@@ -2110,7 +2094,6 @@ function MyMangaPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
     dropped: filteredLibrary.filter((e) => e.status === "Dropped").length,
     manga: data.mangaLibrary.filter((e) => (e.mediaType ?? "manga") === "manga").length,
     manhwa: data.mangaLibrary.filter((e) => e.mediaType === "manhwa").length,
-    manhua: data.mangaLibrary.filter((e) => e.mediaType === "manhua").length,
   };
 
   const recent = [...filteredLibrary]
@@ -2136,7 +2119,7 @@ function MyMangaPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
           >
             {t.flag ? `${t.flag} ${t.label}` : t.label}
             <span className="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-              {t.key === "all" ? data.mangaLibrary.length : t.key === "manga" ? counts.manga : t.key === "manhwa" ? counts.manhwa : counts.manhua}
+              {t.key === "all" ? data.mangaLibrary.length : t.key === "manga" ? counts.manga : counts.manhwa}
             </span>
           </button>
         ))}
@@ -2146,7 +2129,7 @@ function MyMangaPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
         <div className="grid gap-2">
           <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Comics shelf</p>
           <h3 className="break-words font-display text-3xl leading-tight sm:text-4xl">{data.settings.username}'s bookshelf</h3>
-          <p className="text-sm text-slate-600 dark:text-slate-300">Manga, manhwa, and manhua — all in one place.</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">Manga and manhwa — all in one place.</p>
           <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-700">
             <span className="rounded-xl bg-white/70 px-3 py-1 dark:bg-slate-900">Total {counts.total}</span>
             <span className="rounded-xl bg-white/70 px-3 py-1 dark:bg-slate-900">Reading {counts.reading}</span>
@@ -2167,7 +2150,7 @@ function MyMangaPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
           ))}
         </div>
       </Card>
-      <MangaHighlights data={data} updateData={updateData} />
+      <MangaHighlights data={data} updateData={updateData} typeFilter={typeFilter} />
       <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-6">
         <Card className="text-sm"><p className="text-slate-500">Total</p><p className="text-2xl font-black">{counts.total}</p></Card>
         <Card className="text-sm"><p className="text-slate-500">Reading</p><p className="text-2xl font-black">{counts.reading}</p></Card>
@@ -2287,43 +2270,50 @@ function ProfileHighlights({ data, updateData }: { data: AppData; updateData: (p
   );
 }
 
-function MangaHighlights({ data, updateData }: { data: AppData; updateData: (patch: Partial<AppData>) => void }) {
+function MangaHighlights({ data, updateData, typeFilter = "all" }: { data: AppData; updateData: (patch: Partial<AppData>) => void; typeFilter?: ComicMediaType | "all" }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<MangaSummary[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState("");
+
+  // Reset picker when the tab changes
+  useEffect(() => { setOpen(false); setQuery(""); setSearchResults([]); }, [typeFilter]);
+
   const selectedIds = data.settings.favoriteMangaIds || [];
   const favoriteCatalog = data.settings.favoriteMangaCatalog || [];
-  const catalog = allKnownManga(data.mangaLibrary, favoriteCatalog);
-  const searchableCatalog = allKnownManga(data.mangaLibrary, [...favoriteCatalog, ...searchResults]);
+  const allCatalog = allKnownManga(data.mangaLibrary, favoriteCatalog);
+
+  // Scope catalog to the active tab
+  const catalog = typeFilter === "all" ? allCatalog : allCatalog.filter((m) => (m.mediaType ?? "manga") === typeFilter);
+  const scopedResults = typeFilter === "all" ? searchResults : searchResults.filter((m) => (m.mediaType ?? "manga") === typeFilter);
+  const searchableCatalog = allKnownManga(
+    typeFilter === "all" ? data.mangaLibrary : data.mangaLibrary.filter((e) => (e.mediaType ?? "manga") === typeFilter),
+    [...favoriteCatalog, ...scopedResults]
+  );
   const catalogIds = new Set(catalog.map((manga) => manga.mal_id));
   const validSelectedIds = selectedIds.filter((mangaId) => catalogIds.has(mangaId));
   const selected = validSelectedIds.map((mangaId) => catalog.find((manga) => manga.mal_id === mangaId)).filter(Boolean) as MangaSummary[];
   const visibleCatalog = searchableCatalog.filter((manga) => !query.trim() || manga.title.toLowerCase().includes(query.toLowerCase()) || manga.genres.some((genre) => genre.toLowerCase().includes(query.toLowerCase())));
 
+  const label = typeFilter === "manhwa" ? "Manhwa" : "Manga";
+  const searchFn = typeFilter === "manhwa" ? searchManhwa : searchManga;
+
   useEffect(() => {
-    if (!open || query.trim().length < 2) {
-      setSearchResults([]);
-      setSearchError("");
-      setSearchLoading(false);
-      return;
-    }
+    if (!open || query.trim().length < 2) { setSearchResults([]); setSearchError(""); setSearchLoading(false); return; }
     const timer = window.setTimeout(() => {
       setSearchLoading(true);
-      searchManga(query)
-        .then((items) => {
-          setSearchResults(items);
-          setSearchError("");
-        })
+      searchFn(query)
+        .then((items) => { setSearchResults(items); setSearchError(""); })
         .catch((err: Error) => setSearchError(err.message))
         .finally(() => setSearchLoading(false));
     }, 500);
     return () => clearTimeout(timer);
-  }, [open, query]);
+  }, [open, query, typeFilter]);
 
   const toggleFavorite = (manga: MangaSummary) => {
-    const nextIds = validSelectedIds.includes(manga.mal_id) ? validSelectedIds.filter((idValue) => idValue !== manga.mal_id) : [...validSelectedIds, manga.mal_id];
+    const allIds = data.settings.favoriteMangaIds || [];
+    const nextIds = allIds.includes(manga.mal_id) ? allIds.filter((id) => id !== manga.mal_id) : [...allIds, manga.mal_id];
     const shouldStoreManga = !data.mangaLibrary.some((item) => item.mal_id === manga.mal_id);
     const nextCatalog = shouldStoreManga && !favoriteCatalog.some((item) => item.mal_id === manga.mal_id) ? [...favoriteCatalog, manga] : favoriteCatalog;
     updateData({ settings: { ...data.settings, favoriteMangaIds: nextIds, favoriteMangaCatalog: nextCatalog } });
@@ -2332,9 +2322,9 @@ function MangaHighlights({ data, updateData }: { data: AppData; updateData: (pat
   return (
     <Card className="grid gap-4">
       <div>
-        <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Manga highlights</p>
-        <h3 className="font-display text-3xl">Favorite manga shelf</h3>
-        <p className="text-sm text-slate-500">Pin the manga you keep coming back to.</p>
+        <p className="text-xs uppercase tracking-[0.3em] text-teal-500">{label} highlights</p>
+        <h3 className="font-display text-3xl">Favorite {label.toLowerCase()} shelf</h3>
+        <p className="text-sm text-slate-500">Pin the {label.toLowerCase()} you keep coming back to.</p>
       </div>
       {selected.length > 0 ? (
         <div className="grid gap-3 min-[520px]:grid-cols-2 lg:grid-cols-4">
@@ -2349,15 +2339,15 @@ function MangaHighlights({ data, updateData }: { data: AppData; updateData: (pat
           ))}
         </div>
       ) : (
-        <p className="rounded-xl bg-teal-50 p-3 text-sm text-slate-500 dark:bg-teal-950/30">No manga highlights yet.</p>
+        <p className="rounded-xl bg-teal-50 p-3 text-sm text-slate-500 dark:bg-teal-950/30">No {label.toLowerCase()} highlights yet.</p>
       )}
       <button className="inline-flex items-center justify-between rounded-xl border border-teal-200/70 bg-white/70 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-teal-900/50 dark:bg-slate-950/70 dark:text-slate-200" onClick={() => setOpen((prev) => !prev)}>
-        <span>{open ? "Hide manga picker" : "Choose favorite manga"}</span>
+        <span>{open ? `Hide ${label.toLowerCase()} picker` : `Choose favorite ${label.toLowerCase()}`}</span>
         {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
       </button>
       {open && (
         <div className="grid gap-3">
-          <input className={inputClass()} placeholder="Search manga favorites" value={query} onChange={(event) => setQuery(event.target.value)} />
+          <input className={inputClass()} placeholder={`Search ${label.toLowerCase()} favorites`} value={query} onChange={(event) => setQuery(event.target.value)} />
           {searchLoading && <p className="rounded-xl bg-teal-50 p-3 text-sm text-slate-500 dark:bg-teal-950/30">Searching manga...</p>}
           {searchError && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{searchError}</p>}
           <div className="scrollbar-soft grid max-h-[70vh] gap-2 overflow-auto pr-1 md:max-h-96 md:grid-cols-2 xl:grid-cols-3">

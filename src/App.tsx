@@ -1435,23 +1435,34 @@ function AnimeRail({ title, kicker, items, onAdd }: { title: string; kicker: str
   );
 }
 
-function MangaRail({ title, kicker, items, onAdd }: { title: string; kicker: string; items: MangaSummary[]; onAdd: (manga: MangaSummary) => void }) {
+function MangaRail({ title, kicker, items, onAdd, loading = false }: { title: string; kicker: string; items: MangaSummary[]; onAdd: (manga: MangaSummary) => void; loading?: boolean }) {
   return (
     <section className="grid gap-3">
-      <div>
-        <p className="text-xs uppercase tracking-[0.25em] text-teal-500">{kicker}</p>
-        <h2 className="font-display text-2xl leading-tight sm:text-3xl">{title}</h2>
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.25em] text-blue-500">{kicker}</p>
+          <h2 className="font-display text-2xl leading-tight sm:text-3xl">{title}</h2>
+        </div>
       </div>
-      {items.length ? (
+      {loading ? (
         <div className="scrollbar-soft -mx-3 flex gap-3 overflow-x-auto px-3 pb-2 sm:mx-0 sm:px-0">
-          {items.slice(0, 10).map((manga) => (
-            <article key={manga.mal_id} className="touch-card grid w-[230px] shrink-0 grid-cols-[72px_minmax(0,1fr)] gap-3 rounded-2xl border border-slate-200/70 bg-white/75 p-2.5 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300 dark:border-slate-800 dark:bg-slate-950/70">
-              <img src={manga.image_url} alt="" className="h-28 w-[72px] rounded-xl object-cover" />
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="w-[200px] shrink-0 sm:w-[230px]">
+              <div className="h-[112px] w-full animate-pulse rounded-2xl bg-white/70 dark:bg-slate-900/70" />
+            </div>
+          ))}
+        </div>
+      ) : items.length ? (
+        <div className="scrollbar-soft -mx-3 flex gap-3 overflow-x-auto px-3 pb-3 sm:mx-0 sm:px-0">
+          {items.slice(0, 12).map((manga) => (
+            <article key={manga.mal_id} className="touch-card grid w-[200px] shrink-0 grid-cols-[64px_minmax(0,1fr)] gap-2.5 rounded-2xl border border-slate-200/70 bg-white/75 p-2.5 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 dark:border-slate-800 dark:bg-slate-950/70 sm:w-[230px] sm:grid-cols-[72px_minmax(0,1fr)] sm:gap-3">
+              <img src={manga.image_url} alt="" className="h-24 w-16 rounded-xl object-cover sm:h-28 sm:w-[72px]" />
               <div className="min-w-0">
-                <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold capitalize text-slate-500 dark:bg-slate-800">{manga.mediaType ?? "manga"}</span>
-                <p className="mt-1 line-clamp-2 text-sm font-bold text-slate-900 dark:text-white">{manga.title}</p>
-                <p className="mt-0.5 text-xs text-slate-500">{manga.year || "TBA"} • {manga.score ? `${manga.score}/10` : "No score"}</p>
-                <button className="mt-2 inline-flex items-center gap-1 rounded-full bg-teal-400 px-2.5 py-1 text-[11px] font-black text-slate-950 transition hover:bg-teal-300" onClick={() => onAdd(manga)}>
+                <span className="rounded-full bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-600 dark:bg-blue-950/40 dark:text-blue-300">🇰🇷 manhwa</span>
+                <p className="mt-1 line-clamp-2 text-xs font-bold leading-snug text-slate-900 dark:text-white sm:text-sm">{manga.title}</p>
+                <p className="mt-0.5 text-[11px] text-slate-500 sm:text-xs">{manga.year || "TBA"} • {manga.score ? `${manga.score}/10` : "—"}</p>
+                <p className="mt-0.5 line-clamp-1 text-[11px] text-slate-400 sm:text-xs">{manga.genres.slice(0, 2).join(", ") || "Manhwa"}</p>
+                <button className="mt-2 inline-flex items-center gap-1 rounded-full bg-blue-400 px-2.5 py-1 text-[11px] font-black text-slate-950 transition hover:bg-blue-300" onClick={() => onAdd(manga)}>
                   <Plus className="h-3 w-3" /> Save
                 </button>
               </div>
@@ -1459,7 +1470,7 @@ function MangaRail({ title, kicker, items, onAdd }: { title: string; kicker: str
           ))}
         </div>
       ) : (
-        <Card className="py-4"><p className="text-sm text-slate-500">Loading…</p></Card>
+        <Card className="py-4"><p className="text-sm text-slate-500">No trending manhwa right now.</p></Card>
       )}
     </section>
   );
@@ -1590,12 +1601,14 @@ function SeasonTracker({ trending, seasonal, upcoming, airingToday, updatedAt, l
   );
 }
 
-function HomePage({ addAnime }: { addAnime: (anime: AnimeSummary) => void }) {
+function HomePage({ addAnime, addManga }: { addAnime: (anime: AnimeSummary) => void; addManga: (manga: MangaSummary) => void }) {
   const [trending, setTrending] = useState<AnimeSummary[]>([]);
   const [seasonal, setSeasonal] = useState<AnimeSummary[]>([]);
   const [upcoming, setUpcoming] = useState<AnimeSummary[]>([]);
   const [airingToday, setAiringToday] = useState<AnimeSummary[]>([]);
+  const [topManhwa, setTopManhwa] = useState<MangaSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [manhwaLoading, setManhwaLoading] = useState(true);
   const [error, setError] = useState("");
   const [updatedAt, setUpdatedAt] = useState("");
 
@@ -1635,6 +1648,14 @@ function HomePage({ addAnime }: { addAnime: (anime: AnimeSummary) => void }) {
     };
   }, []);
 
+  useEffect(() => {
+    setManhwaLoading(true);
+    getTopManhwa(12)
+      .then(setTopManhwa)
+      .catch(() => {})
+      .finally(() => setManhwaLoading(false));
+  }, []);
+
   return (
     <div className="mx-auto grid max-w-5xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
       <Card className="hero-banner grid min-h-[140px] content-start justify-items-end gap-1 pt-4 text-right text-white sm:min-h-[190px] sm:pt-6">
@@ -1664,6 +1685,8 @@ function HomePage({ addAnime }: { addAnime: (anime: AnimeSummary) => void }) {
           <AnimeRail title="Coming Soon" kicker="Next issue" items={upcoming} onAdd={addAnime} />
         </>
       )}
+
+      <MangaRail title="Trending Manhwa" kicker="🇰🇷 Korean comics" items={topManhwa} onAdd={addManga} loading={manhwaLoading} />
     </div>
   );
 }
@@ -1675,8 +1698,6 @@ type AnimeCharacter = { character: { name: string }; role: string; voice_actors?
 function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: AnimeSummary) => void; onAddManga: (manga: MangaSummary) => void; onBack: () => void }) {
   const [mode, setMode] = useState<ExploreMode>("anime");
   const [query, setQuery] = useState("");
-  const [topManhwa, setTopManhwa] = useState<MangaSummary[]>([]);
-  const [comicsLoading, setComicsLoading] = useState(false);
   const [results, setResults] = useState<(AnimeSummary | MangaSummary)[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -1719,11 +1740,6 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
     setCast([]);
     setThemes({ openings: [], endings: [] });
     setDetailError("");
-    // Lazy-load top manhwa list when switching to that mode
-    if (mode === "manhwa" && !topManhwa.length) {
-      setComicsLoading(true);
-      getTopManhwa(12).then(setTopManhwa).catch(() => {}).finally(() => setComicsLoading(false));
-    }
   }, [mode]);
 
   useEffect(() => {
@@ -1976,16 +1992,6 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
           )}
         </Card>
       </div>
-      {/* Trending rail for manhwa when no search is active */}
-      {mode === "manhwa" && !selectedId && !query && (
-        <div className="grid gap-5">
-          {comicsLoading ? (
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-40 animate-pulse rounded-2xl bg-white/70 dark:bg-slate-900/70" />)}</div>
-          ) : (
-            <MangaRail title="Trending Manhwa" kicker="🇰🇷 Korean comics" items={topManhwa} onAdd={onAddManga} />
-          )}
-        </div>
-      )}
     </div>
   );
 }
@@ -3616,7 +3622,7 @@ function App() {
           />
         )}
         {page !== "explore" && page !== "stuff" && page !== "manga" && page !== "manhwa" && page !== "add" && page !== "add-manga" && (
-          <HomePage addAnime={startAddFlow} />
+          <HomePage addAnime={startAddFlow} addManga={startAddMangaFlow} />
         )}
         <div className="mx-auto max-w-6xl px-3 pb-6 pt-2 sm:px-4">
           <SiteFooter />
@@ -3666,7 +3672,7 @@ function App() {
       {confirmAction === "clear-manhwa" && (
         <ConfirmModal title="Clear manhwa history?" message="This removes every manhwa entry from this account." confirmLabel="Clear manhwa" onCancel={() => setConfirmAction(null)} onConfirm={clearManhwaHistory} />
       )}
-      {page === "home" && <HomePage addAnime={startAddFlow} />}
+      {page === "home" && <HomePage addAnime={startAddFlow} addManga={startAddMangaFlow} />}
       {page === "explore" && <ExplorePage onAddAnime={startAddFlow} onAddManga={startAddMangaFlow} onBack={() => setPage("home")} />}
       {page === "stuff" && <MyStuffPage data={data} onSelect={startAddFlow} updateEntry={updateEntry} removeEntry={removeEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={() => setConfirmAction("clear-anime")} />}
       {page === "manga" && <MyMangaPage data={data} onSelect={startAddMangaFlow} updateEntry={updateMangaEntry} removeEntry={removeMangaEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={() => setConfirmAction("clear-manga")} />}

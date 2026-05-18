@@ -35,16 +35,6 @@ npm run dev
 
 The app runs on the local Vite development server.
 
-## Environment Variables
-
-Create a `.env` file from `.env.example`:
-
-```env
-VITE_SUPABASE_URL=https://your-project-ref.supabase.co
-VITE_SUPABASE_ANON_KEY=your-public-anon-key
-VITE_SITE_URL=https://animeboxd.app/
-```
-
 
 ## Available Scripts
 

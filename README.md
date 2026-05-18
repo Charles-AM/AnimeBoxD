@@ -17,7 +17,7 @@ AnimeBoxD is a Letterboxd-style anime and manga tracker built with React, Vite, 
 - Vite
 - Tailwind CSS
 - Recharts + react-calendar-heatmap
-- Supabase (optional backend/auth)
+- Supabase (backend/auth)
 
 ## Getting Started
 
@@ -45,11 +45,6 @@ VITE_SUPABASE_ANON_KEY=your-public-anon-key
 VITE_SITE_URL=https://animeboxd.app/
 ```
 
-If Supabase variables are not provided, AnimeBoxD falls back to local demo account behavior.
-
-For full backend setup, see:
-
-- [`docs/supabase-setup.md`](docs/supabase-setup.md)
 
 ## Available Scripts
 

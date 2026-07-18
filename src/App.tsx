@@ -1032,14 +1032,28 @@ function SearchPanel({ onSelect }: { onSelect: (anime: AnimeSummary) => void }) 
       setError("");
       return;
     }
+    let cancelled = false;
     const timer = window.setTimeout(() => {
       setLoading(true);
+      setError("");
       searchAnime(query)
-        .then(setResults)
-        .catch((err: Error) => setError(err.message))
-        .finally(() => setLoading(false));
+        .then((items) => {
+          if (cancelled) return;
+          setResults(items);
+          setError("");
+        })
+        .catch((err: Error) => {
+          if (cancelled) return;
+          setError(err.message);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
     }, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [query]);
 
   return (
@@ -1049,7 +1063,7 @@ function SearchPanel({ onSelect }: { onSelect: (anime: AnimeSummary) => void }) 
         <input className={clsx(inputClass(), "border-0 bg-transparent px-0 focus:border-0")} placeholder="Search anime" value={query} onChange={(event) => setQuery(event.target.value)} />
       </div>
       {loading && <div className="mt-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-40 animate-pulse rounded-md bg-slate-100 dark:bg-slate-800" />)}</div>}
-      {error && <p className="mt-3 rounded-md bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950 dark:text-rose-200">{error}</p>}
+      {error && !results.length && <p className="mt-3 rounded-md bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950 dark:text-rose-200">{error}</p>}
       {!loading && !error && query.trim().length >= 2 && !results.length && (
         <p className="mt-3 rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No safe anime results found. Try another title.</p>
       )}
@@ -1082,11 +1096,14 @@ function SearchMangaPanel({ onSelect, fixedType }: { onSelect: (manga: MangaSumm
 
   useEffect(() => {
     if (query.trim().length < 2) { setResults([]); setError(""); return; }
+    let cancelled = false;
     const timer = window.setTimeout(() => {
       setLoading(true);
+      setError("");
       const fn = fixedType === "manhwa" ? searchManhwa : fixedType === "light-novel" ? searchLightNovels : searchManga;
       fn(query)
         .then((items) => {
+          if (cancelled) return;
           // When searching manga, keep only manga (exclude manhwa + light-novel cross-results)
           const filtered = fixedType === "manga"
             ? items.filter((m) => (m.mediaType ?? "manga") === "manga")
@@ -1094,10 +1111,18 @@ function SearchMangaPanel({ onSelect, fixedType }: { onSelect: (manga: MangaSumm
           setResults(filtered);
           setError("");
         })
-        .catch((err: Error) => setError(err.message))
-        .finally(() => setLoading(false));
+        .catch((err: Error) => {
+          if (cancelled) return;
+          setError(err.message);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
     }, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [query, fixedType]);
 
   const placeholder = fixedType === "manhwa" ? "Search manhwa by title…" : fixedType === "light-novel" ? "Search light novels by title…" : "Search manga by title…";
@@ -1109,7 +1134,7 @@ function SearchMangaPanel({ onSelect, fixedType }: { onSelect: (manga: MangaSumm
         <input className={clsx(inputClass(), "border-0 bg-transparent px-0 focus:border-0")} placeholder={placeholder} value={query} onChange={(e) => setQuery(e.target.value)} />
       </div>
       {loading && <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-40 animate-pulse rounded-md bg-slate-100 dark:bg-slate-800" />)}</div>}
-      {error && <p className="rounded-md bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950 dark:text-rose-200">{error}</p>}
+      {error && !results.length && <p className="rounded-md bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950 dark:text-rose-200">{error}</p>}
       {!loading && !error && query.trim().length >= 2 && !results.length && (
         <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No results found. Try another title.</p>
       )}
@@ -1793,16 +1818,29 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
       setLoading(false);
       return;
     }
+    let cancelled = false;
     const timer = window.setTimeout(() => {
       setLoading(true);
       setError("");
       const request = mode === "anime" ? searchAnime(query) : mode === "manhwa" ? searchManhwa(query) : searchManga(query);
       request
-        .then(setResults)
-        .catch((err: Error) => setError(err.message))
-        .finally(() => setLoading(false));
+        .then((items) => {
+          if (cancelled) return;
+          setResults(items);
+          setError("");
+        })
+        .catch((err: Error) => {
+          if (cancelled) return;
+          setError(err.message);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
     }, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [mode, query]);
 
   useEffect(() => {
@@ -1820,30 +1858,51 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
 
   useEffect(() => {
     if (!selectedId) return;
+    let cancelled = false;
     setDetailLoading(true);
     setDetailError("");
 
     if (mode === "anime") {
-      Promise.all([getAnime(selectedId), getAnimeStaff(selectedId), getAnimeCharacters(selectedId), getAnimeThemes(selectedId)])
-        .then(([detail, staffData, castData, themeData]) => {
-          setAnimeDetail(detail);
-          setStaff(staffData);
-          setCast(castData);
-          setThemes(themeData);
+      Promise.allSettled([getAnime(selectedId), getAnimeStaff(selectedId), getAnimeCharacters(selectedId), getAnimeThemes(selectedId)])
+        .then((responses) => {
+          if (cancelled) return;
+          const [detailResult, staffResult, castResult, themeResult] = responses;
+          if (detailResult.status === "rejected") {
+            setDetailError(detailResult.reason instanceof Error ? detailResult.reason.message : "Could not load this title.");
+            return;
+          }
+          setAnimeDetail(detailResult.value);
+          setStaff(staffResult.status === "fulfilled" ? staffResult.value : []);
+          setCast(castResult.status === "fulfilled" ? castResult.value : []);
+          setThemes(themeResult.status === "fulfilled" ? themeResult.value : { openings: [], endings: [] });
+          setDetailError("");
         })
-        .catch((err: Error) => setDetailError(err.message))
-        .finally(() => setDetailLoading(false));
-      return;
+        .finally(() => {
+          if (!cancelled) setDetailLoading(false);
+        });
+      return () => {
+        cancelled = true;
+      };
     }
 
     getManga(selectedId)
       .then((d) => {
+        if (cancelled) return;
         // Preserve the mediaType that came from the search result
         const match = safeResults.find((r) => r.mal_id === selectedId) as MangaSummary | undefined;
         setMangaDetail({ ...d, mediaType: match?.mediaType ?? d.mediaType });
+        setDetailError("");
       })
-      .catch((err: Error) => setDetailError(err.message))
-      .finally(() => setDetailLoading(false));
+      .catch((err: Error) => {
+        if (cancelled) return;
+        setDetailError(err.message);
+      })
+      .finally(() => {
+        if (!cancelled) setDetailLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [mode, selectedId]);
 
   const renderChipList = (items: string[]) => {
@@ -1914,7 +1973,7 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
             </div>
           </div>
           {loading && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">Searching...</p>}
-          {error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{error}</p>}
+          {error && !safeResults.length && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{error}</p>}
           {!loading && query.trim().length >= 2 && !safeResults.length && !error && (
             <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No safe results found. Try a different title.</p>
           )}
@@ -2424,17 +2483,28 @@ function ProfileHighlights({ data, updateData }: { data: AppData; updateData: (p
       setSearchLoading(false);
       return;
     }
+    let cancelled = false;
     const timer = window.setTimeout(() => {
       setSearchLoading(true);
+      setSearchError("");
       searchAnime(query)
         .then((items) => {
+          if (cancelled) return;
           setSearchResults(items);
           setSearchError("");
         })
-        .catch((err: Error) => setSearchError(err.message))
-        .finally(() => setSearchLoading(false));
+        .catch((err: Error) => {
+          if (cancelled) return;
+          setSearchError(err.message);
+        })
+        .finally(() => {
+          if (!cancelled) setSearchLoading(false);
+        });
     }, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [open, query]);
 
   const toggleFavorite = (anime: AnimeSummary) => {
@@ -2516,14 +2586,28 @@ function MangaHighlights({ data, updateData }: { data: AppData; updateData: (pat
 
   useEffect(() => {
     if (!open || query.trim().length < 2) { setSearchResults([]); setSearchError(""); setSearchLoading(false); return; }
+    let cancelled = false;
     const timer = window.setTimeout(() => {
       setSearchLoading(true);
+      setSearchError("");
       searchManga(query)
-        .then((items) => { setSearchResults(items); setSearchError(""); })
-        .catch((err: Error) => setSearchError(err.message))
-        .finally(() => setSearchLoading(false));
+        .then((items) => {
+          if (cancelled) return;
+          setSearchResults(items);
+          setSearchError("");
+        })
+        .catch((err: Error) => {
+          if (cancelled) return;
+          setSearchError(err.message);
+        })
+        .finally(() => {
+          if (!cancelled) setSearchLoading(false);
+        });
     }, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [open, query]);
 
   const toggleFavorite = (manga: MangaSummary) => {
@@ -2608,14 +2692,28 @@ function ManhwaHighlights({ data, updateData }: { data: AppData; updateData: (pa
 
   useEffect(() => {
     if (!open || query.trim().length < 2) { setSearchResults([]); setSearchError(""); setSearchLoading(false); return; }
+    let cancelled = false;
     const timer = window.setTimeout(() => {
       setSearchLoading(true);
+      setSearchError("");
       searchManhwa(query)
-        .then((items) => { setSearchResults(items); setSearchError(""); })
-        .catch((err: Error) => setSearchError(err.message))
-        .finally(() => setSearchLoading(false));
+        .then((items) => {
+          if (cancelled) return;
+          setSearchResults(items);
+          setSearchError("");
+        })
+        .catch((err: Error) => {
+          if (cancelled) return;
+          setSearchError(err.message);
+        })
+        .finally(() => {
+          if (!cancelled) setSearchLoading(false);
+        });
     }, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [open, query]);
 
   const toggleFavorite = (manga: MangaSummary) => {
@@ -2699,14 +2797,28 @@ function LightNovelHighlights({ data, updateData }: { data: AppData; updateData:
 
   useEffect(() => {
     if (!open || query.trim().length < 2) { setSearchResults([]); setSearchError(""); setSearchLoading(false); return; }
+    let cancelled = false;
     const timer = window.setTimeout(() => {
       setSearchLoading(true);
+      setSearchError("");
       searchLightNovels(query)
-        .then((items) => { setSearchResults(items); setSearchError(""); })
-        .catch((err: Error) => setSearchError(err.message))
-        .finally(() => setSearchLoading(false));
+        .then((items) => {
+          if (cancelled) return;
+          setSearchResults(items);
+          setSearchError("");
+        })
+        .catch((err: Error) => {
+          if (cancelled) return;
+          setSearchError(err.message);
+        })
+        .finally(() => {
+          if (!cancelled) setSearchLoading(false);
+        });
     }, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [open, query]);
 
   const toggleFavorite = (manga: MangaSummary) => {

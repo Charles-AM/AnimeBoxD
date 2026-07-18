@@ -27,8 +27,7 @@ import {
   X
 } from "lucide-react";
 import { fixedAnime } from "./lib/fixedAnime";
-import { fixedLightNovels, fixedManhwa } from "./lib/fixedManga";
-import { getAiringToday, getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, getSeasonal, getTopAiring, getTopLightNovels, getTopManhwa, getUpcomingAnime, searchAnime, searchLightNovels, searchManga, searchManhwa } from "./lib/jikan";
+import { getAiringToday, getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, getSeasonal, getTopAiring, getUpcomingAnime, searchAnime, searchLightNovels, searchManga, searchManhwa } from "./lib/jikan";
 import { loadData, saveData, setActiveUser } from "./lib/storage";
 import { completeAuthSessionFromUrl, createReport, deleteCloudAccount, getCurrentSession, isSupabaseConfigured, loadAdminDashboard, loadCloudData, loadProfile, logActivityEvent, logPageView, markProfileSeen, resendSignupConfirmation, saveCloudData, sendPasswordResetEmail, signInWithEmail, signOutCloud, signUpWithEmail, updateCloudPassword, upsertProfile, userToProfileFallback } from "./lib/supabase";
 import type { AdminDashboardData, AnimeDetail, AnimeSummary, AppData, ComicMediaType, LibraryEntry, LibraryStatus, MangaDetail, MangaEntry, MangaStatus, MangaSummary, Settings, ThemeMode } from "./types/anime";
@@ -1556,55 +1555,6 @@ function AnimeRail({ title, kicker, items, onAdd, loading = false }: { title: st
   );
 }
 
-function MangaRail({ title, kicker, items, onAdd, loading = false, variant = "manhwa" }: { title: string; kicker: string; items: MangaSummary[]; onAdd: (manga: MangaSummary) => void; loading?: boolean; variant?: "manhwa" | "light-novel" }) {
-  const isLN = variant === "light-novel";
-  const accentText   = isLN ? "text-amber-500" : "text-blue-500";
-  const hoverBorder  = isLN ? "hover:border-amber-300" : "hover:border-blue-300";
-  const badgeBg      = isLN ? "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300" : "bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300";
-  const badgeLabel   = isLN ? "📖 light novel" : "🇰🇷 manhwa";
-  const saveBg       = isLN ? "bg-amber-400 hover:bg-amber-300" : "bg-blue-400 hover:bg-blue-300";
-  const emptyMsg     = isLN ? "No trending light novels right now." : "No trending manhwa right now.";
-
-  return (
-    <section className="grid gap-3">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <p className={`text-xs uppercase tracking-[0.25em] ${accentText}`}>{kicker}</p>
-          <h2 className="font-display text-2xl leading-tight sm:text-3xl">{title}</h2>
-        </div>
-      </div>
-      {loading ? (
-        <div className="scrollbar-soft -mx-3 flex gap-3 overflow-x-auto px-3 pb-2 sm:mx-0 sm:px-0">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="w-[200px] shrink-0 sm:w-[230px]">
-              <div className="h-[112px] w-full animate-pulse rounded-2xl bg-white/70 dark:bg-slate-900/70" />
-            </div>
-          ))}
-        </div>
-      ) : items.length ? (
-        <div className="scrollbar-soft -mx-3 flex gap-3 overflow-x-auto px-3 pb-3 sm:mx-0 sm:px-0">
-          {items.slice(0, 12).map((manga) => (
-            <article key={manga.mal_id} className={`touch-card grid w-[200px] shrink-0 grid-cols-[64px_minmax(0,1fr)] gap-2.5 rounded-2xl border border-slate-200/70 bg-white/75 p-2.5 shadow-sm transition hover:-translate-y-0.5 dark:border-slate-800 dark:bg-slate-950/70 sm:w-[230px] sm:grid-cols-[72px_minmax(0,1fr)] sm:gap-3 ${hoverBorder}`}>
-              <img src={manga.image_url} alt="" className="h-24 w-16 rounded-xl object-cover sm:h-28 sm:w-[72px]" />
-              <div className="min-w-0">
-                <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${badgeBg}`}>{badgeLabel}</span>
-                <p className="mt-1 line-clamp-2 text-xs font-bold leading-snug text-slate-900 dark:text-white sm:text-sm">{manga.title}</p>
-                <p className="mt-0.5 text-[11px] text-slate-500 sm:text-xs">{manga.year || "TBA"} • {manga.score ? `${manga.score}/10` : "—"}</p>
-                <p className="mt-0.5 line-clamp-1 text-[11px] text-slate-400 sm:text-xs">{manga.genres.slice(0, 2).join(", ") || (isLN ? "Light Novel" : "Manhwa")}</p>
-                <button className={`mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-black text-slate-950 transition ${saveBg}`} onClick={() => onAdd(manga)}>
-                  <Plus className="h-3 w-3" /> Save
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
-      ) : (
-        <Card className="py-4"><p className="text-sm text-slate-500">{emptyMsg}</p></Card>
-      )}
-    </section>
-  );
-}
-
 function formatCompactNumber(value?: number) {
   if (!value) return "-";
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
@@ -1646,7 +1596,7 @@ function resolveLiveItems(result: PromiseSettledResult<AnimeSummary[]>, fallback
   return fallback;
 }
 
-function SeasonTracker({ trending, seasonal, upcoming, airingToday, updatedAt, loading, error, onRefresh, onAdd }: { trending: AnimeSummary[]; seasonal: AnimeSummary[]; upcoming: AnimeSummary[]; airingToday: AnimeSummary[]; updatedAt: string; loading: boolean; error: string; onRefresh: () => void; onAdd: (anime: AnimeSummary) => void }) {
+function SeasonTracker({ trending, seasonal, upcoming, airingToday, updatedAt, loading, onRefresh, onAdd }: { trending: AnimeSummary[]; seasonal: AnimeSummary[]; upcoming: AnimeSummary[]; airingToday: AnimeSummary[]; updatedAt: string; loading: boolean; onRefresh: () => void; onAdd: (anime: AnimeSummary) => void }) {
   const [todayIndex, setTodayIndex] = useState(0);
   const [scoreIndex, setScoreIndex] = useState(0);
   const seasonPool = [...seasonal, ...trending];
@@ -1730,27 +1680,20 @@ function SeasonTracker({ trending, seasonal, upcoming, airingToday, updatedAt, l
       )}
 
       {updatedAt && <p className="text-xs font-semibold text-slate-500">Updated {updatedAt}</p>}
-      {error && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-100">{error}</p>}
     </Card>
   );
 }
 
-function HomePage({ addAnime, addManga }: { addAnime: (anime: AnimeSummary) => void; addManga: (manga: MangaSummary) => void }) {
+function HomePage({ addAnime }: { addAnime: (anime: AnimeSummary) => void }) {
   const [trending, setTrending] = useState<AnimeSummary[]>([]);
   const [seasonal, setSeasonal] = useState<AnimeSummary[]>([]);
   const [upcoming, setUpcoming] = useState<AnimeSummary[]>([]);
   const [airingToday, setAiringToday] = useState<AnimeSummary[]>([]);
-  const [topManhwa, setTopManhwa] = useState<MangaSummary[]>([]);
-  const [topLightNovels, setTopLightNovels] = useState<MangaSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [manhwaLoading, setManhwaLoading] = useState(true);
-  const [lnLoading, setLnLoading] = useState(true);
-  const [error, setError] = useState("");
   const [updatedAt, setUpdatedAt] = useState("");
 
   const loadHomeUpdates = async (force = false) => {
     setLoading(true);
-    setError("");
     const fallback = shuffleLiveItems(fixedAnime);
     try {
       const [trendingResult, seasonalResult, upcomingResult, todayResult] = await Promise.allSettled([
@@ -1763,19 +1706,12 @@ function HomePage({ addAnime, addManga }: { addAnime: (anime: AnimeSummary) => v
       const seasonalAnime = resolveLiveItems(seasonalResult, fallback.slice(6, 16));
       const upcomingAnime = resolveLiveItems(upcomingResult, fallback.slice(12, 22));
       const todayAnime = resolveLiveItems(todayResult, fallback.slice(4, 14));
-      const usedFallback = [trendingResult, seasonalResult, upcomingResult, todayResult].some(
-        (result) => result.status === "rejected" || (result.status === "fulfilled" && !result.value.length)
-      );
       setTrending(shuffleLiveItems(trendingAnime));
       setSeasonal(shuffleLiveItems(seasonalAnime));
       setUpcoming(shuffleLiveItems(upcomingAnime));
       setAiringToday(shuffleLiveItems(todayAnime));
       setUpdatedAt(new Date().toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }));
-      if (usedFallback) {
-        setError("Live Jikan data is slow right now, so these picks are from our curated fallback list.");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Updates are slow right now. Try again in a bit.");
+    } catch {
       setTrending(shuffleLiveItems(fallback.slice(0, 10)));
       setSeasonal(shuffleLiveItems(fallback.slice(6, 16)));
       setUpcoming(shuffleLiveItems(fallback.slice(12, 22)));
@@ -1798,22 +1734,6 @@ function HomePage({ addAnime, addManga }: { addAnime: (anime: AnimeSummary) => v
     };
   }, []);
 
-  useEffect(() => {
-    setManhwaLoading(true);
-    getTopManhwa(12)
-      .then((items) => setTopManhwa(items.length ? items : fixedManhwa.slice(0, 12)))
-      .catch(() => setTopManhwa(fixedManhwa.slice(0, 12)))
-      .finally(() => setManhwaLoading(false));
-  }, []);
-
-  useEffect(() => {
-    setLnLoading(true);
-    getTopLightNovels(12)
-      .then((items) => setTopLightNovels(items.length ? items : fixedLightNovels.slice(0, 12)))
-      .catch(() => setTopLightNovels(fixedLightNovels.slice(0, 12)))
-      .finally(() => setLnLoading(false));
-  }, []);
-
   return (
     <div className="mx-auto grid max-w-5xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
       <Card className="hero-banner grid min-h-[140px] content-start justify-items-end gap-1 pt-4 text-right text-white sm:min-h-[190px] sm:pt-6">
@@ -1828,7 +1748,7 @@ function HomePage({ addAnime, addManga }: { addAnime: (anime: AnimeSummary) => v
         </div>
       </Card>
 
-      <SeasonTracker trending={trending} seasonal={seasonal} upcoming={upcoming} airingToday={airingToday} updatedAt={updatedAt} loading={loading} error={error} onRefresh={() => loadHomeUpdates(true)} onAdd={addAnime} />
+      <SeasonTracker trending={trending} seasonal={seasonal} upcoming={upcoming} airingToday={airingToday} updatedAt={updatedAt} loading={loading} onRefresh={() => loadHomeUpdates(true)} onAdd={addAnime} />
 
       {loading && !trending.length && !seasonal.length && !upcoming.length ? (
         <div className="grid grid-cols-1 gap-4 min-[520px]:grid-cols-2 xl:grid-cols-3">
@@ -1843,9 +1763,6 @@ function HomePage({ addAnime, addManga }: { addAnime: (anime: AnimeSummary) => v
           <AnimeRail title="Coming Soon" kicker="Next issue" items={upcoming} onAdd={addAnime} loading={loading && !upcoming.length} />
         </>
       )}
-
-      <MangaRail title="Trending Manhwa" kicker="🇰🇷 Korean comics" items={topManhwa} onAdd={addManga} loading={manhwaLoading} variant="manhwa" />
-      <MangaRail title="Popular Light Novels" kicker="📖 Japanese fiction" items={topLightNovels} onAdd={addManga} loading={lnLoading} variant="light-novel" />
     </div>
   );
 }
@@ -3967,7 +3884,7 @@ function App() {
           />
         )}
         {page !== "explore" && page !== "stuff" && page !== "manga" && page !== "manhwa" && page !== "light-novel" && page !== "add" && page !== "add-manga" && (
-          <HomePage addAnime={startAddFlow} addManga={startAddMangaFlow} />
+          <HomePage addAnime={startAddFlow} />
         )}
         <div className="mx-auto max-w-6xl px-3 pb-6 pt-2 sm:px-4">
           <SiteFooter />
@@ -4022,7 +3939,7 @@ function App() {
       {confirmAction === "clear-light-novel" && (
         <ConfirmModal title="Clear light novel history?" message="This removes every light novel entry from this account." confirmLabel="Clear light novels" onCancel={() => setConfirmAction(null)} onConfirm={clearLightNovelHistory} />
       )}
-      {page === "home" && <HomePage addAnime={startAddFlow} addManga={startAddMangaFlow} />}
+      {page === "home" && <HomePage addAnime={startAddFlow} />}
       {page === "explore" && <ExplorePage onAddAnime={startAddFlow} onAddManga={startAddMangaFlow} onBack={() => setPage("home")} />}
       {page === "stuff" && <MyStuffPage data={data} onSelect={startAddFlow} updateEntry={updateEntry} removeEntry={removeEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={() => setConfirmAction("clear-anime")} />}
       {page === "manga" && <MyMangaPage data={data} onSelect={startAddMangaFlow} updateEntry={updateMangaEntry} removeEntry={removeMangaEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={() => setConfirmAction("clear-manga")} />}

@@ -1,6 +1,6 @@
 import type { AnimeDetail, AnimeSummary, MangaDetail, MangaSummary } from "../types/anime";
 
-const API = "https://api.jikan.moe/v4";
+const API_SOURCES = ["https://api.tenrai.org/v1", "https://api.jikan.moe/v4"] as const;
 const hour = 60 * 60 * 1000;
 const liveCacheTime = 10 * 60 * 1000;
 const minSearchInterval = 1000;
@@ -152,25 +152,36 @@ async function waitForRequestSlot() {
   lastRequestAt = Date.now();
 }
 
-async function requestJson<T>(path: string, retries = 4): Promise<T> {
-  return scheduleRequest(async () => {
-    let wait = 700;
-    for (let attempt = 0; attempt <= retries; attempt += 1) {
-      await waitForRequestSlot();
-      const response = await fetch(`${API}${path}`);
-      if (response.ok) return response.json();
-      const retryable = response.status === 429 || response.status === 503 || response.status === 504;
-      if (retryable && attempt < retries) {
-        await new Promise((resolve) => setTimeout(resolve, wait));
-        wait *= 2;
-        continue;
-      }
-      if (response.status === 429) throw new Error("Too many requests, please wait a moment.");
-      if (attempt === retries) throw new Error("Jikan is unavailable right now. Try again shortly.");
+async function fetchFromSource<T>(base: string, path: string, retries = 4): Promise<T> {
+  let wait = 700;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    await waitForRequestSlot();
+    const response = await fetch(`${base}${path}`);
+    if (response.ok) return response.json();
+    const retryable = response.status === 429 || response.status === 503 || response.status === 504;
+    if (retryable && attempt < retries) {
       await new Promise((resolve) => setTimeout(resolve, wait));
       wait *= 2;
+      continue;
     }
-    throw new Error("Request failed");
+    if (response.status === 429) throw new Error("Too many requests, please wait a moment.");
+    throw new Error(`HTTP ${response.status}`);
+  }
+  throw new Error("Request failed");
+}
+
+async function requestJson<T>(path: string, retries = 4): Promise<T> {
+  return scheduleRequest(async () => {
+    let lastError: Error | null = null;
+    for (const base of API_SOURCES) {
+      try {
+        return await fetchFromSource<T>(base, path, retries);
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error("Request failed");
+      }
+    }
+    if (lastError?.message === "Too many requests, please wait a moment.") throw lastError;
+    throw new Error("Anime data is unavailable right now. Try again shortly.");
   });
 }
 
@@ -282,7 +293,7 @@ function writeCache<T>(key: string, data: T) {
 export async function searchAnime(query: string): Promise<AnimeSummary[]> {
   const normalizedQuery = normalizeQuery(query);
   if (isBlockedQuery(normalizedQuery)) return [];
-  const key = `search_cache_v3_safe_${normalizedQuery}`;
+  const key = `search_cache_v4_tenrai_${normalizedQuery}`;
   const cached = readCache<AnimeSummary[]>(key, hour);
   if (cached) return filterSafeAnimeSummaries(cached);
   await throttleSearch("anime");
@@ -309,7 +320,7 @@ export async function searchAnime(query: string): Promise<AnimeSummary[]> {
 export async function searchManhwa(query: string): Promise<MangaSummary[]> {
   const normalizedQuery = normalizeQuery(query);
   if (isBlockedQuery(normalizedQuery)) return [];
-  const key = `search_manhwa_cache_v1_${normalizedQuery}`;
+  const key = `search_manhwa_cache_v2_tenrai_${normalizedQuery}`;
   const cached = readCache<MangaSummary[]>(key, hour);
   if (cached) return filterSafeMangaSummaries(cached);
   await throttleSearch("manga");
@@ -321,7 +332,7 @@ export async function searchManhwa(query: string): Promise<MangaSummary[]> {
 }
 
 export async function getTopManhwa(limit = 12): Promise<MangaSummary[]> {
-  const key = `top_manhwa_cache_v1_${limit}`;
+  const key = `top_manhwa_cache_v2_tenrai_${limit}`;
   const cached = readCache<MangaSummary[]>(key, hour);
   if (cached) return filterSafeMangaSummaries(cached);
   const payload = await requestJson<{ data?: JikanManga[] }>(`/top/manga?type=manhwa&limit=${limit}&sfw=true`);
@@ -334,7 +345,7 @@ export async function getTopManhwa(limit = 12): Promise<MangaSummary[]> {
 export async function searchLightNovels(query: string): Promise<MangaSummary[]> {
   const normalizedQuery = normalizeQuery(query);
   if (isBlockedQuery(normalizedQuery)) return [];
-  const key = `search_ln_cache_v2_${normalizedQuery}`;
+  const key = `search_ln_cache_v3_tenrai_${normalizedQuery}`;
   const cached = readCache<MangaSummary[]>(key, hour);
   if (cached) return filterSafeMangaSummaries(cached);
   await throttleSearch("manga");
@@ -346,7 +357,7 @@ export async function searchLightNovels(query: string): Promise<MangaSummary[]> 
 }
 
 export async function getTopLightNovels(limit = 12): Promise<MangaSummary[]> {
-  const key = `top_ln_cache_v1_${limit}`;
+  const key = `top_ln_cache_v2_tenrai_${limit}`;
   const cached = readCache<MangaSummary[]>(key, hour);
   if (cached) return filterSafeMangaSummaries(cached);
   const payload = await requestJson<{ data?: JikanManga[] }>(`/top/manga?type=lightnovel&limit=${limit}&sfw=true`);
@@ -358,7 +369,7 @@ export async function getTopLightNovels(limit = 12): Promise<MangaSummary[]> {
 export async function searchManga(query: string): Promise<MangaSummary[]> {
   const normalizedQuery = normalizeQuery(query);
   if (isBlockedQuery(normalizedQuery)) return [];
-  const key = `search_manga_cache_v3_safe_${normalizedQuery}`;
+  const key = `search_manga_cache_v4_tenrai_${normalizedQuery}`;
   const cached = readCache<MangaSummary[]>(key, hour);
   if (cached) return filterSafeMangaSummaries(cached);
   await throttleSearch("manga");
@@ -413,7 +424,7 @@ export async function getAnimeThemes(id: number) {
 }
 
 export async function getTopAiring(force = false) {
-  const key = "top_airing_cache_v3_safe";
+  const key = "top_airing_cache_v4_tenrai";
   const cached = force ? null : readCache<AnimeSummary[]>(key, liveCacheTime);
   if (cached) return filterSafeAnimeSummaries(cached);
   const payload = await requestJson<{ data?: JikanAnime[] }>("/top/anime?filter=airing&limit=25&sfw=true");
@@ -425,7 +436,7 @@ export async function getTopAiring(force = false) {
 export async function getAiringToday(force = false) {
   const weekdays = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
   const today = weekdays[new Date().getDay()];
-  const key = `airing_today_cache_v3_safe_${today}`;
+  const key = `airing_today_cache_v4_tenrai_${today}`;
   const cached = force ? null : readCache<AnimeSummary[]>(key, liveCacheTime);
   if (cached) return filterSafeAnimeSummaries(cached);
   const payload = await requestJson<{ data?: JikanAnime[] }>(`/schedules?filter=${today}&limit=25&sfw=true`);
@@ -435,7 +446,7 @@ export async function getAiringToday(force = false) {
 }
 
 export async function getTopAnime(limit = 12) {
-  const key = `top_anime_cache_v3_safe_${limit}`;
+  const key = `top_anime_cache_v4_tenrai_${limit}`;
   const cached = localStorage.getItem(key);
   if (cached) {
     const parsed = JSON.parse(cached) as { at: number; data: AnimeSummary[] };
@@ -453,7 +464,7 @@ export async function getRandomAnimeList(limit = 8) {
 }
 
 export async function getSeasonal(force = false) {
-  const key = "seasonal_anime_cache_v3_safe";
+  const key = "seasonal_anime_cache_v4_tenrai";
   const cached = force ? null : readCache<AnimeSummary[]>(key, liveCacheTime);
   if (cached) return filterSafeAnimeSummaries(cached);
   const payload = await requestJson<{ data?: JikanAnime[] }>("/seasons/now?limit=25&sfw=true");
@@ -463,7 +474,7 @@ export async function getSeasonal(force = false) {
 }
 
 export async function getUpcomingAnime(force = false) {
-  const key = "upcoming_anime_cache_v3_safe";
+  const key = "upcoming_anime_cache_v4_tenrai";
   const cached = force ? null : readCache<AnimeSummary[]>(key, liveCacheTime);
   if (cached) return filterSafeAnimeSummaries(cached);
   const payload = await requestJson<{ data?: JikanAnime[] }>("/seasons/upcoming?limit=25&sfw=true");

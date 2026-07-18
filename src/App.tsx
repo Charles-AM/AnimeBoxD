@@ -76,7 +76,7 @@ const mangaSections: { key: MangaStatus; title: string; icon: React.ReactElement
 ];
 
 const SITE_URL = "https://animeboxd.app/";
-const CREDIT_TEXT = "AnimeBoxD is an independent fan project. Anime and manga titles, artwork, synopses, trademarks, studios, publishers, streaming names, and source metadata belong to their respective owners. Discovery data is provided through Jikan and MyAnimeList references; AnimeBoxD does not claim ownership of third-party content.";
+const CREDIT_TEXT = "AnimeBoxD is an independent fan project. Anime and manga titles, artwork, synopses, trademarks, studios, publishers, streaming names, and source metadata belong to their respective owners. Discovery data is provided through Tenrai and MyAnimeList reference APIs; AnimeBoxD does not claim ownership of third-party content.";
 const avatarOptions = ["✨", "🎴", "🍥", "🌀", "🌙", "🔥", "⚔️", "🛡️", "🧡", "💫", "🌸", "🐉", "👑", "🎧", "📚", "🦊", "👾", "⭐"];
 const inactivityTimeoutMs = 30 * 60 * 1000;
 const REPORT_RATE_KEY = "animeboxd_last_report_at";
@@ -187,48 +187,6 @@ function FieldGroup({ label, children }: { label: string; children: React.ReactN
 function normalizeRating(value: number) {
   if (!Number.isFinite(value) || value <= 0) return 0;
   return Math.min(10, Math.max(0.5, Math.round(value * 2) / 2));
-}
-
-const MOOD_TAGS = [
-  { label: "Cozy",            emoji: "🛋️" },
-  { label: "Hype",            emoji: "⚡" },
-  { label: "Dark",            emoji: "🌑" },
-  { label: "Funny",           emoji: "😂" },
-  { label: "Emotional",       emoji: "💔" },
-  { label: "Mind-bending",    emoji: "🤯" },
-  { label: "Action-packed",   emoji: "🔥" },
-  { label: "Feel-good",       emoji: "🌸" },
-  { label: "Slow burn",       emoji: "🕯️" },
-  { label: "Binge-worthy",    emoji: "📺" },
-  { label: "Thought-provoking", emoji: "💭" },
-  { label: "Chill",           emoji: "😌" },
-];
-
-function MoodPicker({ value, onChange }: { value: string[]; onChange: (moods: string[]) => void }) {
-  const toggle = (label: string) =>
-    onChange(value.includes(label) ? value.filter((m) => m !== label) : [...value, label]);
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {MOOD_TAGS.map(({ label, emoji }) => {
-        const active = value.includes(label);
-        return (
-          <button
-            key={label}
-            type="button"
-            onClick={() => toggle(label)}
-            className={clsx(
-              "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold transition",
-              active
-                ? "border-teal-400 bg-teal-50 text-teal-900 dark:bg-teal-950/60 dark:text-teal-100"
-                : "border-slate-200/70 bg-white/80 text-slate-600 hover:border-teal-300 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300"
-            )}
-          >
-            <span>{emoji}</span> {label}
-          </button>
-        );
-      })}
-    </div>
-  );
 }
 
 function StarRating({ value, onChange }: { value: number; onChange: (value: number) => void }) {
@@ -1032,14 +990,28 @@ function SearchPanel({ onSelect }: { onSelect: (anime: AnimeSummary) => void }) 
       setError("");
       return;
     }
+    let cancelled = false;
     const timer = window.setTimeout(() => {
       setLoading(true);
+      setError("");
       searchAnime(query)
-        .then(setResults)
-        .catch((err: Error) => setError(err.message))
-        .finally(() => setLoading(false));
+        .then((items) => {
+          if (cancelled) return;
+          setResults(items);
+          setError("");
+        })
+        .catch((err: Error) => {
+          if (cancelled) return;
+          setError(err.message);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
     }, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [query]);
 
   return (
@@ -1049,7 +1021,7 @@ function SearchPanel({ onSelect }: { onSelect: (anime: AnimeSummary) => void }) 
         <input className={clsx(inputClass(), "border-0 bg-transparent px-0 focus:border-0")} placeholder="Search anime" value={query} onChange={(event) => setQuery(event.target.value)} />
       </div>
       {loading && <div className="mt-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-40 animate-pulse rounded-md bg-slate-100 dark:bg-slate-800" />)}</div>}
-      {error && <p className="mt-3 rounded-md bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950 dark:text-rose-200">{error}</p>}
+      {error && !results.length && <p className="mt-3 rounded-md bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950 dark:text-rose-200">{error}</p>}
       {!loading && !error && query.trim().length >= 2 && !results.length && (
         <p className="mt-3 rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No safe anime results found. Try another title.</p>
       )}
@@ -1082,11 +1054,14 @@ function SearchMangaPanel({ onSelect, fixedType }: { onSelect: (manga: MangaSumm
 
   useEffect(() => {
     if (query.trim().length < 2) { setResults([]); setError(""); return; }
+    let cancelled = false;
     const timer = window.setTimeout(() => {
       setLoading(true);
+      setError("");
       const fn = fixedType === "manhwa" ? searchManhwa : fixedType === "light-novel" ? searchLightNovels : searchManga;
       fn(query)
         .then((items) => {
+          if (cancelled) return;
           // When searching manga, keep only manga (exclude manhwa + light-novel cross-results)
           const filtered = fixedType === "manga"
             ? items.filter((m) => (m.mediaType ?? "manga") === "manga")
@@ -1094,10 +1069,18 @@ function SearchMangaPanel({ onSelect, fixedType }: { onSelect: (manga: MangaSumm
           setResults(filtered);
           setError("");
         })
-        .catch((err: Error) => setError(err.message))
-        .finally(() => setLoading(false));
+        .catch((err: Error) => {
+          if (cancelled) return;
+          setError(err.message);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
     }, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [query, fixedType]);
 
   const placeholder = fixedType === "manhwa" ? "Search manhwa by title…" : fixedType === "light-novel" ? "Search light novels by title…" : "Search manga by title…";
@@ -1109,7 +1092,7 @@ function SearchMangaPanel({ onSelect, fixedType }: { onSelect: (manga: MangaSumm
         <input className={clsx(inputClass(), "border-0 bg-transparent px-0 focus:border-0")} placeholder={placeholder} value={query} onChange={(e) => setQuery(e.target.value)} />
       </div>
       {loading && <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-40 animate-pulse rounded-md bg-slate-100 dark:bg-slate-800" />)}</div>}
-      {error && <p className="rounded-md bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950 dark:text-rose-200">{error}</p>}
+      {error && !results.length && <p className="rounded-md bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950 dark:text-rose-200">{error}</p>}
       {!loading && !error && query.trim().length >= 2 && !results.length && (
         <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No results found. Try another title.</p>
       )}
@@ -1203,7 +1186,6 @@ function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave
   const [review, setReview] = useState("");
   const [notes, setNotes] = useState("");
   const [dropReason, setDropReason] = useState("");
-  const [moods, setMoods] = useState<string[]>([]);
   const changeStatus = (nextStatus: LibraryStatus) => {
     setStatus(nextStatus);
     if (nextStatus === "Completed" && anime.total_episodes > 0) {
@@ -1244,9 +1226,6 @@ function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave
             <FieldGroup label="Rating">
               <StarRating value={rating} onChange={setRating} />
             </FieldGroup>
-            <FieldGroup label="Vibe tags">
-              <MoodPicker value={moods} onChange={setMoods} />
-            </FieldGroup>
             <Field label="Review">
               <textarea className={clsx(inputClass(), "min-h-24")} value={review} onChange={(event) => setReview(event.target.value)} />
             </Field>
@@ -1267,7 +1246,7 @@ function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave
               <Button className="bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => {
                 const entry = mergeAnimeToEntry(anime);
                 const episodesWatched = status === "Completed" && anime.total_episodes > 0 ? anime.total_episodes : episodesWatchedInput.trim() ? Number(episodesWatchedInput) : 0;
-                onSave(applyAnimeStatus({ ...entry, status, rating, episodes_watched: episodesWatched, rewatch_count: rewatchCount, review, notes, drop_reason: dropReason, moods }, status));
+                onSave(applyAnimeStatus({ ...entry, status, rating, episodes_watched: episodesWatched, rewatch_count: rewatchCount, review, notes, drop_reason: dropReason }, status));
               }}>Save</Button>
               <button className="button-ghost" onClick={onCancel}>Cancel</button>
             </div>
@@ -1285,7 +1264,6 @@ function AddMangaPage({ manga, onSave, onCancel }: { manga: MangaSummary; onSave
   const [review, setReview] = useState("");
   const [notes, setNotes] = useState("");
   const [dropReason, setDropReason] = useState("");
-  const [moods, setMoods] = useState<string[]>([]);
   const changeStatus = (nextStatus: MangaStatus) => setStatus(nextStatus);
 
   return (
@@ -1311,9 +1289,6 @@ function AddMangaPage({ manga, onSave, onCancel }: { manga: MangaSummary; onSave
             <FieldGroup label="Rating">
               <StarRating value={rating} onChange={setRating} />
             </FieldGroup>
-            <FieldGroup label="Vibe tags">
-              <MoodPicker value={moods} onChange={setMoods} />
-            </FieldGroup>
             <Field label="Re-read count">
               <input className={inputClass()} type="number" min={0} max={99} value={rereadCount} onChange={(e) => setRereadCount(Math.max(0, Number(e.target.value)))} />
             </Field>
@@ -1331,7 +1306,7 @@ function AddMangaPage({ manga, onSave, onCancel }: { manga: MangaSummary; onSave
             <div className="flex items-center gap-2">
               <Button className="bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => {
                 const entry = mergeMangaToEntry(manga);
-                onSave(applyMangaStatus({ ...entry, status, rating, reread_count: rereadCount, review, notes, drop_reason: dropReason, moods }, status));
+                onSave(applyMangaStatus({ ...entry, status, rating, reread_count: rereadCount, review, notes, drop_reason: dropReason }, status));
               }}>Save</Button>
               <button className="button-ghost" onClick={onCancel}>Cancel</button>
             </div>
@@ -1368,11 +1343,6 @@ function LibraryCard({ entry, onUpdate, onRemove }: { entry: LibraryEntry; onUpd
           <div className="h-2 rounded-full bg-teal-500" style={{ width: `${progress}%` }} />
         </div>
       </div>
-      {!expanded && (draft.moods || []).length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {(draft.moods || []).map((mood) => <span key={mood} className="rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-semibold text-teal-700 dark:bg-teal-950/40 dark:text-teal-300">{mood}</span>)}
-        </div>
-      )}
       {draft.status === "Dropped" && draft.drop_reason && (
         <p className="rounded-xl bg-rose-50 p-2 text-xs text-rose-700 dark:bg-rose-950/30 dark:text-rose-200">Dropped: {draft.drop_reason}</p>
       )}
@@ -1390,9 +1360,6 @@ function LibraryCard({ entry, onUpdate, onRemove }: { entry: LibraryEntry; onUpd
           </div>
           <FieldGroup label="Rating">
             <StarRating value={draft.rating} onChange={(rating) => setDraft({ ...draft, rating })} />
-          </FieldGroup>
-          <FieldGroup label="Vibe tags">
-            <MoodPicker value={draft.moods || []} onChange={(moods) => setDraft({ ...draft, moods })} />
           </FieldGroup>
           <Field label="Rewatch count">
             <input className={inputClass()} type="number" min={0} max={99} value={draft.rewatch_count || 0} onChange={(e) => setDraft({ ...draft, rewatch_count: Math.max(0, Number(e.target.value)) })} />
@@ -1448,11 +1415,6 @@ function MangaCard({ entry, onUpdate, onRemove }: { entry: MangaEntry; onUpdate:
           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </button>
       </div>
-      {!expanded && (draft.moods || []).length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {(draft.moods || []).map((mood) => <span key={mood} className="rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-semibold text-teal-700 dark:bg-teal-950/40 dark:text-teal-300">{mood}</span>)}
-        </div>
-      )}
       {draft.status === "Dropped" && draft.drop_reason && (
         <p className="rounded-xl bg-rose-50 p-2 text-xs text-rose-700 dark:bg-rose-950/30 dark:text-rose-200">Dropped: {draft.drop_reason}</p>
       )}
@@ -1467,9 +1429,6 @@ function MangaCard({ entry, onUpdate, onRemove }: { entry: MangaEntry; onUpdate:
           </div>
           <FieldGroup label="Rating">
             <StarRating value={draft.rating} onChange={(rating) => setDraft({ ...draft, rating })} />
-          </FieldGroup>
-          <FieldGroup label="Vibe tags">
-            <MoodPicker value={draft.moods || []} onChange={(moods) => setDraft({ ...draft, moods })} />
           </FieldGroup>
           <Field label="Re-read count">
             <input className={inputClass()} type="number" min={0} max={99} value={draft.reread_count || 0} onChange={(e) => setDraft({ ...draft, reread_count: Math.max(0, Number(e.target.value)) })} />
@@ -1793,16 +1752,29 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
       setLoading(false);
       return;
     }
+    let cancelled = false;
     const timer = window.setTimeout(() => {
       setLoading(true);
       setError("");
       const request = mode === "anime" ? searchAnime(query) : mode === "manhwa" ? searchManhwa(query) : searchManga(query);
       request
-        .then(setResults)
-        .catch((err: Error) => setError(err.message))
-        .finally(() => setLoading(false));
+        .then((items) => {
+          if (cancelled) return;
+          setResults(items);
+          setError("");
+        })
+        .catch((err: Error) => {
+          if (cancelled) return;
+          setError(err.message);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
     }, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [mode, query]);
 
   useEffect(() => {
@@ -1820,30 +1792,51 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
 
   useEffect(() => {
     if (!selectedId) return;
+    let cancelled = false;
     setDetailLoading(true);
     setDetailError("");
 
     if (mode === "anime") {
-      Promise.all([getAnime(selectedId), getAnimeStaff(selectedId), getAnimeCharacters(selectedId), getAnimeThemes(selectedId)])
-        .then(([detail, staffData, castData, themeData]) => {
-          setAnimeDetail(detail);
-          setStaff(staffData);
-          setCast(castData);
-          setThemes(themeData);
+      Promise.allSettled([getAnime(selectedId), getAnimeStaff(selectedId), getAnimeCharacters(selectedId), getAnimeThemes(selectedId)])
+        .then((responses) => {
+          if (cancelled) return;
+          const [detailResult, staffResult, castResult, themeResult] = responses;
+          if (detailResult.status === "rejected") {
+            setDetailError(detailResult.reason instanceof Error ? detailResult.reason.message : "Could not load this title.");
+            return;
+          }
+          setAnimeDetail(detailResult.value);
+          setStaff(staffResult.status === "fulfilled" ? staffResult.value : []);
+          setCast(castResult.status === "fulfilled" ? castResult.value : []);
+          setThemes(themeResult.status === "fulfilled" ? themeResult.value : { openings: [], endings: [] });
+          setDetailError("");
         })
-        .catch((err: Error) => setDetailError(err.message))
-        .finally(() => setDetailLoading(false));
-      return;
+        .finally(() => {
+          if (!cancelled) setDetailLoading(false);
+        });
+      return () => {
+        cancelled = true;
+      };
     }
 
     getManga(selectedId)
       .then((d) => {
+        if (cancelled) return;
         // Preserve the mediaType that came from the search result
         const match = safeResults.find((r) => r.mal_id === selectedId) as MangaSummary | undefined;
         setMangaDetail({ ...d, mediaType: match?.mediaType ?? d.mediaType });
+        setDetailError("");
       })
-      .catch((err: Error) => setDetailError(err.message))
-      .finally(() => setDetailLoading(false));
+      .catch((err: Error) => {
+        if (cancelled) return;
+        setDetailError(err.message);
+      })
+      .finally(() => {
+        if (!cancelled) setDetailLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [mode, selectedId]);
 
   const renderChipList = (items: string[]) => {
@@ -1914,7 +1907,7 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
             </div>
           </div>
           {loading && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">Searching...</p>}
-          {error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{error}</p>}
+          {error && !safeResults.length && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{error}</p>}
           {!loading && query.trim().length >= 2 && !safeResults.length && !error && (
             <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No safe results found. Try a different title.</p>
           )}
@@ -1961,7 +1954,7 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
                   </div>
                   <p className="line-clamp-4 text-sm leading-6 text-slate-600 dark:text-slate-300">{detail.synopsis || "No synopsis available."}</p>
                   <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                    Artwork and reference details are credited to their respective owners. AnimeBoxD uses public Jikan/MyAnimeList reference data and does not claim ownership of third-party content.
+                    Artwork and reference details are credited to their respective owners. AnimeBoxD uses public Tenrai and MyAnimeList reference data and does not claim ownership of third-party content.
                   </p>
                   <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
                     {detail.score ? <span className="rounded-xl bg-slate-100 px-3 py-1 dark:bg-slate-900">Score {detail.score}</span> : null}
@@ -2424,17 +2417,28 @@ function ProfileHighlights({ data, updateData }: { data: AppData; updateData: (p
       setSearchLoading(false);
       return;
     }
+    let cancelled = false;
     const timer = window.setTimeout(() => {
       setSearchLoading(true);
+      setSearchError("");
       searchAnime(query)
         .then((items) => {
+          if (cancelled) return;
           setSearchResults(items);
           setSearchError("");
         })
-        .catch((err: Error) => setSearchError(err.message))
-        .finally(() => setSearchLoading(false));
+        .catch((err: Error) => {
+          if (cancelled) return;
+          setSearchError(err.message);
+        })
+        .finally(() => {
+          if (!cancelled) setSearchLoading(false);
+        });
     }, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [open, query]);
 
   const toggleFavorite = (anime: AnimeSummary) => {
@@ -2516,14 +2520,28 @@ function MangaHighlights({ data, updateData }: { data: AppData; updateData: (pat
 
   useEffect(() => {
     if (!open || query.trim().length < 2) { setSearchResults([]); setSearchError(""); setSearchLoading(false); return; }
+    let cancelled = false;
     const timer = window.setTimeout(() => {
       setSearchLoading(true);
+      setSearchError("");
       searchManga(query)
-        .then((items) => { setSearchResults(items); setSearchError(""); })
-        .catch((err: Error) => setSearchError(err.message))
-        .finally(() => setSearchLoading(false));
+        .then((items) => {
+          if (cancelled) return;
+          setSearchResults(items);
+          setSearchError("");
+        })
+        .catch((err: Error) => {
+          if (cancelled) return;
+          setSearchError(err.message);
+        })
+        .finally(() => {
+          if (!cancelled) setSearchLoading(false);
+        });
     }, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [open, query]);
 
   const toggleFavorite = (manga: MangaSummary) => {
@@ -2608,14 +2626,28 @@ function ManhwaHighlights({ data, updateData }: { data: AppData; updateData: (pa
 
   useEffect(() => {
     if (!open || query.trim().length < 2) { setSearchResults([]); setSearchError(""); setSearchLoading(false); return; }
+    let cancelled = false;
     const timer = window.setTimeout(() => {
       setSearchLoading(true);
+      setSearchError("");
       searchManhwa(query)
-        .then((items) => { setSearchResults(items); setSearchError(""); })
-        .catch((err: Error) => setSearchError(err.message))
-        .finally(() => setSearchLoading(false));
+        .then((items) => {
+          if (cancelled) return;
+          setSearchResults(items);
+          setSearchError("");
+        })
+        .catch((err: Error) => {
+          if (cancelled) return;
+          setSearchError(err.message);
+        })
+        .finally(() => {
+          if (!cancelled) setSearchLoading(false);
+        });
     }, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [open, query]);
 
   const toggleFavorite = (manga: MangaSummary) => {
@@ -2699,14 +2731,28 @@ function LightNovelHighlights({ data, updateData }: { data: AppData; updateData:
 
   useEffect(() => {
     if (!open || query.trim().length < 2) { setSearchResults([]); setSearchError(""); setSearchLoading(false); return; }
+    let cancelled = false;
     const timer = window.setTimeout(() => {
       setSearchLoading(true);
+      setSearchError("");
       searchLightNovels(query)
-        .then((items) => { setSearchResults(items); setSearchError(""); })
-        .catch((err: Error) => setSearchError(err.message))
-        .finally(() => setSearchLoading(false));
+        .then((items) => {
+          if (cancelled) return;
+          setSearchResults(items);
+          setSearchError("");
+        })
+        .catch((err: Error) => {
+          if (cancelled) return;
+          setSearchError(err.message);
+        })
+        .finally(() => {
+          if (!cancelled) setSearchLoading(false);
+        });
     }, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [open, query]);
 
   const toggleFavorite = (manga: MangaSummary) => {

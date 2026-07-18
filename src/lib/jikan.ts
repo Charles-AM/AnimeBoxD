@@ -304,11 +304,15 @@ export async function searchAnime(query: string): Promise<AnimeSummary[]> {
   if (!filtered.length && normalizedQuery.includes(" ")) {
     const token = normalizedQuery.split(" ").sort((a, b) => b.length - a.length)[0];
     if (token) {
-      await throttleSearch("anime");
-      const fallback = await requestJson<{ data?: JikanAnime[] }>(`/anime?q=${encodeURIComponent(token)}&limit=25&sfw=true`);
-      const fallbackItems = Array.isArray(fallback.data) ? filterSafeAnime(sanitizeItems(fallback.data)) : [];
-      filtered = fallbackItems.filter((item) => matchesQuery(item, normalizedQuery));
-      if (!filtered.length) filtered = fallbackItems;
+      try {
+        await throttleSearch("anime");
+        const fallback = await requestJson<{ data?: JikanAnime[] }>(`/anime?q=${encodeURIComponent(token)}&limit=25&sfw=true`);
+        const fallbackItems = Array.isArray(fallback.data) ? filterSafeAnime(sanitizeItems(fallback.data)) : [];
+        filtered = fallbackItems.filter((item) => matchesQuery(item, normalizedQuery));
+        if (!filtered.length) filtered = fallbackItems;
+      } catch {
+        // Keep the first response if the token fallback is unavailable.
+      }
     }
   }
 
@@ -380,11 +384,15 @@ export async function searchManga(query: string): Promise<MangaSummary[]> {
   if (!filtered.length && normalizedQuery.includes(" ")) {
     const token = normalizedQuery.split(" ").sort((a, b) => b.length - a.length)[0];
     if (token) {
-      await throttleSearch("manga");
-      const fallback = await requestJson<{ data?: JikanManga[] }>(`/manga?q=${encodeURIComponent(token)}&limit=25&sfw=true`);
-      const fallbackItems = Array.isArray(fallback.data) ? filterSafeManga(sanitizeItems(fallback.data)) : [];
-      filtered = fallbackItems.filter((item) => matchesQuery(item, normalizedQuery));
-      if (!filtered.length) filtered = fallbackItems;
+      try {
+        await throttleSearch("manga");
+        const fallback = await requestJson<{ data?: JikanManga[] }>(`/manga?q=${encodeURIComponent(token)}&limit=25&sfw=true`);
+        const fallbackItems = Array.isArray(fallback.data) ? filterSafeManga(sanitizeItems(fallback.data)) : [];
+        filtered = fallbackItems.filter((item) => matchesQuery(item, normalizedQuery));
+        if (!filtered.length) filtered = fallbackItems;
+      } catch {
+        // Keep the first response if the token fallback is unavailable.
+      }
     }
   }
 

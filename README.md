@@ -4,7 +4,7 @@ AnimeBoxD is a Letterboxd-style anime and manga tracker built with React, Vite, 
 
 ## Features
 
-- Search anime, manga, manhwa, and light novels with Jikan (MyAnimeList) data
+- Search anime, manga, manhwa, and light novels with Tenrai (MyAnimeList reference data)
 - Track watch/read status, ratings, favorites, and personal notes
 - Create reviews, diary-style entries, and custom lists
 - View dashboard insights and activity visualizations
@@ -44,4 +44,4 @@ The app runs on the local Vite development server.
 
 ## Credits
 
-Anime and manga metadata is sourced via Jikan/MyAnimeList references. All third-party titles, artwork, and trademarks belong to their respective owners.
+Anime and manga metadata is sourced via Tenrai and MyAnimeList reference APIs (with Jikan as a backup). All third-party titles, artwork, and trademarks belong to their respective owners.

@@ -27,6 +27,7 @@ import {
   X
 } from "lucide-react";
 import { fixedAnime } from "./lib/fixedAnime";
+import { fixedLightNovels, fixedManhwa } from "./lib/fixedManga";
 import { getAiringToday, getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, getSeasonal, getTopAiring, getTopLightNovels, getTopManhwa, getUpcomingAnime, searchAnime, searchLightNovels, searchManga, searchManhwa } from "./lib/jikan";
 import { loadData, saveData, setActiveUser } from "./lib/storage";
 import { completeAuthSessionFromUrl, createReport, deleteCloudAccount, getCurrentSession, isSupabaseConfigured, loadAdminDashboard, loadCloudData, loadProfile, logActivityEvent, logPageView, markProfileSeen, resendSignupConfirmation, saveCloudData, sendPasswordResetEmail, signInWithEmail, signOutCloud, signUpWithEmail, updateCloudPassword, upsertProfile, userToProfileFallback } from "./lib/supabase";
@@ -1513,7 +1514,7 @@ function Section({ title, icon, children }: { title: string; icon: React.ReactEl
   );
 }
 
-function AnimeRail({ title, kicker, items, onAdd }: { title: string; kicker: string; items: AnimeSummary[]; onAdd: (anime: AnimeSummary) => void }) {
+function AnimeRail({ title, kicker, items, onAdd, loading = false }: { title: string; kicker: string; items: AnimeSummary[]; onAdd: (anime: AnimeSummary) => void; loading?: boolean }) {
   return (
     <section className="grid gap-3">
       <div className="flex items-end justify-between gap-3">
@@ -1522,7 +1523,15 @@ function AnimeRail({ title, kicker, items, onAdd }: { title: string; kicker: str
           <h2 className="font-display text-2xl leading-tight sm:text-3xl">{title}</h2>
         </div>
       </div>
-      {items.length ? (
+      {loading ? (
+        <div className="scrollbar-soft -mx-3 flex gap-3 overflow-x-auto px-3 pb-2 sm:mx-0 sm:px-0">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="w-[230px] shrink-0">
+              <div className="h-[112px] w-full animate-pulse rounded-2xl bg-white/70 dark:bg-slate-900/70" />
+            </div>
+          ))}
+        </div>
+      ) : items.length ? (
         <div className="scrollbar-soft -mx-3 flex gap-3 overflow-x-auto px-3 pb-2 sm:mx-0 sm:px-0">
           {items.slice(0, 10).map((anime) => (
             <article key={anime.mal_id} className="touch-card grid w-[230px] shrink-0 grid-cols-[72px_minmax(0,1fr)] gap-3 rounded-2xl border border-slate-200/70 bg-white/75 p-2.5 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300 dark:border-slate-800 dark:bg-slate-950/70">
@@ -1540,7 +1549,7 @@ function AnimeRail({ title, kicker, items, onAdd }: { title: string; kicker: str
         </div>
       ) : (
         <Card className="py-4">
-          <p className="text-sm text-slate-500">Updates are still loading.</p>
+          <p className="text-sm text-slate-500">Live updates are quiet right now. Try refresh in a moment.</p>
         </Card>
       )}
     </section>
@@ -1630,6 +1639,11 @@ function formatBroadcastShort(value?: string) {
 
 function shuffleLiveItems(items: AnimeSummary[]) {
   return [...items].sort(() => Math.random() - 0.5);
+}
+
+function resolveLiveItems(result: PromiseSettledResult<AnimeSummary[]>, fallback: AnimeSummary[]) {
+  if (result.status === "fulfilled" && result.value.length) return result.value;
+  return fallback;
 }
 
 function SeasonTracker({ trending, seasonal, upcoming, airingToday, updatedAt, loading, error, onRefresh, onAdd }: { trending: AnimeSummary[]; seasonal: AnimeSummary[]; upcoming: AnimeSummary[]; airingToday: AnimeSummary[]; updatedAt: string; loading: boolean; error: string; onRefresh: () => void; onAdd: (anime: AnimeSummary) => void }) {
@@ -1737,21 +1751,35 @@ function HomePage({ addAnime, addManga }: { addAnime: (anime: AnimeSummary) => v
   const loadHomeUpdates = async (force = false) => {
     setLoading(true);
     setError("");
+    const fallback = shuffleLiveItems(fixedAnime);
     try {
-      const [trendingAnime, seasonalAnime, upcomingAnime, todayAnime] = await Promise.all([
+      const [trendingResult, seasonalResult, upcomingResult, todayResult] = await Promise.allSettled([
         getTopAiring(force),
         getSeasonal(force),
         getUpcomingAnime(force),
         getAiringToday(force)
       ]);
+      const trendingAnime = resolveLiveItems(trendingResult, fallback.slice(0, 10));
+      const seasonalAnime = resolveLiveItems(seasonalResult, fallback.slice(6, 16));
+      const upcomingAnime = resolveLiveItems(upcomingResult, fallback.slice(12, 22));
+      const todayAnime = resolveLiveItems(todayResult, fallback.slice(4, 14));
+      const usedFallback = [trendingResult, seasonalResult, upcomingResult, todayResult].some(
+        (result) => result.status === "rejected" || (result.status === "fulfilled" && !result.value.length)
+      );
       setTrending(shuffleLiveItems(trendingAnime));
       setSeasonal(shuffleLiveItems(seasonalAnime));
       setUpcoming(shuffleLiveItems(upcomingAnime));
       setAiringToday(shuffleLiveItems(todayAnime));
       setUpdatedAt(new Date().toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }));
+      if (usedFallback) {
+        setError("Live Jikan data is slow right now, so these picks are from our curated fallback list.");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Updates are slow right now. Try again in a bit.");
-      setTrending(fixedAnime.slice(0, 6));
+      setTrending(shuffleLiveItems(fallback.slice(0, 10)));
+      setSeasonal(shuffleLiveItems(fallback.slice(6, 16)));
+      setUpcoming(shuffleLiveItems(fallback.slice(12, 22)));
+      setAiringToday(shuffleLiveItems(fallback.slice(4, 14)));
     } finally {
       setLoading(false);
     }
@@ -1773,16 +1801,16 @@ function HomePage({ addAnime, addManga }: { addAnime: (anime: AnimeSummary) => v
   useEffect(() => {
     setManhwaLoading(true);
     getTopManhwa(12)
-      .then(setTopManhwa)
-      .catch(() => {})
+      .then((items) => setTopManhwa(items.length ? items : fixedManhwa.slice(0, 12)))
+      .catch(() => setTopManhwa(fixedManhwa.slice(0, 12)))
       .finally(() => setManhwaLoading(false));
   }, []);
 
   useEffect(() => {
     setLnLoading(true);
     getTopLightNovels(12)
-      .then(setTopLightNovels)
-      .catch(() => {})
+      .then((items) => setTopLightNovels(items.length ? items : fixedLightNovels.slice(0, 12)))
+      .catch(() => setTopLightNovels(fixedLightNovels.slice(0, 12)))
       .finally(() => setLnLoading(false));
   }, []);
 
@@ -1802,7 +1830,7 @@ function HomePage({ addAnime, addManga }: { addAnime: (anime: AnimeSummary) => v
 
       <SeasonTracker trending={trending} seasonal={seasonal} upcoming={upcoming} airingToday={airingToday} updatedAt={updatedAt} loading={loading} error={error} onRefresh={() => loadHomeUpdates(true)} onAdd={addAnime} />
 
-      {loading && !trending.length ? (
+      {loading && !trending.length && !seasonal.length && !upcoming.length ? (
         <div className="grid grid-cols-1 gap-4 min-[520px]:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, index) => (
             <div key={index} className="h-80 animate-pulse rounded-2xl bg-white/70 dark:bg-slate-900/70" />
@@ -1810,9 +1838,9 @@ function HomePage({ addAnime, addManga }: { addAnime: (anime: AnimeSummary) => v
         </div>
       ) : (
         <>
-          <AnimeRail title="Currently Airing" kicker="Now on screen" items={seasonal} onAdd={addAnime} />
-          <AnimeRail title="Popular Airing" kicker="Audience pulse" items={trending} onAdd={addAnime} />
-          <AnimeRail title="Coming Soon" kicker="Next issue" items={upcoming} onAdd={addAnime} />
+          <AnimeRail title="Currently Airing" kicker="Now on screen" items={seasonal} onAdd={addAnime} loading={loading && !seasonal.length} />
+          <AnimeRail title="Popular Airing" kicker="Audience pulse" items={trending} onAdd={addAnime} loading={loading && !trending.length} />
+          <AnimeRail title="Coming Soon" kicker="Next issue" items={upcoming} onAdd={addAnime} loading={loading && !upcoming.length} />
         </>
       )}
 

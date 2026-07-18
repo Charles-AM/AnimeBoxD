@@ -4,6 +4,9 @@ const API = "https://api.jikan.moe/v4";
 const hour = 60 * 60 * 1000;
 const liveCacheTime = 10 * 60 * 1000;
 const minSearchInterval = 1000;
+const minRequestGap = 400;
+let lastRequestAt = 0;
+let requestChain: Promise<unknown> = Promise.resolve();
 const lastSearchAt: Record<"anime" | "manga", number> = { anime: 0, manga: 0 };
 const blockedContentTerms = ["hentai", "erotica", "ecchi"];
 const blockedRatingTerms = ["rx", "hentai"];
@@ -136,22 +139,39 @@ export function normalizeMangaDetail(item: JikanManga): MangaDetail {
   };
 }
 
-async function requestJson<T>(path: string, retries = 3): Promise<T> {
-  let wait = 700;
-  for (let attempt = 0; attempt <= retries; attempt += 1) {
-    const response = await fetch(`${API}${path}`);
-    if (response.ok) return response.json();
-    if (response.status === 429 && attempt < retries) {
+function scheduleRequest<T>(task: () => Promise<T>): Promise<T> {
+  const next = requestChain.then(task);
+  requestChain = next.catch(() => {});
+  return next;
+}
+
+async function waitForRequestSlot() {
+  const now = Date.now();
+  const delay = Math.max(0, minRequestGap - (now - lastRequestAt));
+  if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
+  lastRequestAt = Date.now();
+}
+
+async function requestJson<T>(path: string, retries = 4): Promise<T> {
+  return scheduleRequest(async () => {
+    let wait = 700;
+    for (let attempt = 0; attempt <= retries; attempt += 1) {
+      await waitForRequestSlot();
+      const response = await fetch(`${API}${path}`);
+      if (response.ok) return response.json();
+      const retryable = response.status === 429 || response.status === 503 || response.status === 504;
+      if (retryable && attempt < retries) {
+        await new Promise((resolve) => setTimeout(resolve, wait));
+        wait *= 2;
+        continue;
+      }
+      if (response.status === 429) throw new Error("Too many requests, please wait a moment.");
+      if (attempt === retries) throw new Error("Jikan is unavailable right now. Try again shortly.");
       await new Promise((resolve) => setTimeout(resolve, wait));
       wait *= 2;
-      continue;
     }
-    if (response.status === 429) throw new Error("Too many requests, please wait 2 seconds");
-    if (attempt === retries) throw new Error("Jikan is unavailable right now. Try again shortly.");
-    await new Promise((resolve) => setTimeout(resolve, wait));
-    wait *= 2;
-  }
-  throw new Error("Request failed");
+    throw new Error("Request failed");
+  });
 }
 
 async function throttleSearch(kind: "anime" | "manga") {
@@ -255,6 +275,7 @@ function readCache<T>(key: string, maxAge = hour): T | null {
 }
 
 function writeCache<T>(key: string, data: T) {
+  if (Array.isArray(data) && data.length === 0) return;
   localStorage.setItem(key, JSON.stringify({ at: Date.now(), data }));
 }
 

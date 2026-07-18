@@ -76,7 +76,7 @@ const mangaSections: { key: MangaStatus; title: string; icon: React.ReactElement
 ];
 
 const SITE_URL = "https://animeboxd.app/";
-const CREDIT_TEXT = "AnimeBoxD is an independent fan project. Anime and manga titles, artwork, synopses, trademarks, studios, publishers, streaming names, and source metadata belong to their respective owners. Discovery data is provided through Jikan and MyAnimeList references; AnimeBoxD does not claim ownership of third-party content.";
+const CREDIT_TEXT = "AnimeBoxD is an independent fan project. Anime and manga titles, artwork, synopses, trademarks, studios, publishers, streaming names, and source metadata belong to their respective owners. Discovery data is provided through Tenrai and MyAnimeList reference APIs; AnimeBoxD does not claim ownership of third-party content.";
 const avatarOptions = ["✨", "🎴", "🍥", "🌀", "🌙", "🔥", "⚔️", "🛡️", "🧡", "💫", "🌸", "🐉", "👑", "🎧", "📚", "🦊", "👾", "⭐"];
 const inactivityTimeoutMs = 30 * 60 * 1000;
 const REPORT_RATE_KEY = "animeboxd_last_report_at";
@@ -187,48 +187,6 @@ function FieldGroup({ label, children }: { label: string; children: React.ReactN
 function normalizeRating(value: number) {
   if (!Number.isFinite(value) || value <= 0) return 0;
   return Math.min(10, Math.max(0.5, Math.round(value * 2) / 2));
-}
-
-const MOOD_TAGS = [
-  { label: "Cozy",            emoji: "🛋️" },
-  { label: "Hype",            emoji: "⚡" },
-  { label: "Dark",            emoji: "🌑" },
-  { label: "Funny",           emoji: "😂" },
-  { label: "Emotional",       emoji: "💔" },
-  { label: "Mind-bending",    emoji: "🤯" },
-  { label: "Action-packed",   emoji: "🔥" },
-  { label: "Feel-good",       emoji: "🌸" },
-  { label: "Slow burn",       emoji: "🕯️" },
-  { label: "Binge-worthy",    emoji: "📺" },
-  { label: "Thought-provoking", emoji: "💭" },
-  { label: "Chill",           emoji: "😌" },
-];
-
-function MoodPicker({ value, onChange }: { value: string[]; onChange: (moods: string[]) => void }) {
-  const toggle = (label: string) =>
-    onChange(value.includes(label) ? value.filter((m) => m !== label) : [...value, label]);
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {MOOD_TAGS.map(({ label, emoji }) => {
-        const active = value.includes(label);
-        return (
-          <button
-            key={label}
-            type="button"
-            onClick={() => toggle(label)}
-            className={clsx(
-              "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold transition",
-              active
-                ? "border-teal-400 bg-teal-50 text-teal-900 dark:bg-teal-950/60 dark:text-teal-100"
-                : "border-slate-200/70 bg-white/80 text-slate-600 hover:border-teal-300 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300"
-            )}
-          >
-            <span>{emoji}</span> {label}
-          </button>
-        );
-      })}
-    </div>
-  );
 }
 
 function StarRating({ value, onChange }: { value: number; onChange: (value: number) => void }) {
@@ -1228,7 +1186,6 @@ function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave
   const [review, setReview] = useState("");
   const [notes, setNotes] = useState("");
   const [dropReason, setDropReason] = useState("");
-  const [moods, setMoods] = useState<string[]>([]);
   const changeStatus = (nextStatus: LibraryStatus) => {
     setStatus(nextStatus);
     if (nextStatus === "Completed" && anime.total_episodes > 0) {
@@ -1269,9 +1226,6 @@ function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave
             <FieldGroup label="Rating">
               <StarRating value={rating} onChange={setRating} />
             </FieldGroup>
-            <FieldGroup label="Vibe tags">
-              <MoodPicker value={moods} onChange={setMoods} />
-            </FieldGroup>
             <Field label="Review">
               <textarea className={clsx(inputClass(), "min-h-24")} value={review} onChange={(event) => setReview(event.target.value)} />
             </Field>
@@ -1292,7 +1246,7 @@ function AddEntryPage({ anime, onSave, onCancel }: { anime: AnimeSummary; onSave
               <Button className="bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => {
                 const entry = mergeAnimeToEntry(anime);
                 const episodesWatched = status === "Completed" && anime.total_episodes > 0 ? anime.total_episodes : episodesWatchedInput.trim() ? Number(episodesWatchedInput) : 0;
-                onSave(applyAnimeStatus({ ...entry, status, rating, episodes_watched: episodesWatched, rewatch_count: rewatchCount, review, notes, drop_reason: dropReason, moods }, status));
+                onSave(applyAnimeStatus({ ...entry, status, rating, episodes_watched: episodesWatched, rewatch_count: rewatchCount, review, notes, drop_reason: dropReason }, status));
               }}>Save</Button>
               <button className="button-ghost" onClick={onCancel}>Cancel</button>
             </div>
@@ -1310,7 +1264,6 @@ function AddMangaPage({ manga, onSave, onCancel }: { manga: MangaSummary; onSave
   const [review, setReview] = useState("");
   const [notes, setNotes] = useState("");
   const [dropReason, setDropReason] = useState("");
-  const [moods, setMoods] = useState<string[]>([]);
   const changeStatus = (nextStatus: MangaStatus) => setStatus(nextStatus);
 
   return (
@@ -1336,9 +1289,6 @@ function AddMangaPage({ manga, onSave, onCancel }: { manga: MangaSummary; onSave
             <FieldGroup label="Rating">
               <StarRating value={rating} onChange={setRating} />
             </FieldGroup>
-            <FieldGroup label="Vibe tags">
-              <MoodPicker value={moods} onChange={setMoods} />
-            </FieldGroup>
             <Field label="Re-read count">
               <input className={inputClass()} type="number" min={0} max={99} value={rereadCount} onChange={(e) => setRereadCount(Math.max(0, Number(e.target.value)))} />
             </Field>
@@ -1356,7 +1306,7 @@ function AddMangaPage({ manga, onSave, onCancel }: { manga: MangaSummary; onSave
             <div className="flex items-center gap-2">
               <Button className="bg-teal-400 text-slate-950 hover:bg-teal-300" onClick={() => {
                 const entry = mergeMangaToEntry(manga);
-                onSave(applyMangaStatus({ ...entry, status, rating, reread_count: rereadCount, review, notes, drop_reason: dropReason, moods }, status));
+                onSave(applyMangaStatus({ ...entry, status, rating, reread_count: rereadCount, review, notes, drop_reason: dropReason }, status));
               }}>Save</Button>
               <button className="button-ghost" onClick={onCancel}>Cancel</button>
             </div>
@@ -1393,11 +1343,6 @@ function LibraryCard({ entry, onUpdate, onRemove }: { entry: LibraryEntry; onUpd
           <div className="h-2 rounded-full bg-teal-500" style={{ width: `${progress}%` }} />
         </div>
       </div>
-      {!expanded && (draft.moods || []).length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {(draft.moods || []).map((mood) => <span key={mood} className="rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-semibold text-teal-700 dark:bg-teal-950/40 dark:text-teal-300">{mood}</span>)}
-        </div>
-      )}
       {draft.status === "Dropped" && draft.drop_reason && (
         <p className="rounded-xl bg-rose-50 p-2 text-xs text-rose-700 dark:bg-rose-950/30 dark:text-rose-200">Dropped: {draft.drop_reason}</p>
       )}
@@ -1415,9 +1360,6 @@ function LibraryCard({ entry, onUpdate, onRemove }: { entry: LibraryEntry; onUpd
           </div>
           <FieldGroup label="Rating">
             <StarRating value={draft.rating} onChange={(rating) => setDraft({ ...draft, rating })} />
-          </FieldGroup>
-          <FieldGroup label="Vibe tags">
-            <MoodPicker value={draft.moods || []} onChange={(moods) => setDraft({ ...draft, moods })} />
           </FieldGroup>
           <Field label="Rewatch count">
             <input className={inputClass()} type="number" min={0} max={99} value={draft.rewatch_count || 0} onChange={(e) => setDraft({ ...draft, rewatch_count: Math.max(0, Number(e.target.value)) })} />
@@ -1473,11 +1415,6 @@ function MangaCard({ entry, onUpdate, onRemove }: { entry: MangaEntry; onUpdate:
           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </button>
       </div>
-      {!expanded && (draft.moods || []).length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {(draft.moods || []).map((mood) => <span key={mood} className="rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-semibold text-teal-700 dark:bg-teal-950/40 dark:text-teal-300">{mood}</span>)}
-        </div>
-      )}
       {draft.status === "Dropped" && draft.drop_reason && (
         <p className="rounded-xl bg-rose-50 p-2 text-xs text-rose-700 dark:bg-rose-950/30 dark:text-rose-200">Dropped: {draft.drop_reason}</p>
       )}
@@ -1492,9 +1429,6 @@ function MangaCard({ entry, onUpdate, onRemove }: { entry: MangaEntry; onUpdate:
           </div>
           <FieldGroup label="Rating">
             <StarRating value={draft.rating} onChange={(rating) => setDraft({ ...draft, rating })} />
-          </FieldGroup>
-          <FieldGroup label="Vibe tags">
-            <MoodPicker value={draft.moods || []} onChange={(moods) => setDraft({ ...draft, moods })} />
           </FieldGroup>
           <Field label="Re-read count">
             <input className={inputClass()} type="number" min={0} max={99} value={draft.reread_count || 0} onChange={(e) => setDraft({ ...draft, reread_count: Math.max(0, Number(e.target.value)) })} />
@@ -2020,7 +1954,7 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
                   </div>
                   <p className="line-clamp-4 text-sm leading-6 text-slate-600 dark:text-slate-300">{detail.synopsis || "No synopsis available."}</p>
                   <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                    Artwork and reference details are credited to their respective owners. AnimeBoxD uses public Jikan/MyAnimeList reference data and does not claim ownership of third-party content.
+                    Artwork and reference details are credited to their respective owners. AnimeBoxD uses public Tenrai and MyAnimeList reference data and does not claim ownership of third-party content.
                   </p>
                   <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
                     {detail.score ? <span className="rounded-xl bg-slate-100 px-3 py-1 dark:bg-slate-900">Score {detail.score}</span> : null}

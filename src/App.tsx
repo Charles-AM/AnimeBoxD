@@ -29,7 +29,7 @@ import {
 import { fixedAnime } from "./lib/fixedAnime";
 import { getAiringToday, getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, getSeasonal, getTopAiring, getUpcomingAnime, searchAnime, searchLightNovels, searchManga, searchManhwa } from "./lib/jikan";
 import { loadData, saveData, setActiveUser } from "./lib/storage";
-import { completeAuthSessionFromUrl, createReport, deleteCloudAccount, getCurrentSession, isSupabaseConfigured, loadAdminDashboard, loadCloudData, loadProfile, logActivityEvent, logPageView, markProfileSeen, resendSignupConfirmation, saveCloudData, sendPasswordResetEmail, signInWithEmail, signOutCloud, signUpWithEmail, updateCloudPassword, upsertProfile, userToProfileFallback } from "./lib/supabase";
+import { completeAuthSessionFromUrl, completeCloudSessionUser, createReport, deleteCloudAccount, getCurrentSession, isSupabaseConfigured, loadAdminDashboard, loadCloudData, loadProfile, logActivityEvent, logPageView, markProfileSeen, resendSignupConfirmation, saveCloudData, sendPasswordResetEmail, signInWithEmail, signInWithGoogle, signOutCloud, signUpWithEmail, updateCloudPassword, upsertProfile, userToProfileFallback } from "./lib/supabase";
 import type { AdminDashboardData, AnimeDetail, AnimeSummary, AppData, ComicMediaType, LibraryEntry, LibraryStatus, MangaDetail, MangaEntry, MangaStatus, MangaSummary, Settings, ThemeMode } from "./types/anime";
 import { CookieBanner } from "./CookieBanner";
 
@@ -158,6 +158,17 @@ function findUserById(userId: string) {
 function ensureDemoUser(users: UserAccount[]) {
   if (users.some((user) => user.id === DEMO_USER.id)) return users;
   return [...users, DEMO_USER];
+}
+
+function GoogleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62Z" />
+      <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18Z" />
+      <path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33Z" />
+      <path fill="#EA4335" d="M9 3.58c1.32 0 2.51.46 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58Z" />
+    </svg>
+  );
 }
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -302,6 +313,7 @@ function AuthPage({ initialNotice, onBrowse, onLogin }: { initialNotice?: string
   const [resending, setResending] = useState(false);
   const [resetMode, setResetMode] = useState(false);
   const [resetSending, setResetSending] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   useEffect(() => {
     if (initialNotice) setNotice(initialNotice);
@@ -332,14 +344,27 @@ function AuthPage({ initialNotice, onBrowse, onLogin }: { initialNotice?: string
       try {
         if (isSupabaseConfigured && hasAuthPayload) {
           const result = await completeAuthSessionFromUrl();
-          if (!cancelled && result?.type === "recovery") {
+          if (cancelled) return;
+          if (result?.type === "recovery") {
             setMode("signin");
             setResetMode(true);
             setNotice("Set your new password below.");
+          } else if (result?.session?.user) {
+            // Covers both the Google OAuth redirect and email confirmation
+            // links — either way, a session now exists and the user should
+            // land signed in rather than back on this form.
+            const sessionUser = result.session.user;
+            const profile = await completeCloudSessionUser(sessionUser);
+            const nextData = await loadCloudData(sessionUser.id);
+            if (cancelled) return;
+            await onLogin({
+              user: { id: sessionUser.id, name: profile.username, avatar: profile.avatar, passcode: "", email: sessionUser.email, isCloud: true, isAdmin: Boolean(profile.is_admin), memberSince: profile.created_at || sessionUser.created_at },
+              data: { ...nextData, settings: { ...nextData.settings, username: profile.username, avatar: profile.avatar, bio: profile.bio || nextData.settings.bio, isPublic: profile.is_public } }
+            });
           }
         }
       } catch (err) {
-        if (!cancelled) setError(friendlyAuthError(err, "Could not open this reset link. Try sending a fresh one."));
+        if (!cancelled) setError(friendlyAuthError(err, "Could not complete sign-in. Please try again."));
       } finally {
         if (!cancelled && hasAuthPayload) {
           window.history.replaceState({}, document.title, window.location.pathname);
@@ -440,6 +465,21 @@ function AuthPage({ initialNotice, onBrowse, onLogin }: { initialNotice?: string
     onLogin({ user: DEMO_USER, data: { ...nextData, settings: { ...nextData.settings, username: DEMO_USER.name, avatar: DEMO_USER.avatar } } });
   };
 
+  const continueWithGoogle = async () => {
+    setError("");
+    setNotice("");
+    setGoogleLoading(true);
+    try {
+      // Redirects the browser to Google; on success this component never
+      // sees a return value here — the user comes back to handleAuthCallback
+      // above instead, so only the error path needs to reset the button.
+      await signInWithGoogle();
+    } catch (err) {
+      setError(friendlyAuthError(err, "Could not start Google sign-in."));
+      setGoogleLoading(false);
+    }
+  };
+
   const resendVerification = async () => {
     const targetEmail = signupEmail || email.trim();
     if (!targetEmail) {
@@ -524,6 +564,24 @@ function AuthPage({ initialNotice, onBrowse, onLogin }: { initialNotice?: string
               <button className={clsx("rounded-xl border px-3 py-2 text-sm font-semibold", mode === "signin" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300")} onClick={() => switchMode("signin")}>
                 Sign in
               </button>
+            </div>
+          )}
+          {isSupabaseConfigured && !resetMode && (
+            <div className="grid gap-4">
+              <button
+                type="button"
+                className="inline-flex min-h-10 items-center justify-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                onClick={continueWithGoogle}
+                disabled={googleLoading}
+              >
+                <GoogleIcon className="h-4 w-4 shrink-0" />
+                {googleLoading ? "Redirecting to Google..." : "Continue with Google"}
+              </button>
+              <div className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+                or with email
+                <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+              </div>
             </div>
           )}
           <div className="grid gap-4">

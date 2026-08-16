@@ -212,6 +212,38 @@ export async function signInWithEmail(email: string, password: string) {
   return data;
 }
 
+export async function signInWithGoogle() {
+  const client = assertSupabase();
+  const { error } = await client.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: authRedirectUrl()
+    }
+  });
+  if (error) throw error;
+}
+
+export async function completeCloudSessionUser(user: User) {
+  const username = (user.user_metadata?.username as string) || user.email?.split("@")[0] || "Anime fan";
+  let profile = await loadProfile(user.id);
+  if (!profile) {
+    await upsertProfile({
+      id: user.id,
+      email: user.email,
+      username,
+      avatar: (user.user_metadata?.avatar as string) || "✨",
+      bio: "",
+      is_public: false,
+      created_at: user.created_at
+    });
+    profile = await loadProfile(user.id);
+  }
+  await ensureCloudData(user.id, username);
+  await markProfileSeen(user.id).catch(() => undefined);
+  await logActivityEvent(user.id, "sign_in", { method: "oauth" }).catch(() => undefined);
+  return profile || userToProfileFallback(user);
+}
+
 export async function signOutCloud() {
   const client = assertSupabase();
   const { error } = await client.auth.signOut();

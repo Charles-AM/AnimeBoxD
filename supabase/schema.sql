@@ -208,6 +208,17 @@ security definer
 set search_path = public
 as $$
 begin
+  -- INSERT path: no OLD row exists yet (e.g. a client upsert() racing ahead of, or
+  -- filling in for, handle_new_auth_user). Without this branch a non-admin whose
+  -- profile row happens to be missing could self-elevate by upserting is_admin=true —
+  -- the RLS check on this table only verifies row ownership, not this column.
+  if tg_op = 'INSERT' then
+    if auth.uid() is not null and not public.current_user_is_admin() then
+      new.is_admin = false;
+    end if;
+    return new;
+  end if;
+
   if auth.uid() is not null and not public.current_user_is_admin() then
     new.is_admin = old.is_admin;
     new.email = old.email;
@@ -218,7 +229,7 @@ $$;
 
 drop trigger if exists protect_profile_admin_fields on public.profiles;
 create trigger protect_profile_admin_fields
-before update on public.profiles
+before insert or update on public.profiles
 for each row execute function public.protect_profile_admin_fields();
 
 create or replace function public.log_new_report_notification()

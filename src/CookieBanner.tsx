@@ -29,7 +29,7 @@ export function CookieBanner({ onConsent }: { onConsent: (choice: CookieConsent)
     >
       <div className="flex items-start justify-between gap-3 sm:block">
         <div className="min-w-0">
-          <p className="text-sm font-bold text-slate-900 dark:text-white">🍪 Quick heads-up</p>
+          <p className="text-sm font-bold text-slate-900 dark:text-white">Quick heads-up</p>
           <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
             We use cookies to keep you signed in and save your settings. No ads or tracking.{" "}
             <a href="/privacy.html" className="font-semibold text-teal-600 underline underline-offset-2 dark:text-teal-400" target="_blank" rel="noopener noreferrer">

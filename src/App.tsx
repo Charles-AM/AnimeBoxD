@@ -82,6 +82,12 @@ const inactivityTimeoutMs = 30 * 60 * 1000;
 const REPORT_RATE_KEY = "animeboxd_last_report_at";
 const REPORT_COOLDOWN_MS = 60 * 60 * 1000;
 
+function possessiveLabel(username: string) {
+  const trimmed = (username || "").trim();
+  if (!trimmed || trimmed.toLowerCase() === "you") return "Your";
+  return `${trimmed}'s`;
+}
+
 function getAuthHashType() {
   if (typeof window === "undefined") return "";
   return new URLSearchParams(window.location.hash.replace(/^#/, "")).get("type") || "";
@@ -1040,12 +1046,6 @@ function SearchPanel({ onSelect }: { onSelect: (anime: AnimeSummary) => void }) 
   );
 }
 
-const COMIC_TYPES: { key: ComicMediaType | "all"; label: string; flag?: string }[] = [
-  { key: "all",    label: "All" },
-  { key: "manga",  label: "Manga",  flag: "🇯🇵" },
-  { key: "manhwa", label: "Manhwa", flag: "🇰🇷" },
-];
-
 function SearchMangaPanel({ onSelect, fixedType }: { onSelect: (manga: MangaSummary) => void; fixedType?: ComicMediaType }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<MangaSummary[]>([]);
@@ -1404,7 +1404,7 @@ function MangaCard({ entry, onUpdate, onRemove }: { entry: MangaEntry; onUpdate:
           <div className="flex flex-wrap items-center gap-1.5">
             <p className="font-semibold text-slate-900 dark:text-white">{entry.title}</p>
             {entry.mediaType === "manhwa" && (
-              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">🇰🇷 Manhwa</span>
+              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">Manhwa</span>
             )}
           </div>
           <p className="text-xs text-slate-500">{mangaStatusLabels[draft.status]} • {draft.rating || "-"}/10</p>
@@ -1604,9 +1604,9 @@ function SeasonTracker({ trending, seasonal, upcoming, airingToday, updatedAt, l
     <Card className="grid gap-4 overflow-hidden border border-teal-200/60 bg-white/80 dark:border-teal-900/50 dark:bg-slate-950/70">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-2xl">
-          <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Live Season Tracker</p>
-          <h2 className="font-display text-3xl leading-tight sm:text-4xl">A compact pulse check for the season.</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-500">What is scoring well, airing today, and coming up next.</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-teal-500">This Season</p>
+          <h2 className="font-display text-3xl leading-tight sm:text-4xl">What's worth watching right now.</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-500">Top-rated, airing today, and what's coming next.</p>
         </div>
         <Button className="self-start bg-slate-900 text-white hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300 sm:self-auto" onClick={onRefresh} disabled={loading}>
           <RefreshCcw className="h-4 w-4" /> {loading ? "Updating" : "Refresh"}
@@ -1700,9 +1700,9 @@ function HomePage({ addAnime }: { addAnime: (anime: AnimeSummary) => void }) {
         <h1 className="hero-title font-display text-5xl leading-none sm:text-6xl">Animeboxd</h1>
         <div className="hero-tagline max-w-md text-base italic text-white/90 sm:text-lg">
           <ul className="m-0 list-none space-y-2 p-0 text-right">
-            <li>🍥 anime</li>
-            <li>🍥 manga</li>
-            <li>🇰🇷 manhwa</li>
+            <li>anime</li>
+            <li>manga</li>
+            <li>manhwa</li>
           </ul>
         </div>
       </Card>
@@ -1889,7 +1889,7 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
         <div className="flex flex-wrap items-center gap-2">
           {(["anime", "manga", "manhwa"] as ExploreMode[]).map((m) => (
             <button key={m} className={clsx("rounded-xl border px-3 py-2 text-sm font-semibold capitalize transition", mode === m ? "border-teal-400 bg-teal-50 text-teal-900 dark:bg-teal-950/50 dark:text-teal-100" : "border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300")} onClick={() => setMode(m)}>
-              {m === "manhwa" ? "🇰🇷 Manhwa" : m === "manga" ? "🇯🇵 Manga" : "Anime"}
+              {m === "manhwa" ? "Manhwa" : m === "manga" ? "Manga" : "Anime"}
             </button>
           ))}
         </div>
@@ -2098,7 +2098,7 @@ function MyStuffPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
       <Card className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="grid gap-2">
           <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Diary shelf</p>
-          <h3 className="break-words font-display text-3xl leading-tight sm:text-4xl">{data.settings.username}'s logbook</h3>
+          <h3 className="break-words font-display text-3xl leading-tight sm:text-4xl">{possessiveLabel(data.settings.username)} logbook</h3>
           <p className="text-sm text-slate-500">What you are watching, finished, and saving for later.</p>
           <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
             <span className="rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-900">Total {counts.total}</span>
@@ -2170,7 +2170,7 @@ function MyMangaPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
   return (
     <div className="mx-auto grid max-w-6xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="font-display text-3xl leading-tight">🇯🇵 My Manga</h2>
+        <h2 className="font-display text-3xl leading-tight">My Manga</h2>
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
           <Button className="bg-rose-600 px-2 hover:bg-rose-700 sm:px-4" onClick={onClearHistory}>Clear history</Button>
           <Button className="bg-slate-900 px-2 hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300 sm:px-4" onClick={onBack}>Back home</Button>
@@ -2180,7 +2180,7 @@ function MyMangaPage({ data, onSelect, updateEntry, removeEntry, updateData, onB
       <Card className="grid gap-4 border border-teal-200/70 bg-teal-50/40 dark:border-teal-900/60 dark:bg-slate-950/70 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="grid gap-2">
           <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Manga shelf</p>
-          <h3 className="break-words font-display text-3xl leading-tight sm:text-4xl">{data.settings.username}'s manga</h3>
+          <h3 className="break-words font-display text-3xl leading-tight sm:text-4xl">{possessiveLabel(data.settings.username)} manga</h3>
           <p className="text-sm text-slate-600 dark:text-slate-300">Japanese manga — tracked here.</p>
           <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-700">
             <span className="rounded-xl bg-white/70 px-3 py-1 dark:bg-slate-900">Total {counts.total}</span>
@@ -2252,7 +2252,7 @@ function MyManhwaPage({ data, onSelect, updateEntry, removeEntry, updateData, on
   return (
     <div className="mx-auto grid max-w-6xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="font-display text-3xl leading-tight">🇰🇷 My Manhwa</h2>
+        <h2 className="font-display text-3xl leading-tight">My Manhwa</h2>
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
           <Button className="bg-rose-600 px-2 hover:bg-rose-700 sm:px-4" onClick={onClearHistory}>Clear history</Button>
           <Button className="bg-slate-900 px-2 hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300 sm:px-4" onClick={onBack}>Back home</Button>
@@ -2262,7 +2262,7 @@ function MyManhwaPage({ data, onSelect, updateEntry, removeEntry, updateData, on
       <Card className="grid gap-4 border border-blue-200/70 bg-blue-50/40 dark:border-blue-900/60 dark:bg-slate-950/70 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="grid gap-2">
           <p className="text-xs uppercase tracking-[0.3em] text-blue-500">Manhwa shelf</p>
-          <h3 className="break-words font-display text-3xl leading-tight sm:text-4xl">{data.settings.username}'s manhwa</h3>
+          <h3 className="break-words font-display text-3xl leading-tight sm:text-4xl">{possessiveLabel(data.settings.username)} manhwa</h3>
           <p className="text-sm text-slate-600 dark:text-slate-300">Korean manhwa — tracked here.</p>
           <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-700">
             <span className="rounded-xl bg-white/70 px-3 py-1 dark:bg-slate-900">Total {counts.total}</span>
@@ -2344,7 +2344,7 @@ function MyLightNovelPage({ data, onSelect, updateEntry, removeEntry, updateData
       <Card className="grid gap-4 border border-amber-200/70 bg-amber-50/40 dark:border-amber-900/60 dark:bg-slate-950/70 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="grid gap-2">
           <p className="text-xs uppercase tracking-[0.3em] text-amber-500">Light Novel shelf</p>
-          <h3 className="break-words font-display text-3xl leading-tight sm:text-4xl">{data.settings.username}'s novels</h3>
+          <h3 className="break-words font-display text-3xl leading-tight sm:text-4xl">{possessiveLabel(data.settings.username)} novels</h3>
           <p className="text-sm text-slate-600 dark:text-slate-300">Japanese light novels — tracked here.</p>
           <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-700">
             <span className="rounded-xl bg-white/70 px-3 py-1 dark:bg-slate-900">Total {counts.total}</span>

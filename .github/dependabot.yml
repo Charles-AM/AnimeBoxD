@@ -6,3 +6,15 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 10
     versioning-strategy: "increase"
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Major bumps are evaluated manually, not auto-opened as PRs —
+      # dependencies here are pinned to exact versions on purpose, and an
+      # unreviewed major bump (e.g. a Tailwind 3->4 or Vite 6->8 jump) is far
+      # more likely to break the build than a patch/minor update is.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]

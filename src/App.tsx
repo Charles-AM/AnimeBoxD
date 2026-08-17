@@ -28,7 +28,7 @@ import {
   X
 } from "lucide-react";
 import { fixedAnime } from "./lib/fixedAnime";
-import { getAiringToday, getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, getSeasonal, getTopAiring, getUpcomingAnime, searchAnime, searchLightNovels, searchManga, searchManhwa } from "./lib/jikan";
+import { getAiringToday, getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, getMangaRecommendations, getRecommendations, getSeasonal, getTopAiring, getUpcomingAnime, searchAnime, searchLightNovels, searchManga, searchManhwa } from "./lib/jikan";
 import { loadData, saveData, setActiveUser } from "./lib/storage";
 import { completeAuthSessionFromUrl, completeCloudSessionUser, createReport, deleteCloudAccount, type FavoriteMediaType, type FavoritePick, getCurrentSession, isSupabaseConfigured, loadAdminDashboard, loadCloudData, loadFavoritePicks, loadMyFavoritePick, loadProfile, logActivityEvent, logPageView, markProfileSeen, resendSignupConfirmation, saveCloudData, sendPasswordResetEmail, signInWithEmail, signInWithGoogle, signOutCloud, signUpWithEmail, submitFavoritePick, updateCloudPassword, upsertProfile, userToProfileFallback } from "./lib/supabase";
 import type { AdminDashboardData, AnimeDetail, AnimeSummary, AppData, ComicMediaType, LibraryEntry, LibraryStatus, MangaDetail, MangaEntry, MangaStatus, MangaSummary, Settings, ThemeMode } from "./types/anime";
@@ -1925,7 +1925,310 @@ function FavoritePickPrompt({ userId, onRequestSignIn, onActiveChange }: { userI
   );
 }
 
-function HomePage({ addAnime, addManga, userId, onRequestSignIn }: { addAnime: (anime: AnimeSummary) => void; addManga?: (manga: MangaSummary) => void; userId?: string; onRequestSignIn?: (message: string) => void }) {
+const TONIGHTS_PICK_STORAGE_PREFIX = "animeboxd_tonights_pick_v1_";
+
+type TonightsPickItem = { kind: FavoriteMediaType; mal_id: number; title: string; image_url: string };
+type TonightsPickState = { date: string; seedTitle: string; why: string; main: TonightsPickItem; backups: TonightsPickItem[] };
+
+function todayLocalDateString() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+function loadStoredTonightsPick(userId?: string): TonightsPickState | null {
+  try {
+    const raw = localStorage.getItem(`${TONIGHTS_PICK_STORAGE_PREFIX}${userId || "guest"}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as TonightsPickState;
+    return parsed.date === todayLocalDateString() ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveTonightsPick(userId: string | undefined, pick: TonightsPickState) {
+  try {
+    localStorage.setItem(`${TONIGHTS_PICK_STORAGE_PREFIX}${userId || "guest"}`, JSON.stringify(pick));
+  } catch {
+    // ignore
+  }
+}
+
+// Weighted sample without replacement: earlier candidates (stronger MAL
+// recommendation signal) get a higher chance of being picked, but it's not
+// deterministic — that's what keeps "tonight's pick" feeling like discovery
+// instead of the same slot-machine top result every time.
+function weightedPickWithoutReplacement<T>(items: T[], count: number): T[] {
+  const pool = items.map((item, index) => ({ item, weight: 1 / (index + 1) }));
+  const result: T[] = [];
+  while (result.length < count && pool.length) {
+    const total = pool.reduce((sum, entry) => sum + entry.weight, 0);
+    let r = Math.random() * total;
+    let chosenIndex = pool.length - 1;
+    for (let i = 0; i < pool.length; i += 1) {
+      r -= pool[i].weight;
+      if (r <= 0) {
+        chosenIndex = i;
+        break;
+      }
+    }
+    result.push(pool.splice(chosenIndex, 1)[0].item);
+  }
+  return result;
+}
+
+async function buildTonightsPick(
+  seeds: { kind: FavoriteMediaType; mal_id: number; title: string }[],
+  excludeAnimeIds: Set<number>,
+  excludeMangaIds: Set<number>
+): Promise<TonightsPickState | null> {
+  const candidates: { item: TonightsPickItem; seedTitle: string }[] = [];
+  const seen = new Set<number>();
+
+  for (const seed of seeds) {
+    try {
+      if (seed.kind === "anime") {
+        const recs = await getRecommendations(seed.mal_id);
+        for (const rec of recs) {
+          if (excludeAnimeIds.has(rec.mal_id) || seen.has(rec.mal_id)) continue;
+          seen.add(rec.mal_id);
+          candidates.push({ item: { kind: "anime", mal_id: rec.mal_id, title: rec.title, image_url: rec.image_url }, seedTitle: seed.title });
+        }
+      } else {
+        const recs = await getMangaRecommendations(seed.mal_id);
+        for (const rec of recs) {
+          if (excludeMangaIds.has(rec.mal_id) || seen.has(rec.mal_id)) continue;
+          seen.add(rec.mal_id);
+          candidates.push({ item: { kind: rec.mediaType === "manhwa" ? "manhwa" : "manga", mal_id: rec.mal_id, title: rec.title, image_url: rec.image_url }, seedTitle: seed.title });
+        }
+      }
+    } catch {
+      // this seed's recommendations failed to load — move on to the next seed
+    }
+  }
+
+  if (!candidates.length) return null;
+  const picked = weightedPickWithoutReplacement(candidates, 3);
+  const [mainEntry, ...backupEntries] = picked;
+  return {
+    date: todayLocalDateString(),
+    seedTitle: mainEntry.seedTitle,
+    main: mainEntry.item,
+    why: `Because you're into ${mainEntry.seedTitle}, and fans of that also loved this.`,
+    backups: backupEntries.map((entry) => entry.item)
+  };
+}
+
+function TonightsPick({
+  userId,
+  onRequestSignIn,
+  onAddAnime,
+  onAddManga,
+  libraryAnimeIds,
+  libraryMangaIds,
+  favoriteAnime,
+  favoriteManga
+}: {
+  userId?: string;
+  onRequestSignIn?: (message: string) => void;
+  onAddAnime: (anime: AnimeSummary) => void;
+  onAddManga?: (manga: MangaSummary) => void;
+  libraryAnimeIds: number[];
+  libraryMangaIds: number[];
+  favoriteAnime: AnimeSummary[];
+  favoriteManga: MangaSummary[];
+}) {
+  const [pick, setPick] = useState<TonightsPickState | null>(null);
+  const [checkedStorage, setCheckedStorage] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<FavoriteSearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    setPick(loadStoredTonightsPick(userId));
+    setCheckedStorage(true);
+  }, [userId]);
+
+  const seedUiVisible = !pick || seeding;
+
+  useEffect(() => {
+    if (!seedUiVisible || query.trim().length < 2) {
+      setResults([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setSearching(true);
+      try {
+        const [anime, manga, manhwa] = await Promise.allSettled([searchAnime(query), searchManga(query), searchManhwa(query)]);
+        if (cancelled) return;
+        const toResults = (settled: PromiseSettledResult<AnimeSummary[] | MangaSummary[]>, kind: FavoriteMediaType): FavoriteSearchResult[] =>
+          settled.status === "fulfilled" ? settled.value.slice(0, 4).map((item) => ({ kind, mal_id: item.mal_id, title: item.title, image_url: item.image_url })) : [];
+        setResults([...toResults(anime, "anime"), ...toResults(manga, "manga"), ...toResults(manhwa, "manhwa")].slice(0, 8));
+      } finally {
+        if (!cancelled) setSearching(false);
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [query, seedUiVisible]);
+
+  const excludeAnime = useMemo(() => new Set(libraryAnimeIds), [libraryAnimeIds]);
+  const excludeManga = useMemo(() => new Set(libraryMangaIds), [libraryMangaIds]);
+
+  const generateFrom = async (seeds: { kind: FavoriteMediaType; mal_id: number; title: string }[]) => {
+    setGenerating(true);
+    setError("");
+    try {
+      const result = await buildTonightsPick(seeds, excludeAnime, excludeManga);
+      if (!result) {
+        setError("Could not find a fresh match from that. Try a different title.");
+        return;
+      }
+      setPick(result);
+      saveTonightsPick(userId, result);
+      setSeeding(false);
+      setQuery("");
+      setResults([]);
+    } catch (err) {
+      setError(friendlyAuthError(err, "Could not generate a pick right now. Please try again."));
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const pickFromFavorites = () => {
+    const seeds = [
+      ...favoriteAnime.map((item) => ({ kind: "anime" as FavoriteMediaType, mal_id: item.mal_id, title: item.title })),
+      ...favoriteManga.map((item) => ({ kind: (item.mediaType === "manhwa" ? "manhwa" : "manga") as FavoriteMediaType, mal_id: item.mal_id, title: item.title }))
+    ].slice(0, 6);
+    if (!seeds.length) return;
+    generateFrom(seeds);
+  };
+
+  const addMainToShelf = () => {
+    if (!pick) return;
+    if (pick.main.kind === "anime") {
+      onAddAnime({ mal_id: pick.main.mal_id, title: pick.main.title, image_url: pick.main.image_url, total_episodes: 0, genres: [], studios: [] });
+    } else {
+      onAddManga?.({ mal_id: pick.main.mal_id, title: pick.main.title, image_url: pick.main.image_url, total_chapters: 0, total_volumes: 0, genres: [], authors: [], mediaType: pick.main.kind });
+    }
+  };
+
+  if (!checkedStorage) return null;
+
+  const hasFavorites = favoriteAnime.length > 0 || favoriteManga.length > 0;
+
+  return (
+    <Card className="grid gap-4 border border-teal-300/60 bg-teal-50/30 dark:border-teal-800/50 dark:bg-slate-950/70">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Tonight's pick</p>
+          <h2 className="font-display text-2xl leading-tight sm:text-3xl">{pick ? "What to watch tonight." : "Let's find tonight's watch."}</h2>
+        </div>
+        {pick && !seeding && (
+          <button className="button-ghost" onClick={() => setSeeding(true)} type="button">Something else?</button>
+        )}
+      </div>
+
+      {seedUiVisible ? (
+        <div className="grid gap-3">
+          {hasFavorites && (
+            <Button onClick={pickFromFavorites} disabled={generating}>{generating ? "Picking..." : "Pick from my favorites"}</Button>
+          )}
+          <div className="relative">
+            <input
+              className={inputClass()}
+              placeholder="Search a title you've watched, or anything you're in the mood for"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              disabled={generating}
+            />
+            {searching && <p className="mt-1 text-xs text-slate-400">Looking...</p>}
+            {results.length > 0 && (
+              <div className="absolute z-10 mt-1 grid w-full gap-1 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg dark:border-slate-800 dark:bg-slate-900">
+                {results.map((item) => (
+                  <button
+                    key={`${item.kind}-${item.mal_id}`}
+                    className="flex items-center gap-2 rounded-lg p-1.5 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+                    onClick={() => generateFrom([{ kind: item.kind, mal_id: item.mal_id, title: item.title }])}
+                    type="button"
+                  >
+                    <img src={item.image_url} alt="" className="h-10 w-7 shrink-0 rounded object-cover" />
+                    <span className="min-w-0 flex-1 truncate">{item.title}</span>
+                    <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-500 dark:bg-slate-800">{item.kind}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {error && <p className="text-sm text-rose-600 dark:text-rose-300">{error}</p>}
+          {pick && (
+            <button className="button-ghost justify-self-start" onClick={() => { setSeeding(false); setError(""); }} type="button">
+              Never mind, keep tonight's pick
+            </button>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-[96px_minmax(0,1fr)] gap-4">
+            <img src={pick.main.image_url} alt="" className="aspect-[2/3] w-full rounded-xl object-cover shadow-md" />
+            <div className="min-w-0">
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-500 dark:bg-slate-800">{pick.main.kind}</span>
+              <p className="mt-1 font-display text-xl leading-tight">{pick.main.title}</p>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{pick.why}</p>
+              <Button className="mt-2" onClick={addMainToShelf}><Plus className="h-4 w-4" /> Add to my shelf</Button>
+            </div>
+          </div>
+          {pick.backups.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Or maybe</p>
+              <div className="mt-2 flex gap-3">
+                {pick.backups.map((backup) => (
+                  <div key={backup.mal_id} className="grid w-20 shrink-0 gap-1 sm:w-24">
+                    <img src={backup.image_url} alt="" className="aspect-[2/3] w-full rounded-lg object-cover" />
+                    <p className="line-clamp-2 text-[11px] font-semibold text-slate-700 dark:text-slate-200">{backup.title}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {!userId && (
+            <div className="flex flex-wrap items-center gap-3 rounded-xl bg-slate-100 p-3 dark:bg-slate-900">
+              <p className="flex-1 text-sm text-slate-600 dark:text-slate-300">Sign in to track and rate this one.</p>
+              <Button onClick={() => onRequestSignIn?.("Create a free account to track and rate what you watch.")}>Sign in</Button>
+            </div>
+          )}
+        </>
+      )}
+    </Card>
+  );
+}
+
+function HomePage({
+  addAnime,
+  addManga,
+  userId,
+  onRequestSignIn,
+  libraryAnimeIds,
+  libraryMangaIds,
+  favoriteAnime,
+  favoriteManga
+}: {
+  addAnime: (anime: AnimeSummary) => void;
+  addManga?: (manga: MangaSummary) => void;
+  userId?: string;
+  onRequestSignIn?: (message: string) => void;
+  libraryAnimeIds?: number[];
+  libraryMangaIds?: number[];
+  favoriteAnime?: AnimeSummary[];
+  favoriteManga?: MangaSummary[];
+}) {
   const [trending, setTrending] = useState<AnimeSummary[]>([]);
   const [seasonal, setSeasonal] = useState<AnimeSummary[]>([]);
   const [upcoming, setUpcoming] = useState<AnimeSummary[]>([]);
@@ -1992,6 +2295,16 @@ function HomePage({ addAnime, addManga, userId, onRequestSignIn }: { addAnime: (
 
       <FavoritePickPrompt userId={userId} onRequestSignIn={onRequestSignIn} onActiveChange={setFavoritePromptActive} />
       <CommunityFavoritesBoard onAddAnime={addAnime} onAddManga={addManga} />
+      <TonightsPick
+        userId={userId}
+        onRequestSignIn={onRequestSignIn}
+        onAddAnime={addAnime}
+        onAddManga={addManga}
+        libraryAnimeIds={libraryAnimeIds || []}
+        libraryMangaIds={libraryMangaIds || []}
+        favoriteAnime={favoriteAnime || []}
+        favoriteManga={favoriteManga || []}
+      />
 
       <div className={clsx("grid gap-5 transition-all duration-500 sm:gap-6", favoritePromptActive && "pointer-events-none scale-[0.99] opacity-50 blur-sm")}>
         <SeasonTracker trending={trending} seasonal={seasonal} upcoming={upcoming} airingToday={airingToday} updatedAt={updatedAt} loading={loading} onRefresh={() => loadHomeUpdates(true)} onAdd={addAnime} />
@@ -4359,6 +4672,10 @@ function App() {
               setAuthNotice(msg);
               setPage("auth");
             }}
+            libraryAnimeIds={data.library.map((entry) => entry.mal_id)}
+            libraryMangaIds={data.mangaLibrary.map((entry) => entry.mal_id)}
+            favoriteAnime={data.settings.favoriteAnimeCatalog}
+            favoriteManga={data.settings.favoriteMangaCatalog}
           />
         )}
         <div className="mx-auto max-w-6xl px-3 pb-6 pt-2 sm:px-4">
@@ -4414,7 +4731,17 @@ function App() {
       {confirmAction === "clear-light-novel" && (
         <ConfirmModal title="Clear light novel history?" message="This removes every light novel entry from this account." confirmLabel="Clear light novels" onCancel={() => setConfirmAction(null)} onConfirm={clearLightNovelHistory} />
       )}
-      {page === "home" && <HomePage addAnime={startAddFlow} addManga={startAddMangaFlow} userId={userId} />}
+      {page === "home" && (
+        <HomePage
+          addAnime={startAddFlow}
+          addManga={startAddMangaFlow}
+          userId={userId}
+          libraryAnimeIds={data.library.map((entry) => entry.mal_id)}
+          libraryMangaIds={data.mangaLibrary.map((entry) => entry.mal_id)}
+          favoriteAnime={data.settings.favoriteAnimeCatalog}
+          favoriteManga={data.settings.favoriteMangaCatalog}
+        />
+      )}
       {page === "explore" && <ExplorePage onAddAnime={startAddFlow} onAddManga={startAddMangaFlow} onBack={() => setPage("home")} />}
       {page === "stuff" && <MyStuffPage data={data} onSelect={startAddFlow} updateEntry={updateEntry} removeEntry={removeEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={() => setConfirmAction("clear-anime")} />}
       {page === "manga" && <MyMangaPage data={data} onSelect={startAddMangaFlow} updateEntry={updateMangaEntry} removeEntry={removeMangaEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={() => setConfirmAction("clear-manga")} />}

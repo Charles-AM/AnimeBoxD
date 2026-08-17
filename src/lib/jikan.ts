@@ -504,6 +504,11 @@ export async function getRecommendations(id: number) {
   return Array.isArray(payload.data) ? payload.data.map((item) => item.entry).filter(isSafeAnime).slice(0, 8).map(normalizeAnime) : [];
 }
 
+export async function getMangaRecommendations(id: number) {
+  const payload = await requestJson<{ data?: { entry: JikanManga }[] }>(`/manga/${id}/recommendations`);
+  return Array.isArray(payload.data) ? payload.data.map((item) => item.entry).filter(isSafeManga).slice(0, 8).map(normalizeManga) : [];
+}
+
 export async function getRelations(id: number) {
   const payload = await requestJson<{ data: { relation: string; entry: { mal_id: number; name: string; type: string; url: string }[] }[] }>(`/anime/${id}/relations`);
   return payload.data;

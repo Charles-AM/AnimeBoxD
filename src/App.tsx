@@ -2027,7 +2027,8 @@ function TonightsPick({
   libraryAnimeIds,
   libraryMangaIds,
   favoriteAnime,
-  favoriteManga
+  favoriteManga,
+  onOpenInExplore
 }: {
   userId?: string;
   onRequestSignIn?: (message: string) => void;
@@ -2037,6 +2038,7 @@ function TonightsPick({
   libraryMangaIds: number[];
   favoriteAnime: AnimeSummary[];
   favoriteManga: MangaSummary[];
+  onOpenInExplore?: (item: { kind: FavoriteMediaType; mal_id: number }) => void;
 }) {
   const [pick, setPick] = useState<TonightsPickState | null>(null);
   const [checkedStorage, setCheckedStorage] = useState(false);
@@ -2220,7 +2222,18 @@ function TonightsPick({
                 {pick.main.synopsis && (
                   <p className="mt-1.5 line-clamp-2 text-xs leading-snug text-white/70 sm:line-clamp-3 sm:text-sm">{pick.main.synopsis}</p>
                 )}
-                <Button className="mt-2 bg-white px-3 py-1.5 text-xs text-slate-950 hover:bg-slate-100 sm:mt-3 sm:px-4 sm:py-2 sm:text-sm" onClick={() => addItemToShelf(pick.main)}><Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Add to my shelf</Button>
+                <div className="mt-2 flex flex-wrap items-center gap-3 sm:mt-3">
+                  <Button className="bg-white px-3 py-1.5 text-xs text-slate-950 hover:bg-slate-100 sm:px-4 sm:py-2 sm:text-sm" onClick={() => addItemToShelf(pick.main)}><Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Add to my shelf</Button>
+                  {onOpenInExplore && (
+                    <button
+                      className="text-xs font-semibold text-white/80 underline underline-offset-2 hover:text-white sm:text-sm"
+                      onClick={() => onOpenInExplore({ kind: pick.main.kind, mal_id: pick.main.mal_id })}
+                      type="button"
+                    >
+                      Read full synopsis
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -2230,8 +2243,10 @@ function TonightsPick({
               <div className="mt-1.5 flex gap-2">
                 {pick.backups.map((backup) => (
                   <div key={backup.mal_id} className="grid w-16 shrink-0 gap-1 sm:w-20">
-                    <img src={backup.image_url} alt="" className="aspect-[2/3] w-full rounded-lg object-cover" />
-                    <p className="line-clamp-2 text-[11px] font-semibold text-slate-700 dark:text-slate-200">{backup.title}</p>
+                    <button className="contents" onClick={() => onOpenInExplore?.({ kind: backup.kind, mal_id: backup.mal_id })} type="button" aria-label={`Read more about ${backup.title}`}>
+                      <img src={backup.image_url} alt="" className="aspect-[2/3] w-full rounded-lg object-cover" />
+                      <p className="line-clamp-2 text-[11px] font-semibold text-slate-700 dark:text-slate-200">{backup.title}</p>
+                    </button>
                     <button
                       className="inline-flex items-center justify-center gap-1 rounded-full bg-slate-900 py-0.5 text-[10px] font-bold text-white transition hover:bg-teal-500 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300"
                       onClick={() => addItemToShelf(backup)}
@@ -2264,7 +2279,8 @@ function HomePage({
   libraryAnimeIds,
   libraryMangaIds,
   favoriteAnime,
-  favoriteManga
+  favoriteManga,
+  onOpenInExplore
 }: {
   addAnime: (anime: AnimeSummary) => void;
   addManga?: (manga: MangaSummary) => void;
@@ -2274,6 +2290,7 @@ function HomePage({
   libraryMangaIds?: number[];
   favoriteAnime?: AnimeSummary[];
   favoriteManga?: MangaSummary[];
+  onOpenInExplore?: (item: { kind: FavoriteMediaType; mal_id: number }) => void;
 }) {
   const [trending, setTrending] = useState<AnimeSummary[]>([]);
   const [seasonal, setSeasonal] = useState<AnimeSummary[]>([]);
@@ -2350,6 +2367,7 @@ function HomePage({
         libraryMangaIds={libraryMangaIds || []}
         favoriteAnime={favoriteAnime || []}
         favoriteManga={favoriteManga || []}
+        onOpenInExplore={onOpenInExplore}
       />
 
       <div className={clsx("grid gap-5 transition-all duration-500 sm:gap-6", favoritePromptActive && "pointer-events-none scale-[0.99] opacity-50 blur-sm")}>
@@ -2510,8 +2528,22 @@ type ExploreMode = "anime" | "manga" | "manhwa";
 type AnimeStaff = { person: { name: string }; positions: string[] };
 type AnimeCharacter = { character: { name: string }; role: string; voice_actors?: { person: { name: string }; language: string }[] };
 
-function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: AnimeSummary) => void; onAddManga: (manga: MangaSummary) => void; onBack: () => void }) {
-  const [mode, setMode] = useState<ExploreMode>("anime");
+function ExplorePage({
+  onAddAnime,
+  onAddManga,
+  onBack,
+  initialMode,
+  initialSelectedId,
+  onConsumedDeepLink
+}: {
+  onAddAnime: (anime: AnimeSummary) => void;
+  onAddManga: (manga: MangaSummary) => void;
+  onBack: () => void;
+  initialMode?: ExploreMode;
+  initialSelectedId?: number;
+  onConsumedDeepLink?: () => void;
+}) {
+  const [mode, setMode] = useState<ExploreMode>(initialMode || "anime");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<(AnimeSummary | MangaSummary)[]>([]);
   const [loading, setLoading] = useState(false);
@@ -2569,6 +2601,18 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
     setThemes({ openings: [], endings: [] });
     setDetailError("");
   }, [mode]);
+
+  // Runs once on mount, after the mode-reset effect above (same commit,
+  // later in declaration order) — so this correctly wins over that effect
+  // clearing selectedId back to null, and opens straight into the detail
+  // view someone was sent here to read.
+  useEffect(() => {
+    if (initialSelectedId) {
+      setSelectedId(initialSelectedId);
+      onConsumedDeepLink?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -4353,6 +4397,11 @@ function App() {
   const [cloudSaveReady, setCloudSaveReady] = useState(!isSupabaseConfigured);
   const [saveError, setSaveError] = useState("");
   const [page, setPage] = useState<AppPage>("home");
+  const [exploreDeepLink, setExploreDeepLink] = useState<{ mode: ExploreMode; mal_id: number } | null>(null);
+  const openInExplore = (item: { kind: FavoriteMediaType; mal_id: number }) => {
+    setExploreDeepLink({ mode: item.kind, mal_id: item.mal_id });
+    setPage("explore");
+  };
   const [isAdmin, setIsAdmin] = useState(false);
   const [memberSince, setMemberSince] = useState("");
   const [selectedAnime, setSelectedAnime] = useState<AnimeSummary | null>(null);
@@ -4690,7 +4739,16 @@ function App() {
             onClose={() => setGuestPrompt(false)}
           />
         )}
-        {page === "explore" && <ExplorePage onAddAnime={startAddFlow} onAddManga={startAddMangaFlow} onBack={() => setPage("home")} />}
+        {page === "explore" && (
+          <ExplorePage
+            onAddAnime={startAddFlow}
+            onAddManga={startAddMangaFlow}
+            onBack={() => setPage("home")}
+            initialMode={exploreDeepLink?.mode}
+            initialSelectedId={exploreDeepLink?.mal_id}
+            onConsumedDeepLink={() => setExploreDeepLink(null)}
+          />
+        )}
         {page === "stuff" && <MyStuffPage data={data} onSelect={startAddFlow} updateEntry={guestSave} removeEntry={guestSave} updateData={guestSave} onBack={() => setPage("home")} onClearHistory={noop} />}
         {page === "manga" && <MyMangaPage data={data} onSelect={startAddMangaFlow} updateEntry={guestSave} removeEntry={guestSave} updateData={guestSave} onBack={() => setPage("home")} onClearHistory={noop} />}
         {page === "manhwa" && <MyManhwaPage data={data} onSelect={startAddMangaFlow} updateEntry={guestSave} removeEntry={guestSave} updateData={guestSave} onBack={() => setPage("home")} onClearHistory={noop} />}
@@ -4722,6 +4780,7 @@ function App() {
             libraryMangaIds={data.mangaLibrary.map((entry) => entry.mal_id)}
             favoriteAnime={data.settings.favoriteAnimeCatalog}
             favoriteManga={data.settings.favoriteMangaCatalog}
+            onOpenInExplore={openInExplore}
           />
         )}
         <div className="mx-auto max-w-6xl px-3 pb-6 pt-2 sm:px-4">
@@ -4786,9 +4845,19 @@ function App() {
           libraryMangaIds={data.mangaLibrary.map((entry) => entry.mal_id)}
           favoriteAnime={data.settings.favoriteAnimeCatalog}
           favoriteManga={data.settings.favoriteMangaCatalog}
+          onOpenInExplore={openInExplore}
         />
       )}
-      {page === "explore" && <ExplorePage onAddAnime={startAddFlow} onAddManga={startAddMangaFlow} onBack={() => setPage("home")} />}
+      {page === "explore" && (
+        <ExplorePage
+          onAddAnime={startAddFlow}
+          onAddManga={startAddMangaFlow}
+          onBack={() => setPage("home")}
+          initialMode={exploreDeepLink?.mode}
+          initialSelectedId={exploreDeepLink?.mal_id}
+          onConsumedDeepLink={() => setExploreDeepLink(null)}
+        />
+      )}
       {page === "stuff" && <MyStuffPage data={data} onSelect={startAddFlow} updateEntry={updateEntry} removeEntry={removeEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={() => setConfirmAction("clear-anime")} />}
       {page === "manga" && <MyMangaPage data={data} onSelect={startAddMangaFlow} updateEntry={updateMangaEntry} removeEntry={removeMangaEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={() => setConfirmAction("clear-manga")} />}
       {page === "manhwa" && <MyManhwaPage data={data} onSelect={startAddMangaFlow} updateEntry={updateMangaEntry} removeEntry={removeMangaEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={() => setConfirmAction("clear-manhwa")} />}

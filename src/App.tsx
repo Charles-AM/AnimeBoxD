@@ -29,7 +29,7 @@ import {
 import { fixedAnime } from "./lib/fixedAnime";
 import { getAiringToday, getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, getSeasonal, getTopAiring, getUpcomingAnime, searchAnime, searchLightNovels, searchManga, searchManhwa } from "./lib/jikan";
 import { loadData, saveData, setActiveUser } from "./lib/storage";
-import { completeAuthSessionFromUrl, completeCloudSessionUser, createReport, deleteCloudAccount, getCurrentSession, isSupabaseConfigured, loadAdminDashboard, loadCloudData, loadProfile, logActivityEvent, logPageView, markProfileSeen, resendSignupConfirmation, saveCloudData, sendPasswordResetEmail, signInWithEmail, signInWithGoogle, signOutCloud, signUpWithEmail, updateCloudPassword, upsertProfile, userToProfileFallback } from "./lib/supabase";
+import { completeAuthSessionFromUrl, completeCloudSessionUser, createReport, deleteCloudAccount, type FavoriteMediaType, getCurrentSession, isSupabaseConfigured, loadAdminDashboard, loadCloudData, loadMyFavoritePick, loadProfile, logActivityEvent, logPageView, markProfileSeen, resendSignupConfirmation, saveCloudData, sendPasswordResetEmail, signInWithEmail, signInWithGoogle, signOutCloud, signUpWithEmail, submitFavoritePick, updateCloudPassword, upsertProfile, userToProfileFallback } from "./lib/supabase";
 import type { AdminDashboardData, AnimeDetail, AnimeSummary, AppData, ComicMediaType, LibraryEntry, LibraryStatus, MangaDetail, MangaEntry, MangaStatus, MangaSummary, Settings, ThemeMode } from "./types/anime";
 import { CookieBanner } from "./CookieBanner";
 
@@ -108,8 +108,17 @@ function hasAuthCallbackParams() {
   );
 }
 
+function extractErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string") return message;
+  }
+  return String(error || "");
+}
+
 function friendlyAuthError(error: unknown, fallback = "Something went wrong. Please try again.") {
-  const message = error instanceof Error ? error.message : String(error || "");
+  const message = extractErrorMessage(error);
   const normalized = message.toLowerCase();
   if (normalized.includes("auth session missing") || normalized.includes("session missing")) {
     return "This sign-in link has expired or was already used. Please request a fresh email and try again.";
@@ -129,7 +138,10 @@ function friendlyAuthError(error: unknown, fallback = "Something went wrong. Ple
   if (normalized.includes("rate limit") || normalized.includes("too many")) {
     return "Too many tries right now. Please wait a minute, then try again.";
   }
-  return message || fallback;
+  if (normalized.includes("failed to fetch") || normalized.includes("networkerror") || normalized.includes("network request failed")) {
+    return "Could not reach the server. Check your connection and try again.";
+  }
+  return fallback;
 }
 
 function normalizeUserId(value: string) {
@@ -1708,7 +1720,183 @@ function SeasonTracker({ trending, seasonal, upcoming, airingToday, updatedAt, l
   );
 }
 
-function HomePage({ addAnime }: { addAnime: (anime: AnimeSummary) => void }) {
+const FAVORITE_PICK_SEEN_KEY = "animeboxd_favorite_pick_seen";
+
+type FavoriteSearchResult = { kind: FavoriteMediaType; mal_id: number; title: string; image_url: string };
+
+function markFavoritePromptSeen() {
+  try {
+    localStorage.setItem(FAVORITE_PICK_SEEN_KEY, "1");
+  } catch {
+    // ignore
+  }
+}
+
+function hasSeenFavoritePrompt() {
+  try {
+    return localStorage.getItem(FAVORITE_PICK_SEEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function FavoritePickPrompt({ userId }: { userId?: string }) {
+  const [dismissed, setDismissed] = useState(hasSeenFavoritePrompt);
+  const [checkingExisting, setCheckingExisting] = useState(Boolean(userId));
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<FavoriteSearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [selected, setSelected] = useState<FavoriteSearchResult | null>(null);
+  const [reason, setReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!userId || !isSupabaseConfigured) {
+      setCheckingExisting(false);
+      return;
+    }
+    let cancelled = false;
+    loadMyFavoritePick(userId)
+      .then((pick) => {
+        if (cancelled || !pick) return;
+        markFavoritePromptSeen();
+        setDismissed(true);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setCheckingExisting(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    if (selected || query.trim().length < 2) {
+      setResults([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setSearching(true);
+      try {
+        const [anime, manga, manhwa] = await Promise.allSettled([searchAnime(query), searchManga(query), searchManhwa(query)]);
+        if (cancelled) return;
+        const toResults = (settled: PromiseSettledResult<AnimeSummary[] | MangaSummary[]>, kind: FavoriteMediaType): FavoriteSearchResult[] =>
+          settled.status === "fulfilled" ? settled.value.slice(0, 4).map((item) => ({ kind, mal_id: item.mal_id, title: item.title, image_url: item.image_url })) : [];
+        setResults([...toResults(anime, "anime"), ...toResults(manga, "manga"), ...toResults(manhwa, "manhwa")].slice(0, 8));
+      } finally {
+        if (!cancelled) setSearching(false);
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [query, selected]);
+
+  const dismiss = () => {
+    markFavoritePromptSeen();
+    setDismissed(true);
+  };
+
+  const submit = async () => {
+    if (!selected || !reason.trim()) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      await submitFavoritePick({
+        userId,
+        mediaType: selected.kind,
+        malId: selected.mal_id,
+        title: selected.title,
+        imageUrl: selected.image_url,
+        reason: reason.trim()
+      });
+      setSubmitted(true);
+      markFavoritePromptSeen();
+    } catch (err) {
+      setError(friendlyAuthError(err, "Could not save your pick right now. Please try again."));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!isSupabaseConfigured || dismissed || checkingExisting) return null;
+
+  if (submitted && selected) {
+    return (
+      <Card className="grid grid-cols-[64px_minmax(0,1fr)] items-center gap-3 border border-teal-200/70 bg-teal-50/40 dark:border-teal-900/60 dark:bg-slate-950/70">
+        <img src={selected.image_url} alt="" className="h-24 w-16 rounded-lg object-cover shadow-md" />
+        <div className="min-w-0">
+          <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Your pick</p>
+          <p className="font-display text-xl leading-tight">{selected.title}</p>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">“{reason.trim()}”</p>
+          <p className="mt-2 text-xs text-slate-500">Thanks for sharing. It just joined the community board.</p>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="grid gap-3">
+      <div>
+        <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Quick one</p>
+        <h2 className="font-display text-2xl leading-tight sm:text-3xl">What's your favorite anime, manga, or manhwa?</h2>
+        <p className="mt-1 text-sm text-slate-500">Pick a title and tell us why in one line. We'll turn it into a card you can share.</p>
+      </div>
+
+      {selected ? (
+        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/70 p-2.5 dark:border-slate-800 dark:bg-slate-950/70">
+          <img src={selected.image_url} alt="" className="h-16 w-11 shrink-0 rounded-lg object-cover" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{selected.title}</p>
+            <button className="text-xs font-semibold text-teal-600 underline underline-offset-2 dark:text-teal-300" onClick={() => { setSelected(null); setQuery(""); }} type="button">
+              Choose a different title
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="relative">
+          <input className={inputClass()} placeholder="Start typing a title" value={query} onChange={(event) => setQuery(event.target.value)} />
+          {searching && <p className="mt-1 text-xs text-slate-400">Looking...</p>}
+          {results.length > 0 && (
+            <div className="absolute z-10 mt-1 grid w-full gap-1 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg dark:border-slate-800 dark:bg-slate-900">
+              {results.map((item) => (
+                <button key={`${item.kind}-${item.mal_id}`} className="flex items-center gap-2 rounded-lg p-1.5 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => { setSelected(item); setResults([]); }} type="button">
+                  <img src={item.image_url} alt="" className="h-10 w-7 shrink-0 rounded object-cover" />
+                  <span className="min-w-0 flex-1 truncate">{item.title}</span>
+                  <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-500 dark:bg-slate-800">{item.kind}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {selected && (
+        <>
+          <Field label="In one line, why this one">
+            <input className={inputClass()} placeholder="I think about the ending all the time" value={reason} maxLength={140} onChange={(event) => setReason(event.target.value)} />
+          </Field>
+          {error && <p className="text-sm text-rose-600 dark:text-rose-300">{error}</p>}
+          <div className="flex flex-wrap items-center gap-3">
+            <Button onClick={submit} disabled={submitting || !reason.trim()}>{submitting ? "Sharing..." : "Share my pick"}</Button>
+            <button className="button-ghost" onClick={dismiss} type="button">Maybe later</button>
+          </div>
+        </>
+      )}
+
+      {!selected && (
+        <button className="button-ghost justify-self-start" onClick={dismiss} type="button">Maybe later</button>
+      )}
+    </Card>
+  );
+}
+
+function HomePage({ addAnime, userId }: { addAnime: (anime: AnimeSummary) => void; userId?: string }) {
   const [trending, setTrending] = useState<AnimeSummary[]>([]);
   const [seasonal, setSeasonal] = useState<AnimeSummary[]>([]);
   const [upcoming, setUpcoming] = useState<AnimeSummary[]>([]);
@@ -1771,6 +1959,8 @@ function HomePage({ addAnime }: { addAnime: (anime: AnimeSummary) => void }) {
           </ul>
         </div>
       </Card>
+
+      <FavoritePickPrompt userId={userId} />
 
       <SeasonTracker trending={trending} seasonal={seasonal} upcoming={upcoming} airingToday={airingToday} updatedAt={updatedAt} loading={loading} onRefresh={() => loadHomeUpdates(true)} onAdd={addAnime} />
 
@@ -3995,7 +4185,7 @@ function App() {
           />
         )}
         {page !== "explore" && page !== "stuff" && page !== "manga" && page !== "manhwa" && page !== "light-novel" && page !== "add" && page !== "add-manga" && (
-          <HomePage addAnime={startAddFlow} />
+          <HomePage addAnime={startAddFlow} userId={userId} />
         )}
         <div className="mx-auto max-w-6xl px-3 pb-6 pt-2 sm:px-4">
           <SiteFooter />
@@ -4050,7 +4240,7 @@ function App() {
       {confirmAction === "clear-light-novel" && (
         <ConfirmModal title="Clear light novel history?" message="This removes every light novel entry from this account." confirmLabel="Clear light novels" onCancel={() => setConfirmAction(null)} onConfirm={clearLightNovelHistory} />
       )}
-      {page === "home" && <HomePage addAnime={startAddFlow} />}
+      {page === "home" && <HomePage addAnime={startAddFlow} userId={userId} />}
       {page === "explore" && <ExplorePage onAddAnime={startAddFlow} onAddManga={startAddMangaFlow} onBack={() => setPage("home")} />}
       {page === "stuff" && <MyStuffPage data={data} onSelect={startAddFlow} updateEntry={updateEntry} removeEntry={removeEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={() => setConfirmAction("clear-anime")} />}
       {page === "manga" && <MyMangaPage data={data} onSelect={startAddMangaFlow} updateEntry={updateMangaEntry} removeEntry={removeMangaEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={() => setConfirmAction("clear-manga")} />}

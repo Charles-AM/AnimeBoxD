@@ -30,9 +30,40 @@ Deno.serve(async (request) => {
   }
 
   const payload = await request.json().catch(() => ({}));
-  const username = payload.username || "Anime fan";
-  const email = payload.email || "No email saved";
   const createdAt = payload.created_at ? new Date(payload.created_at).toLocaleString("en-US", { timeZone: "America/New_York" }) : new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
+
+  let subject: string;
+  let html: string;
+  let text: string;
+
+  if (payload.kind === "favorite_pick") {
+    const displayName = payload.display_name || "Someone browsing";
+    const title = payload.title || "an untitled pick";
+    const mediaType = payload.media_type || "anime";
+    const reason = payload.reason || "";
+    subject = "New AnimeBoxD favorite pick";
+    html = `
+      <h2>New favorite pick</h2>
+      <p><strong>From:</strong> ${escapeHtml(displayName)}</p>
+      <p><strong>Title:</strong> ${escapeHtml(title)} (${escapeHtml(mediaType)})</p>
+      <p><strong>Why:</strong> "${escapeHtml(reason)}"</p>
+      <p><strong>Time:</strong> ${escapeHtml(createdAt)}</p>
+      <p>Open your AnimeBoxD admin board to see the full community board.</p>
+    `;
+    text = `New favorite pick\n\nFrom: ${displayName}\nTitle: ${title} (${mediaType})\nWhy: "${reason}"\nTime: ${createdAt}\n\nOpen your AnimeBoxD admin board to see the full community board.`;
+  } else {
+    const username = payload.username || "Anime fan";
+    const email = payload.email || "No email saved";
+    subject = "New AnimeBoxD signup";
+    html = `
+      <h2>New AnimeBoxD signup</h2>
+      <p><strong>User:</strong> ${escapeHtml(username)}</p>
+      <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+      <p><strong>Time:</strong> ${escapeHtml(createdAt)}</p>
+      <p>Open your AnimeBoxD admin board to review user activity.</p>
+    `;
+    text = `New AnimeBoxD signup\n\nUser: ${username}\nEmail: ${email}\nTime: ${createdAt}\n\nOpen your AnimeBoxD admin board to review user activity.`;
+  }
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -43,15 +74,9 @@ Deno.serve(async (request) => {
     body: JSON.stringify({
       from: fromEmail,
       to: [adminEmail],
-      subject: "New AnimeBoxD signup",
-      html: `
-        <h2>New AnimeBoxD signup</h2>
-        <p><strong>User:</strong> ${escapeHtml(username)}</p>
-        <p><strong>Email:</strong> ${escapeHtml(email)}</p>
-        <p><strong>Time:</strong> ${escapeHtml(createdAt)}</p>
-        <p>Open your AnimeBoxD admin board to review user activity.</p>
-      `,
-      text: `New AnimeBoxD signup\n\nUser: ${username}\nEmail: ${email}\nTime: ${createdAt}\n\nOpen your AnimeBoxD admin board to review user activity.`
+      subject,
+      html,
+      text
     })
   });
 

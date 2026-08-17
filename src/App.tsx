@@ -1836,7 +1836,7 @@ function FavoritePickPrompt({ userId, onRequestSignIn, onActiveChange }: { userI
 
   if (submitted && selected) {
     return (
-      <Card className={clsx("relative grid gap-3 border border-teal-300/70 bg-gradient-to-br from-teal-50 to-white shadow-lg shadow-teal-500/10 dark:border-teal-700/60 dark:from-teal-950/40 dark:to-slate-950 dark:shadow-teal-400/10", awaitingSaveDecision && "z-20")}>
+      <Card className={clsx("relative grid gap-4 border border-teal-300/60 bg-white/40 py-3 shadow-xl shadow-teal-500/20 ring-1 ring-white/60 dark:border-teal-500/40 dark:bg-slate-950/30 dark:shadow-teal-400/10 dark:ring-white/10", awaitingSaveDecision && "z-20")}>
         <div className="grid grid-cols-[64px_minmax(0,1fr)] items-center gap-3">
           <img src={selected.image_url} alt="" className="h-24 w-16 rounded-lg object-cover shadow-md" />
           <div className="min-w-0">
@@ -1862,11 +1862,11 @@ function FavoritePickPrompt({ userId, onRequestSignIn, onActiveChange }: { userI
   }
 
   return (
-    <Card className="relative z-20 grid gap-3 border border-teal-300/70 bg-gradient-to-br from-teal-50 to-white shadow-lg shadow-teal-500/10 dark:border-teal-700/60 dark:from-teal-950/40 dark:to-slate-950 dark:shadow-teal-400/10">
+    <Card className="relative z-20 grid gap-6 border border-teal-300/60 bg-white/40 py-3 shadow-xl shadow-teal-500/20 ring-1 ring-white/60 dark:border-teal-500/40 dark:bg-slate-950/30 dark:shadow-teal-400/10 dark:ring-white/10">
       <div>
         <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Quick one</p>
         <h2 className="font-display text-2xl leading-tight sm:text-3xl">What's your favorite anime, manga, or manhwa?</h2>
-        <p className="mt-1 text-sm text-slate-500">Pick a title and tell us why in one line. We'll turn it into a card you can share.</p>
+        <p className="mt-2 text-sm text-slate-500">Pick a title and tell us why in one line. We'll turn it into a card you can share.</p>
       </div>
 
       {selected ? (
@@ -2035,15 +2035,15 @@ function CommunityFavoritesBoard() {
     <Card className="grid gap-3">
       <div>
         <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Community favorites</p>
-        <h2 className="font-display text-2xl leading-tight sm:text-3xl">What everyone else is loving.</h2>
+        <h2 className="font-display text-2xl leading-tight sm:text-3xl">Everyone else's GOATs.</h2>
       </div>
-      <div className="flex gap-3 overflow-x-auto pb-1">
+      <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1">
         {picks.map((pick) => (
-          <div key={pick.id} className="grid w-40 shrink-0 gap-2 rounded-xl border border-slate-200/70 bg-white/70 p-2.5 dark:border-slate-800 dark:bg-slate-950/70">
-            {pick.image_url && <img src={pick.image_url} alt="" className="aspect-[2/3] w-full rounded-lg object-cover" />}
+          <div key={pick.id} className="grid w-20 shrink-0 snap-start gap-1.5 rounded-lg border border-slate-200/70 bg-white/70 p-1.5 dark:border-slate-800 dark:bg-slate-950/70 sm:w-24">
+            {pick.image_url && <img src={pick.image_url} alt="" className="aspect-[2/3] w-full rounded-md object-cover" />}
             <div className="min-w-0">
-              <p className="line-clamp-1 text-xs font-semibold text-slate-900 dark:text-white">{pick.title}</p>
-              <p className="mt-0.5 line-clamp-3 text-xs text-slate-500">“{pick.reason}”</p>
+              <p className="line-clamp-1 text-[11px] font-semibold text-slate-900 dark:text-white">{pick.title}</p>
+              <p className="line-clamp-2 text-[10px] leading-tight text-slate-500">“{pick.reason}”</p>
             </div>
           </div>
         ))}

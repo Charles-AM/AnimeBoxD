@@ -1927,7 +1927,7 @@ function FavoritePickPrompt({ userId, onRequestSignIn, onActiveChange }: { userI
 
 const TONIGHTS_PICK_STORAGE_PREFIX = "animeboxd_tonights_pick_v1_";
 
-type TonightsPickItem = { kind: FavoriteMediaType; mal_id: number; title: string; image_url: string };
+type TonightsPickItem = { kind: FavoriteMediaType; mal_id: number; title: string; image_url: string; synopsis?: string };
 type TonightsPickState = { date: string; seedTitle: string; why: string; main: TonightsPickItem; backups: TonightsPickItem[] };
 
 function todayLocalDateString() {
@@ -2081,6 +2081,25 @@ function TonightsPick({
   const excludeAnime = useMemo(() => new Set(libraryAnimeIds), [libraryAnimeIds]);
   const excludeManga = useMemo(() => new Set(libraryMangaIds), [libraryMangaIds]);
 
+  const fillInSynopsis = (forMalId: number) => {
+    (async () => {
+      try {
+        const current = loadStoredTonightsPick(userId);
+        if (!current || current.main.mal_id !== forMalId || current.main.synopsis) return;
+        const detail = current.main.kind === "anime" ? await getAnime(forMalId) : await getManga(forMalId);
+        if (!detail.synopsis) return;
+        setPick((prev) => {
+          if (!prev || prev.main.mal_id !== forMalId) return prev;
+          const updated = { ...prev, main: { ...prev.main, synopsis: detail.synopsis } };
+          saveTonightsPick(userId, updated);
+          return updated;
+        });
+      } catch {
+        // synopsis is a nice-to-have — leave it blank if the detail fetch fails
+      }
+    })();
+  };
+
   const generateFrom = async (seeds: { kind: FavoriteMediaType; mal_id: number; title: string }[]) => {
     setGenerating(true);
     setError("");
@@ -2095,6 +2114,7 @@ function TonightsPick({
       setSeeding(false);
       setQuery("");
       setResults([]);
+      fillInSynopsis(result.main.mal_id);
     } catch (err) {
       setError(friendlyAuthError(err, "Could not generate a pick right now. Please try again."));
     } finally {
@@ -2111,14 +2131,20 @@ function TonightsPick({
     generateFrom(seeds);
   };
 
-  const addMainToShelf = () => {
-    if (!pick) return;
-    if (pick.main.kind === "anime") {
-      onAddAnime({ mal_id: pick.main.mal_id, title: pick.main.title, image_url: pick.main.image_url, total_episodes: 0, genres: [], studios: [] });
+  const addItemToShelf = (item: TonightsPickItem) => {
+    if (item.kind === "anime") {
+      onAddAnime({ mal_id: item.mal_id, title: item.title, image_url: item.image_url, total_episodes: 0, genres: [], studios: [] });
     } else {
-      onAddManga?.({ mal_id: pick.main.mal_id, title: pick.main.title, image_url: pick.main.image_url, total_chapters: 0, total_volumes: 0, genres: [], authors: [], mediaType: pick.main.kind });
+      onAddManga?.({ mal_id: item.mal_id, title: item.title, image_url: item.image_url, total_chapters: 0, total_volumes: 0, genres: [], authors: [], mediaType: item.kind });
     }
   };
+
+  useEffect(() => {
+    if (pick && !pick.main.synopsis) fillInSynopsis(pick.main.mal_id);
+    // Only run this once per newly-loaded pick, not on every pick object change
+    // (fillInSynopsis itself updates pick, which would otherwise loop).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pick?.main.mal_id]);
 
   if (!checkedStorage) return null;
 
@@ -2191,7 +2217,10 @@ function TonightsPick({
                 <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold uppercase text-white backdrop-blur-sm">{pick.main.kind}</span>
                 <p className="mt-1.5 font-display text-lg leading-tight text-white sm:mt-2 sm:text-3xl">{pick.main.title}</p>
                 <p className="mt-1 line-clamp-2 text-xs text-white/80 sm:text-sm">{pick.why}</p>
-                <Button className="mt-2 bg-white px-3 py-1.5 text-xs text-slate-950 hover:bg-slate-100 sm:mt-3 sm:px-4 sm:py-2 sm:text-sm" onClick={addMainToShelf}><Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Add to my shelf</Button>
+                {pick.main.synopsis && (
+                  <p className="mt-1.5 line-clamp-2 text-xs leading-snug text-white/70 sm:line-clamp-3 sm:text-sm">{pick.main.synopsis}</p>
+                )}
+                <Button className="mt-2 bg-white px-3 py-1.5 text-xs text-slate-950 hover:bg-slate-100 sm:mt-3 sm:px-4 sm:py-2 sm:text-sm" onClick={() => addItemToShelf(pick.main)}><Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Add to my shelf</Button>
               </div>
             </div>
           </div>
@@ -2203,6 +2232,13 @@ function TonightsPick({
                   <div key={backup.mal_id} className="grid w-16 shrink-0 gap-1 sm:w-20">
                     <img src={backup.image_url} alt="" className="aspect-[2/3] w-full rounded-lg object-cover" />
                     <p className="line-clamp-2 text-[11px] font-semibold text-slate-700 dark:text-slate-200">{backup.title}</p>
+                    <button
+                      className="inline-flex items-center justify-center gap-1 rounded-full bg-slate-900 py-0.5 text-[10px] font-bold text-white transition hover:bg-teal-500 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300"
+                      onClick={() => addItemToShelf(backup)}
+                      type="button"
+                    >
+                      <Plus className="h-2.5 w-2.5" /> Add
+                    </button>
                   </div>
                 ))}
               </div>

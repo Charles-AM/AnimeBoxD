@@ -339,6 +339,62 @@ export async function createReport(payload: { userId?: string; name?: string; em
   if (error) throw error;
 }
 
+export type FavoriteMediaType = "anime" | "manga" | "manhwa";
+
+export type FavoritePick = {
+  id: string;
+  user_id?: string | null;
+  media_type: FavoriteMediaType;
+  mal_id?: number | null;
+  title: string;
+  image_url?: string | null;
+  reason: string;
+  created_at: string;
+};
+
+export async function submitFavoritePick(payload: {
+  userId?: string | null;
+  mediaType: FavoriteMediaType;
+  malId?: number;
+  title: string;
+  imageUrl?: string;
+  reason: string;
+}) {
+  const client = assertSupabase();
+  const { error } = await client.from("favorite_picks").insert({
+    user_id: payload.userId || null,
+    session_id: getOrCreateSessionId(),
+    media_type: payload.mediaType,
+    mal_id: payload.malId ?? null,
+    title: payload.title,
+    image_url: payload.imageUrl || null,
+    reason: payload.reason.trim()
+  });
+  if (error) throw error;
+}
+
+export async function loadMyFavoritePick(userId: string): Promise<FavoritePick | null> {
+  const client = assertSupabase();
+  const { data, error } = await client
+    .from("favorite_picks")
+    .select("id, user_id, media_type, mal_id, title, image_url, reason, created_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as FavoritePick | null) || null;
+}
+
+export async function loadFavoritePicks(limit = 50): Promise<FavoritePick[]> {
+  const client = assertSupabase();
+  const { data, error } = await client
+    .from("favorite_picks")
+    .select("id, user_id, media_type, mal_id, title, image_url, reason, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data as FavoritePick[]) || [];
+}
+
 export async function loadAdminDashboard(): Promise<AdminDashboardData> {
   const client = assertSupabase();
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();

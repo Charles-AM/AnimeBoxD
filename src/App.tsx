@@ -2125,7 +2125,7 @@ function TonightsPick({
   const hasFavorites = favoriteAnime.length > 0 || favoriteManga.length > 0;
 
   return (
-    <Card className="relative z-20 grid gap-4 border border-teal-300/60 bg-white/40 py-3 shadow-xl shadow-teal-500/20 ring-1 ring-white/60 dark:border-teal-500/40 dark:bg-slate-950/30 dark:shadow-teal-400/10 dark:ring-white/10">
+    <Card className="relative z-20 grid gap-3 border border-teal-300/60 bg-white/40 py-3 shadow-xl shadow-teal-500/20 ring-1 ring-white/60 dark:border-teal-500/40 dark:bg-slate-950/30 dark:shadow-teal-400/10 dark:ring-white/10">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Tonight's pick</p>
@@ -2185,22 +2185,22 @@ function TonightsPick({
             )}
             <div className="absolute inset-0 bg-slate-950/50" />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/85 to-slate-950/40 sm:bg-gradient-to-r" />
-            <div className="relative grid gap-3 p-4 text-center sm:grid-cols-[140px_minmax(0,1fr)] sm:items-end sm:p-6 sm:text-left">
-              <img src={pick.main.image_url} alt="" className="mx-auto aspect-[2/3] w-32 shrink-0 rounded-xl object-cover shadow-2xl ring-1 ring-white/20 sm:mx-0 sm:w-full" />
+            <div className="relative grid grid-cols-[88px_minmax(0,1fr)] items-center gap-3 p-3 text-left sm:grid-cols-[140px_minmax(0,1fr)] sm:items-end sm:gap-4 sm:p-5">
+              <img src={pick.main.image_url} alt="" className="aspect-[2/3] w-full shrink-0 rounded-lg object-cover shadow-2xl ring-1 ring-white/20 sm:rounded-xl" />
               <div className="min-w-0">
                 <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold uppercase text-white backdrop-blur-sm">{pick.main.kind}</span>
-                <p className="mt-2 font-display text-2xl leading-tight text-white sm:text-3xl">{pick.main.title}</p>
-                <p className="mt-1 text-sm text-white/80">{pick.why}</p>
-                <Button className="mt-3 bg-white text-slate-950 hover:bg-slate-100" onClick={addMainToShelf}><Plus className="h-4 w-4" /> Add to my shelf</Button>
+                <p className="mt-1.5 font-display text-lg leading-tight text-white sm:mt-2 sm:text-3xl">{pick.main.title}</p>
+                <p className="mt-1 line-clamp-2 text-xs text-white/80 sm:text-sm">{pick.why}</p>
+                <Button className="mt-2 bg-white px-3 py-1.5 text-xs text-slate-950 hover:bg-slate-100 sm:mt-3 sm:px-4 sm:py-2 sm:text-sm" onClick={addMainToShelf}><Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Add to my shelf</Button>
               </div>
             </div>
           </div>
           {pick.backups.length > 0 && (
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Or maybe</p>
-              <div className="mt-2 flex gap-3">
+              <div className="mt-1.5 flex gap-2">
                 {pick.backups.map((backup) => (
-                  <div key={backup.mal_id} className="grid w-20 shrink-0 gap-1 sm:w-24">
+                  <div key={backup.mal_id} className="grid w-16 shrink-0 gap-1 sm:w-20">
                     <img src={backup.image_url} alt="" className="aspect-[2/3] w-full rounded-lg object-cover" />
                     <p className="line-clamp-2 text-[11px] font-semibold text-slate-700 dark:text-slate-200">{backup.title}</p>
                   </div>

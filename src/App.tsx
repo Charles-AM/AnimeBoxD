@@ -1756,9 +1756,13 @@ function FavoritePickPrompt({ userId, onRequestSignIn, onActiveChange }: { userI
   const awaitingSaveDecision = submitted && !userId && !saveResolved;
 
   useEffect(() => {
-    const active = isSupabaseConfigured && !checkingExisting && !dismissed && (!submitted || awaitingSaveDecision);
+    // The rest of the page only stays blurred while the initial question is
+    // unanswered. Once a pick is submitted, the site should be fully visible
+    // again immediately — the save-account ask below is a normal, unblurred
+    // part of the success card, not a reason to keep spotlighting.
+    const active = isSupabaseConfigured && !checkingExisting && !dismissed && !submitted;
     onActiveChange?.(active);
-  }, [checkingExisting, dismissed, submitted, awaitingSaveDecision]);
+  }, [checkingExisting, dismissed, submitted]);
 
   useEffect(() => {
     if (!userId || !isSupabaseConfigured) {

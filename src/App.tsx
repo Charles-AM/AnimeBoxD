@@ -2125,7 +2125,7 @@ function TonightsPick({
   const hasFavorites = favoriteAnime.length > 0 || favoriteManga.length > 0;
 
   return (
-    <Card className="grid gap-4 border border-teal-300/60 bg-teal-50/30 dark:border-teal-800/50 dark:bg-slate-950/70">
+    <Card className="relative z-20 grid gap-4 border border-teal-300/60 bg-white/40 py-3 shadow-xl shadow-teal-500/20 ring-1 ring-white/60 dark:border-teal-500/40 dark:bg-slate-950/30 dark:shadow-teal-400/10 dark:ring-white/10">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Tonight's pick</p>

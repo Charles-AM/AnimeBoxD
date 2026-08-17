@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
@@ -2106,7 +2107,13 @@ function FavoritePickDetailModal({ pick, onAddAnime, onAddManga, onClose }: { pi
     onClose();
   };
 
-  return (
+  // Rendered via a portal straight to document.body: this modal can be opened
+  // from inside a Card, and every Card uses backdrop-filter, which traps
+  // position: fixed descendants inside its own containing block/stacking
+  // context instead of the real viewport (the same root cause as the search
+  // dropdown stacking bug). A portal is what actually escapes that, not a
+  // higher z-index.
+  return createPortal(
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 px-4 backdrop-blur-sm" onClick={onClose}>
       <div className="grid max-h-[85vh] w-full max-w-lg gap-4 overflow-y-auto rounded-2xl border border-white/60 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-950" onClick={(event) => event.stopPropagation()}>
         <div className="grid grid-cols-[96px_minmax(0,1fr)] gap-4">
@@ -2132,10 +2139,11 @@ function FavoritePickDetailModal({ pick, onAddAnime, onAddManga, onClose }: { pi
         )}
         <div className="flex flex-wrap items-center gap-3">
           <Button onClick={addToShelf}><Plus className="h-4 w-4" /> Add to my shelf</Button>
-          <button className="button-ghost" onClick={onClose} type="button">Close</button>
+          <button className="button-ghost" onClick={onClose} type="button">Close, back to homepage</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

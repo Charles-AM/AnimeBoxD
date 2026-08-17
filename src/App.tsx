@@ -2176,13 +2176,23 @@ function TonightsPick({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-[96px_minmax(0,1fr)] gap-4">
-            <img src={pick.main.image_url} alt="" className="aspect-[2/3] w-full rounded-xl object-cover shadow-md" />
-            <div className="min-w-0">
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-500 dark:bg-slate-800">{pick.main.kind}</span>
-              <p className="mt-1 font-display text-xl leading-tight">{pick.main.title}</p>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{pick.why}</p>
-              <Button className="mt-2" onClick={addMainToShelf}><Plus className="h-4 w-4" /> Add to my shelf</Button>
+          {/* Cinematic poster-backdrop treatment, scoped to just this box so it
+              never wraps the search UI above — overflow-hidden here would clip
+              the search dropdown if it were a shared ancestor. */}
+          <div className="relative overflow-hidden rounded-2xl">
+            {pick.main.image_url && (
+              <img src={pick.main.image_url} alt="" className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl" />
+            )}
+            <div className="absolute inset-0 bg-slate-950/50" />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/85 to-slate-950/40 sm:bg-gradient-to-r" />
+            <div className="relative grid gap-3 p-4 text-center sm:grid-cols-[140px_minmax(0,1fr)] sm:items-end sm:p-6 sm:text-left">
+              <img src={pick.main.image_url} alt="" className="mx-auto aspect-[2/3] w-32 shrink-0 rounded-xl object-cover shadow-2xl ring-1 ring-white/20 sm:mx-0 sm:w-full" />
+              <div className="min-w-0">
+                <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold uppercase text-white backdrop-blur-sm">{pick.main.kind}</span>
+                <p className="mt-2 font-display text-2xl leading-tight text-white sm:text-3xl">{pick.main.title}</p>
+                <p className="mt-1 text-sm text-white/80">{pick.why}</p>
+                <Button className="mt-3 bg-white text-slate-950 hover:bg-slate-100" onClick={addMainToShelf}><Plus className="h-4 w-4" /> Add to my shelf</Button>
+              </div>
             </div>
           </div>
           {pick.backups.length > 0 && (

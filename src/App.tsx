@@ -1103,13 +1103,13 @@ function SearchPanel({ onSelect }: { onSelect: (anime: AnimeSummary) => void }) 
         <Search className="h-5 w-5 text-slate-400" />
         <input className={clsx(inputClass(), "border-0 bg-transparent px-0 focus:border-0")} placeholder="Search anime" value={query} onChange={(event) => setQuery(event.target.value)} />
       </div>
-      {loading && <div className="mt-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-40 animate-pulse rounded-md bg-slate-100 dark:bg-slate-800" />)}</div>}
+      {loading && <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-40 animate-pulse rounded-md bg-slate-100 dark:bg-slate-800" />)}</div>}
       {error && !results.length && <p className="mt-3 rounded-md bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950 dark:text-rose-200">{error}</p>}
       {!loading && !error && query.trim().length >= 2 && !results.length && (
         <p className="mt-3 rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No safe anime results found. Try another title.</p>
       )}
       {!!results.length && (
-        <div className="mt-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
           {results.map((anime) => (
             <div key={anime.mal_id} className="touch-card rounded-xl border border-slate-200/70 bg-white/70 p-3 dark:border-slate-800 dark:bg-slate-900/70">
               <img src={anime.image_url} alt="" className="aspect-[2/3] w-full rounded-lg object-cover" />
@@ -1174,7 +1174,7 @@ function SearchMangaPanel({ onSelect, fixedType }: { onSelect: (manga: MangaSumm
         <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-500 dark:bg-slate-900">No results found. Try another title.</p>
       )}
       {!!results.length && (
-        <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
           {results.map((manga) => (
             <div key={manga.mal_id} className="touch-card rounded-xl border border-slate-200/70 bg-white/70 p-3 dark:border-slate-800 dark:bg-slate-900/70">
               <img src={manga.image_url} alt="" className="aspect-[2/3] w-full rounded-lg object-cover" />
@@ -1862,14 +1862,16 @@ function FavoritePickPrompt({ userId, onRequestSignIn, onActiveChange }: { userI
   }
 
   return (
-    <Card className="relative z-20 grid gap-6 border border-teal-300/60 bg-white/40 py-3 shadow-xl shadow-teal-500/20 ring-1 ring-white/60 dark:border-teal-500/40 dark:bg-slate-950/30 dark:shadow-teal-400/10 dark:ring-white/10">
-      <div>
-        <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Quick one</p>
-        <h2 className="font-display text-2xl leading-tight sm:text-3xl">What's your favorite anime, manga, or manhwa?</h2>
-        <p className="mt-2 text-sm text-slate-500">Pick a title and tell us why in one line. We'll turn it into a card you can share.</p>
-      </div>
+    <div className="relative">
+      <div className="absolute -inset-3 -z-10 animate-pulse rounded-[2rem] bg-gradient-to-r from-teal-400/40 via-cyan-300/30 to-violet-400/40 blur-2xl" />
+      <Card className="relative z-20 grid gap-6 border border-teal-300/60 bg-white/40 py-5 shadow-2xl shadow-teal-500/30 ring-1 ring-white/60 sm:py-6 dark:border-teal-500/40 dark:bg-slate-950/30 dark:shadow-teal-400/20 dark:ring-white/10">
+        <div>
+          <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Quick one</p>
+          <h2 className="font-display text-3xl leading-tight sm:text-5xl">What's your favorite anime, manga, or manhwa?</h2>
+          <p className="mt-3 text-base text-slate-500">Pick a title and tell us why in one line. We'll turn it into a card you can share.</p>
+        </div>
 
-      {selected ? (
+        {selected ? (
         <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/70 p-2.5 dark:border-slate-800 dark:bg-slate-950/70">
           <img src={selected.image_url} alt="" className="h-16 w-11 shrink-0 rounded-lg object-cover" />
           <div className="min-w-0 flex-1">
@@ -1913,11 +1915,12 @@ function FavoritePickPrompt({ userId, onRequestSignIn, onActiveChange }: { userI
       {!selected && (
         <button className="button-ghost justify-self-start" onClick={dismiss} type="button">Maybe later</button>
       )}
-    </Card>
+      </Card>
+    </div>
   );
 }
 
-function HomePage({ addAnime, userId, onRequestSignIn }: { addAnime: (anime: AnimeSummary) => void; userId?: string; onRequestSignIn?: (message: string) => void }) {
+function HomePage({ addAnime, addManga, userId, onRequestSignIn }: { addAnime: (anime: AnimeSummary) => void; addManga?: (manga: MangaSummary) => void; userId?: string; onRequestSignIn?: (message: string) => void }) {
   const [trending, setTrending] = useState<AnimeSummary[]>([]);
   const [seasonal, setSeasonal] = useState<AnimeSummary[]>([]);
   const [upcoming, setUpcoming] = useState<AnimeSummary[]>([]);
@@ -1969,7 +1972,7 @@ function HomePage({ addAnime, userId, onRequestSignIn }: { addAnime: (anime: Ani
   }, []);
 
   return (
-    <div className="mx-auto grid max-w-5xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
+    <div className="mx-auto grid max-w-6xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
       <Card className="hero-banner grid min-h-[140px] content-start justify-items-end gap-1 pt-4 text-right text-white sm:min-h-[190px] sm:pt-6">
         <img className="hero-media" src="/homepageheader.jpg" alt="Animeboxd hero collage" />
         <h1 className="hero-title font-display text-5xl leading-none sm:text-6xl">Animeboxd</h1>
@@ -1983,7 +1986,7 @@ function HomePage({ addAnime, userId, onRequestSignIn }: { addAnime: (anime: Ani
       </Card>
 
       <FavoritePickPrompt userId={userId} onRequestSignIn={onRequestSignIn} onActiveChange={setFavoritePromptActive} />
-      <CommunityFavoritesBoard />
+      <CommunityFavoritesBoard onAddAnime={addAnime} onAddManga={addManga} />
 
       <div className={clsx("grid gap-5 transition-all duration-500 sm:gap-6", favoritePromptActive && "pointer-events-none scale-[0.99] opacity-50 blur-sm")}>
         <SeasonTracker trending={trending} seasonal={seasonal} upcoming={upcoming} airingToday={airingToday} updatedAt={updatedAt} loading={loading} onRefresh={() => loadHomeUpdates(true)} onAdd={addAnime} />
@@ -2006,9 +2009,10 @@ function HomePage({ addAnime, userId, onRequestSignIn }: { addAnime: (anime: Ani
   );
 }
 
-function CommunityFavoritesBoard() {
+function CommunityFavoritesBoard({ onAddAnime, onAddManga }: { onAddAnime: (anime: AnimeSummary) => void; onAddManga?: (manga: MangaSummary) => void }) {
   const [picks, setPicks] = useState<FavoritePick[]>([]);
   const [loading, setLoading] = useState(true);
+  const [openPick, setOpenPick] = useState<FavoritePick | null>(null);
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -2039,16 +2043,95 @@ function CommunityFavoritesBoard() {
       </div>
       <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1">
         {picks.map((pick) => (
-          <div key={pick.id} className="grid w-20 shrink-0 snap-start gap-1.5 rounded-lg border border-slate-200/70 bg-white/70 p-1.5 dark:border-slate-800 dark:bg-slate-950/70 sm:w-24">
+          <button
+            key={pick.id}
+            className="grid w-20 shrink-0 snap-start gap-1.5 rounded-lg border border-slate-200/70 bg-white/70 p-1.5 text-left transition hover:-translate-y-0.5 hover:border-teal-300 dark:border-slate-800 dark:bg-slate-950/70 sm:w-24"
+            onClick={() => setOpenPick(pick)}
+            type="button"
+          >
             {pick.image_url && <img src={pick.image_url} alt="" className="aspect-[2/3] w-full rounded-md object-cover" />}
             <div className="min-w-0">
               <p className="line-clamp-1 text-[11px] font-semibold text-slate-900 dark:text-white">{pick.title}</p>
               <p className="line-clamp-2 text-[10px] leading-tight text-slate-500">“{pick.reason}”</p>
             </div>
-          </div>
+          </button>
         ))}
       </div>
+      {openPick && (
+        <FavoritePickDetailModal
+          pick={openPick}
+          onAddAnime={onAddAnime}
+          onAddManga={onAddManga}
+          onClose={() => setOpenPick(null)}
+        />
+      )}
     </Card>
+  );
+}
+
+function FavoritePickDetailModal({ pick, onAddAnime, onAddManga, onClose }: { pick: FavoritePick; onAddAnime: (anime: AnimeSummary) => void; onAddManga?: (manga: MangaSummary) => void; onClose: () => void }) {
+  const [detail, setDetail] = useState<AnimeDetail | MangaDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!pick.mal_id) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    const fetchDetail = pick.media_type === "anime" ? getAnime(pick.mal_id) : getManga(pick.mal_id);
+    fetchDetail
+      .then((result) => {
+        if (!cancelled) setDetail(result);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pick.mal_id, pick.media_type]);
+
+  const addToShelf = () => {
+    if (pick.media_type === "anime") {
+      onAddAnime((detail as AnimeSummary) || { mal_id: pick.mal_id || 0, title: pick.title, image_url: pick.image_url || "", total_episodes: 0, genres: [], studios: [] });
+    } else {
+      onAddManga?.((detail as MangaSummary) || { mal_id: pick.mal_id || 0, title: pick.title, image_url: pick.image_url || "", total_chapters: 0, total_volumes: 0, genres: [], authors: [], mediaType: pick.media_type });
+    }
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 px-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="grid max-h-[85vh] w-full max-w-lg gap-4 overflow-y-auto rounded-2xl border border-white/60 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-950" onClick={(event) => event.stopPropagation()}>
+        <div className="grid grid-cols-[96px_minmax(0,1fr)] gap-4">
+          {pick.image_url && <img src={pick.image_url} alt="" className="aspect-[2/3] w-full rounded-xl object-cover shadow-md" />}
+          <div className="min-w-0">
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-500 dark:bg-slate-800">{pick.media_type}</span>
+            <h2 className="mt-1 font-display text-2xl leading-tight">{pick.title}</h2>
+            {detail?.score ? <p className="mt-1 text-sm font-semibold text-teal-600 dark:text-teal-300">{detail.score}/10</p> : null}
+          </div>
+        </div>
+        <div className="rounded-xl bg-teal-50 p-3 text-sm text-teal-900 dark:bg-teal-950/40 dark:text-teal-100">“{pick.reason}”</div>
+        {loading ? (
+          <div className="h-16 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-900" />
+        ) : detail?.synopsis ? (
+          <p className="line-clamp-5 text-sm leading-6 text-slate-600 dark:text-slate-300">{detail.synopsis}</p>
+        ) : null}
+        {detail?.genres && detail.genres.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {detail.genres.slice(0, 5).map((genre) => (
+              <span key={genre} className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-900 dark:text-slate-300">{genre}</span>
+            ))}
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-3">
+          <Button onClick={addToShelf}><Plus className="h-4 w-4" /> Add to my shelf</Button>
+          <button className="button-ghost" onClick={onClose} type="button">Close</button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -2202,7 +2285,7 @@ function ExplorePage({ onAddAnime, onAddManga, onBack }: { onAddAnime: (anime: A
   };
 
   return (
-    <div className="mx-auto grid max-w-5xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
+    <div className="mx-auto grid max-w-6xl gap-5 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
       <Card className="grid gap-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="grid gap-2">
@@ -4258,6 +4341,7 @@ function App() {
         {page !== "explore" && page !== "stuff" && page !== "manga" && page !== "manhwa" && page !== "light-novel" && page !== "add" && page !== "add-manga" && (
           <HomePage
             addAnime={startAddFlow}
+            addManga={startAddMangaFlow}
             userId={userId}
             onRequestSignIn={(msg) => {
               setAuthNotice(msg);
@@ -4318,7 +4402,7 @@ function App() {
       {confirmAction === "clear-light-novel" && (
         <ConfirmModal title="Clear light novel history?" message="This removes every light novel entry from this account." confirmLabel="Clear light novels" onCancel={() => setConfirmAction(null)} onConfirm={clearLightNovelHistory} />
       )}
-      {page === "home" && <HomePage addAnime={startAddFlow} userId={userId} />}
+      {page === "home" && <HomePage addAnime={startAddFlow} addManga={startAddMangaFlow} userId={userId} />}
       {page === "explore" && <ExplorePage onAddAnime={startAddFlow} onAddManga={startAddMangaFlow} onBack={() => setPage("home")} />}
       {page === "stuff" && <MyStuffPage data={data} onSelect={startAddFlow} updateEntry={updateEntry} removeEntry={removeEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={() => setConfirmAction("clear-anime")} />}
       {page === "manga" && <MyMangaPage data={data} onSelect={startAddMangaFlow} updateEntry={updateMangaEntry} removeEntry={removeMangaEntry} updateData={updateData} onBack={() => setPage("home")} onClearHistory={() => setConfirmAction("clear-manga")} />}

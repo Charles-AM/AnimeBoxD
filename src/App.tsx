@@ -314,6 +314,7 @@ function AuthPage({ initialNotice, onBrowse, onLogin }: { initialNotice?: string
   const [resetMode, setResetMode] = useState(false);
   const [resetSending, setResetSending] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [showEmailForm, setShowEmailForm] = useState(false);
 
   useEffect(() => {
     if (initialNotice) setNotice(initialNotice);
@@ -548,7 +549,7 @@ function AuthPage({ initialNotice, onBrowse, onLogin }: { initialNotice?: string
             <div className="min-w-0">
               <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Animeboxd</p>
               <h1 className="font-display text-4xl leading-tight sm:text-5xl">Welcome back</h1>
-              <p className="text-sm text-slate-500">{isSupabaseConfigured ? "Your anime, manga and manhwa shelf, wherever you log in." : "Pick up where you left off."}</p>
+              <p className="text-sm text-slate-500">{isSupabaseConfigured ? "Your anime, manga, and manhwa shelf — synced everywhere." : "Pick up where you left off."}</p>
             </div>
             <Film className="h-10 w-10 shrink-0 text-teal-500" />
           </div>
@@ -556,34 +557,39 @@ function AuthPage({ initialNotice, onBrowse, onLogin }: { initialNotice?: string
             <div className="rounded-xl border border-teal-300 bg-teal-50 px-3 py-2 text-sm font-bold text-teal-900 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-100">
               Reset password
             </div>
-          ) : (
-            <div className="grid gap-2 sm:grid-cols-2">
-              <button className={clsx("rounded-xl border px-3 py-2 text-sm font-semibold", mode === "signup" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300")} onClick={() => switchMode("signup")}>
-                Sign up
-              </button>
-              <button className={clsx("rounded-xl border px-3 py-2 text-sm font-semibold", mode === "signin" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300")} onClick={() => switchMode("signin")}>
-                Sign in
-              </button>
-            </div>
-          )}
-          {isSupabaseConfigured && !resetMode && (
-            <div className="grid gap-4">
-              <button
-                type="button"
-                className="inline-flex min-h-10 items-center justify-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                onClick={continueWithGoogle}
-                disabled={googleLoading}
-              >
+          ) : isSupabaseConfigured && !showEmailForm ? (
+            <div className="grid gap-3">
+              <Button className="w-full bg-white text-slate-900 hover:bg-slate-100 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100" onClick={continueWithGoogle} disabled={googleLoading}>
                 <GoogleIcon className="h-4 w-4 shrink-0" />
-                {googleLoading ? "Redirecting to Google..." : "Continue with Google"}
+                {googleLoading ? "Opening Google..." : "Continue with Google"}
+              </Button>
+              <button className="button-ghost justify-self-center" onClick={() => setShowEmailForm(true)} type="button">
+                Sign in with email instead
               </button>
-              <div className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">
-                <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
-                or with email
-                <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
-              </div>
+              {onBrowse && (
+                <button className="button-ghost justify-self-center" onClick={onBrowse} type="button">
+                  Continue browsing
+                </button>
+              )}
             </div>
+          ) : (
+            <>
+              {isSupabaseConfigured && (
+                <button className="button-ghost justify-self-start" onClick={() => setShowEmailForm(false)} type="button">
+                  ← Use Google instead
+                </button>
+              )}
+              <div className="grid gap-2 sm:grid-cols-2">
+                <button className={clsx("rounded-xl border px-3 py-2 text-sm font-semibold", mode === "signup" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300")} onClick={() => switchMode("signup")}>
+                  Sign up
+                </button>
+                <button className={clsx("rounded-xl border px-3 py-2 text-sm font-semibold", mode === "signin" ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300")} onClick={() => switchMode("signin")}>
+                  Sign in
+                </button>
+              </div>
+            </>
           )}
+          {(resetMode || showEmailForm || !isSupabaseConfigured) && (
           <div className="grid gap-4">
             {(!resetMode && (!isSupabaseConfigured || mode === "signup")) && (
               <Field label="Display name">
@@ -638,6 +644,7 @@ function AuthPage({ initialNotice, onBrowse, onLogin }: { initialNotice?: string
               </button>
             )}
           </div>
+          )}
         </Card>
         <div className="mt-4 border-t border-slate-200/60 pt-4 pb-2 text-center dark:border-slate-800">
           <nav className="flex flex-wrap justify-center gap-x-4 gap-y-2">

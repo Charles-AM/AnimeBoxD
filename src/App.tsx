@@ -29,7 +29,7 @@ import {
 import { fixedAnime } from "./lib/fixedAnime";
 import { getAiringToday, getAnime, getAnimeCharacters, getAnimeStaff, getAnimeThemes, getManga, getSeasonal, getTopAiring, getUpcomingAnime, searchAnime, searchLightNovels, searchManga, searchManhwa } from "./lib/jikan";
 import { loadData, saveData, setActiveUser } from "./lib/storage";
-import { completeAuthSessionFromUrl, completeCloudSessionUser, createReport, deleteCloudAccount, type FavoriteMediaType, getCurrentSession, isSupabaseConfigured, loadAdminDashboard, loadCloudData, loadMyFavoritePick, loadProfile, logActivityEvent, logPageView, markProfileSeen, resendSignupConfirmation, saveCloudData, sendPasswordResetEmail, signInWithEmail, signInWithGoogle, signOutCloud, signUpWithEmail, submitFavoritePick, updateCloudPassword, upsertProfile, userToProfileFallback } from "./lib/supabase";
+import { completeAuthSessionFromUrl, completeCloudSessionUser, createReport, deleteCloudAccount, type FavoriteMediaType, type FavoritePick, getCurrentSession, isSupabaseConfigured, loadAdminDashboard, loadCloudData, loadFavoritePicks, loadMyFavoritePick, loadProfile, logActivityEvent, logPageView, markProfileSeen, resendSignupConfirmation, saveCloudData, sendPasswordResetEmail, signInWithEmail, signInWithGoogle, signOutCloud, signUpWithEmail, submitFavoritePick, updateCloudPassword, upsertProfile, userToProfileFallback } from "./lib/supabase";
 import type { AdminDashboardData, AnimeDetail, AnimeSummary, AppData, ComicMediaType, LibraryEntry, LibraryStatus, MangaDetail, MangaEntry, MangaStatus, MangaSummary, Settings, ThemeMode } from "./types/anime";
 import { CookieBanner } from "./CookieBanner";
 
@@ -1740,7 +1740,7 @@ function hasSeenFavoritePrompt() {
   }
 }
 
-function FavoritePickPrompt({ userId }: { userId?: string }) {
+function FavoritePickPrompt({ userId, onRequestSignIn, onActiveChange }: { userId?: string; onRequestSignIn?: (message: string) => void; onActiveChange?: (active: boolean) => void }) {
   const [dismissed, setDismissed] = useState(hasSeenFavoritePrompt);
   const [checkingExisting, setCheckingExisting] = useState(Boolean(userId));
   const [query, setQuery] = useState("");
@@ -1750,7 +1750,15 @@ function FavoritePickPrompt({ userId }: { userId?: string }) {
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [saveResolved, setSaveResolved] = useState(false);
   const [error, setError] = useState("");
+
+  const awaitingSaveDecision = submitted && !userId && !saveResolved;
+
+  useEffect(() => {
+    const active = isSupabaseConfigured && !checkingExisting && !dismissed && (!submitted || awaitingSaveDecision);
+    onActiveChange?.(active);
+  }, [checkingExisting, dismissed, submitted, awaitingSaveDecision]);
 
   useEffect(() => {
     if (!userId || !isSupabaseConfigured) {
@@ -1828,14 +1836,27 @@ function FavoritePickPrompt({ userId }: { userId?: string }) {
 
   if (submitted && selected) {
     return (
-      <Card className="grid grid-cols-[64px_minmax(0,1fr)] items-center gap-3 border border-teal-200/70 bg-teal-50/40 dark:border-teal-900/60 dark:bg-slate-950/70">
-        <img src={selected.image_url} alt="" className="h-24 w-16 rounded-lg object-cover shadow-md" />
-        <div className="min-w-0">
-          <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Your pick</p>
-          <p className="font-display text-xl leading-tight">{selected.title}</p>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">“{reason.trim()}”</p>
-          <p className="mt-2 text-xs text-slate-500">Thanks for sharing. It just joined the community board.</p>
+      <Card className={clsx("relative grid gap-3 border border-teal-300/70 bg-gradient-to-br from-teal-50 to-white shadow-lg shadow-teal-500/10 dark:border-teal-700/60 dark:from-teal-950/40 dark:to-slate-950 dark:shadow-teal-400/10", awaitingSaveDecision && "z-20")}>
+        <div className="grid grid-cols-[64px_minmax(0,1fr)] items-center gap-3">
+          <img src={selected.image_url} alt="" className="h-24 w-16 rounded-lg object-cover shadow-md" />
+          <div className="min-w-0">
+            <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Your pick</p>
+            <p className="font-display text-xl leading-tight">{selected.title}</p>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">“{reason.trim()}”</p>
+            <p className="mt-2 text-xs text-slate-500">Thanks for sharing. It just joined the community board.</p>
+          </div>
         </div>
+        {awaitingSaveDecision && (
+          <div className="grid gap-2 border-t border-teal-200/60 pt-3 dark:border-teal-800/60">
+            <p className="text-sm text-slate-600 dark:text-slate-300">Want to keep this and start your own collection?</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button onClick={() => onRequestSignIn?.("Create a free account to save your favorite pick and start your collection.")}>
+                Save my collection
+              </Button>
+              <button className="button-ghost" onClick={() => setSaveResolved(true)} type="button">Not now</button>
+            </div>
+          </div>
+        )}
       </Card>
     );
   }
@@ -1896,13 +1917,14 @@ function FavoritePickPrompt({ userId }: { userId?: string }) {
   );
 }
 
-function HomePage({ addAnime, userId }: { addAnime: (anime: AnimeSummary) => void; userId?: string }) {
+function HomePage({ addAnime, userId, onRequestSignIn }: { addAnime: (anime: AnimeSummary) => void; userId?: string; onRequestSignIn?: (message: string) => void }) {
   const [trending, setTrending] = useState<AnimeSummary[]>([]);
   const [seasonal, setSeasonal] = useState<AnimeSummary[]>([]);
   const [upcoming, setUpcoming] = useState<AnimeSummary[]>([]);
   const [airingToday, setAiringToday] = useState<AnimeSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatedAt, setUpdatedAt] = useState("");
+  const [favoritePromptActive, setFavoritePromptActive] = useState(false);
 
   const loadHomeUpdates = async (force = false) => {
     setLoading(true);
@@ -1960,24 +1982,73 @@ function HomePage({ addAnime, userId }: { addAnime: (anime: AnimeSummary) => voi
         </div>
       </Card>
 
-      <FavoritePickPrompt userId={userId} />
+      <FavoritePickPrompt userId={userId} onRequestSignIn={onRequestSignIn} onActiveChange={setFavoritePromptActive} />
+      <CommunityFavoritesBoard />
 
-      <SeasonTracker trending={trending} seasonal={seasonal} upcoming={upcoming} airingToday={airingToday} updatedAt={updatedAt} loading={loading} onRefresh={() => loadHomeUpdates(true)} onAdd={addAnime} />
+      <div className={clsx("grid gap-5 transition-all duration-500 sm:gap-6", favoritePromptActive && "pointer-events-none scale-[0.99] opacity-50 blur-sm")}>
+        <SeasonTracker trending={trending} seasonal={seasonal} upcoming={upcoming} airingToday={airingToday} updatedAt={updatedAt} loading={loading} onRefresh={() => loadHomeUpdates(true)} onAdd={addAnime} />
 
-      {loading && !trending.length && !seasonal.length && !upcoming.length ? (
-        <div className="grid grid-cols-1 gap-4 min-[520px]:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="h-80 animate-pulse rounded-2xl bg-white/70 dark:bg-slate-900/70" />
-          ))}
-        </div>
-      ) : (
-        <>
-          <AnimeRail title="Currently Airing" kicker="Now on screen" items={seasonal} onAdd={addAnime} loading={loading && !seasonal.length} />
-          <AnimeRail title="Popular Airing" kicker="Audience pulse" items={trending} onAdd={addAnime} loading={loading && !trending.length} />
-          <AnimeRail title="Coming Soon" kicker="Next issue" items={upcoming} onAdd={addAnime} loading={loading && !upcoming.length} />
-        </>
-      )}
+        {loading && !trending.length && !seasonal.length && !upcoming.length ? (
+          <div className="grid grid-cols-1 gap-4 min-[520px]:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div key={index} className="h-80 animate-pulse rounded-2xl bg-white/70 dark:bg-slate-900/70" />
+            ))}
+          </div>
+        ) : (
+          <>
+            <AnimeRail title="Currently Airing" kicker="Now on screen" items={seasonal} onAdd={addAnime} loading={loading && !seasonal.length} />
+            <AnimeRail title="Popular Airing" kicker="Audience pulse" items={trending} onAdd={addAnime} loading={loading && !trending.length} />
+            <AnimeRail title="Coming Soon" kicker="Next issue" items={upcoming} onAdd={addAnime} loading={loading && !upcoming.length} />
+          </>
+        )}
+      </div>
     </div>
+  );
+}
+
+function CommunityFavoritesBoard() {
+  const [picks, setPicks] = useState<FavoritePick[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    loadFavoritePicks(12)
+      .then((items) => {
+        if (!cancelled) setPicks(items);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!isSupabaseConfigured || loading || !picks.length) return null;
+
+  return (
+    <Card className="grid gap-3">
+      <div>
+        <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Community favorites</p>
+        <h2 className="font-display text-2xl leading-tight sm:text-3xl">What everyone else is loving.</h2>
+      </div>
+      <div className="flex gap-3 overflow-x-auto pb-1">
+        {picks.map((pick) => (
+          <div key={pick.id} className="grid w-40 shrink-0 gap-2 rounded-xl border border-slate-200/70 bg-white/70 p-2.5 dark:border-slate-800 dark:bg-slate-950/70">
+            {pick.image_url && <img src={pick.image_url} alt="" className="aspect-[2/3] w-full rounded-lg object-cover" />}
+            <div className="min-w-0">
+              <p className="line-clamp-1 text-xs font-semibold text-slate-900 dark:text-white">{pick.title}</p>
+              <p className="mt-0.5 line-clamp-3 text-xs text-slate-500">“{pick.reason}”</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }
 
@@ -4185,7 +4256,14 @@ function App() {
           />
         )}
         {page !== "explore" && page !== "stuff" && page !== "manga" && page !== "manhwa" && page !== "light-novel" && page !== "add" && page !== "add-manga" && (
-          <HomePage addAnime={startAddFlow} userId={userId} />
+          <HomePage
+            addAnime={startAddFlow}
+            userId={userId}
+            onRequestSignIn={(msg) => {
+              setAuthNotice(msg);
+              setPage("auth");
+            }}
+          />
         )}
         <div className="mx-auto max-w-6xl px-3 pb-6 pt-2 sm:px-4">
           <SiteFooter />

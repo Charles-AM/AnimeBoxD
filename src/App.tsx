@@ -1841,7 +1841,7 @@ function FavoritePickPrompt({ userId }: { userId?: string }) {
   }
 
   return (
-    <Card className="grid gap-3">
+    <Card className="relative z-20 grid gap-3 border border-teal-300/70 bg-gradient-to-br from-teal-50 to-white shadow-lg shadow-teal-500/10 dark:border-teal-700/60 dark:from-teal-950/40 dark:to-slate-950 dark:shadow-teal-400/10">
       <div>
         <p className="text-xs uppercase tracking-[0.3em] text-teal-500">Quick one</p>
         <h2 className="font-display text-2xl leading-tight sm:text-3xl">What's your favorite anime, manga, or manhwa?</h2>
